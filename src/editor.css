@@ -143,10 +143,10 @@
 }
 
 .cpn-node label{
-  font-weight: 500;
-  font-size: 9px; /* Reduced font size */
+  /* font-weight: 500; */
+  font-size: 7px; /* Reduced font size */
   position: absolute;
-  bottom: -15px; /* Adjusted position */
+  /* bottom: -15px; Adjusted position */
   max-width: 100px; /* Adjusted width */
   overflow: hidden;
   white-space: nowrap;

@@ -1,12 +1,11 @@
 import { PlaceNode } from './PlaceNode';
 import TransitionNode from './TransitionNode';
-import { PositionLoggerNode } from './PositionLoggerNode';
 
 export const initialNodes = [
   { id: 'a', type: 'place', position: { x: -200, y: 0 }, data: { label: 'start' } },
   {
     id: 'b',
-    type: 'transition-node',
+    type: 'transition',
     position: { x: -100, y: 100 },
     data: { label: 'transition' },
   },
@@ -19,7 +18,6 @@ export const initialNodes = [
 ];
 
 export const nodeTypes = {
-  'position-logger': PositionLoggerNode,
   'place': PlaceNode,
-  'transition-node': TransitionNode,
+  'transition': TransitionNode,
 };

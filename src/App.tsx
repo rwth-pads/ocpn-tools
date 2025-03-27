@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import {
   ReactFlow,
   Background,
@@ -8,6 +8,8 @@ import {
   useNodesState,
   useEdgesState,
   MarkerType,
+  useReactFlow,
+  ReactFlowProvider,
 } from '@xyflow/react';
 
 import '@xyflow/react/dist/style.css';
@@ -33,48 +35,63 @@ import { Separator } from '@/components/ui/separator';
 
 import { Circle, Square, MoveRight, Play } from 'lucide-react';
 
-const defaultEdgeOptions = {
-  type: 'floating',
-  markerEnd: {
-    type: MarkerType.ArrowClosed,
-    color: '#000',
-    width: 15,
-    height: 15,
-  },
-};
+import { DnDProvider, useDnD } from './utils/DnDContext';
 
-export default function App() {
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
+let id = 0;
+const getId = () => `dndnode_${id++}`;
+ 
+const DnDFlow = () => {  
+  const reactFlowWrapper = useRef(null);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const { screenToFlowPosition } = useReactFlow();
+  const [type] = useDnD();
+ 
   const onConnect = useCallback(
-    (connection) => setEdges((edges) => addEdge(connection, edges)),
-    [setEdges]
+    (connection) => setEdges((eds) => addEdge(connection, eds)),
+    [setEdges],
   );
+ 
+  const onDragOver = useCallback((event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }, []);
 
+  const [_, setType] = useDnD();
+ 
+  const onDragStart = (event, nodeType) => {
+    setType(nodeType);
+    event.dataTransfer.effectAllowed = 'move';
+  };
+ 
+  const onDrop = useCallback(
+    (event) => {
+      event.preventDefault();
+ 
+      // Check if the dropped element is valid
+      if (!type || typeof type !== 'string') {
+        return;
+      }
+ 
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      const newNode = {
+        id: getId(),
+        type, // Ensure `type` is a string
+        position,
+        data: { label: `${type}` },
+      };
+ 
+      setNodes((nds) => nds.concat(newNode));
+    },
+    [screenToFlowPosition, type],
+  );
+ 
   return (
-    <div className="h-screen">
-    <ResizablePanelGroup direction="horizontal">
-      {/* Left Panel */}
-      <ResizablePanel defaultSize={20}>
-        <div>
-          <div className="p-4">
-            {/* Variables Section */}
-            <h2 className="font-bold">Variables</h2>
-            {/* Add content for the Variables section here */}
-          </div>
-          <Separator orientation="horizontal" className="mt-2" />
-          <div className="p-4">
-            {/* Color Sets Section */}
-            <h2 className="font-bold">Color Sets</h2>
-            {/* Add content for the Color Sets section here */}
-          </div>
-        </div>
-      </ResizablePanel>
-      <ResizableHandle />
-
-      {/* Center Panel */}
-      <ResizablePanel>
-        <div className="flex flex-col h-screen">
+    <div className="dndflow">
+      <div className="flex flex-col h-screen">
           {/* Toolbar Panel */}
           <div className="flex items-center justify-between p-2 border-b">
             {/* Left Section */}
@@ -83,8 +100,8 @@ export default function App() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span>
-                      <Button variant="ghost" size="icon">
-                        <Circle className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" className="dndnode input" onDragStart={(event) => onDragStart(event, 'place')} draggable>
+                        <Circle className="h-4 w-4"/>
                         <span className="sr-only">Add Place</span>
                       </Button>
                     </span>
@@ -98,7 +115,7 @@ export default function App() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span>
-                      <Button variant="ghost" size="icon">
+                      <Button variant="ghost" size="icon" className="dndnode input" onDragStart={(event) => onDragStart(event, 'transition')} draggable>
                         <Square className="h-4 w-4" />
                         <span className="sr-only">Add Transition</span>
                       </Button>
@@ -153,7 +170,7 @@ export default function App() {
           </div>
 
           {/* ReactFlow Component */}
-          <div className="flex-1">
+          <div className="flex-1 reactflow-wrapper" ref={reactFlowWrapper}>
             <ReactFlow
               nodes={nodes}
               nodeTypes={nodeTypes}
@@ -162,6 +179,8 @@ export default function App() {
               edgeTypes={edgeTypes}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
+              onDrop={onDrop}
+              onDragOver={onDragOver}
               fitView
               defaultEdgeOptions={defaultEdgeOptions}
               connectionLineComponent={CustomConnectionLine}
@@ -179,7 +198,50 @@ export default function App() {
             </ReactFlow>
           </div>
         </div>
+    </div>
+  );
+};
+
+const defaultEdgeOptions = {
+  type: 'floating',
+  markerEnd: {
+    type: MarkerType.ArrowClosed,
+    color: '#000',
+    width: 15,
+    height: 15,
+  },
+};
+
+export default function App() {
+  return (
+    <div className="h-screen">
+    <ResizablePanelGroup direction="horizontal">
+      {/* Left Panel */}
+      <ResizablePanel defaultSize={20}>
+        <div>
+          <div className="p-4">
+            {/* Variables Section */}
+            <h2 className="font-bold">Variables</h2>
+            {/* Add content for the Variables section here */}
+          </div>
+          <Separator orientation="horizontal" className="mt-2" />
+          <div className="p-4">
+            {/* Color Sets Section */}
+            <h2 className="font-bold">Color Sets</h2>
+            {/* Add content for the Color Sets section here */}
+          </div>
+        </div>
       </ResizablePanel>
+      <ResizableHandle />
+
+      {/* Center Panel */}
+        <ResizablePanel>
+          <ReactFlowProvider>
+            <DnDProvider>
+              <DnDFlow />
+            </DnDProvider>
+          </ReactFlowProvider>
+        </ResizablePanel>
       <ResizableHandle />
 
       {/* Right Panel */}

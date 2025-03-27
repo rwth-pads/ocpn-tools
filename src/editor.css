@@ -1,0 +1,59 @@
+.react-flow__attribution {
+  display: none;
+}
+.react-flow__node{
+  visibility: visible !important;
+}
+.my-custom-node{
+  background-color: #fff;
+  border: 2px solid;
+  padding: 0.5rem;
+  text-align: center;
+  box-shadow: 0 0 #0000, 0 0 #0000, 0 0 #0000, 0 0 #0000, 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+}
+.my-custom-node label{
+  font-weight: 500;
+  font-size: 9px; /* Reduced font size */
+  position: absolute;
+  bottom: -15px; /* Adjusted position */
+  max-width: 100px; /* Adjusted width */
+  overflow: hidden;
+  white-space: nowrap;
+}
+.place-node{
+  border-radius: 50%;
+  width: 20px; /* Further reduced size */
+  height: 20px; /* Further reduced size */
+  border-color: rgb(30 64 175);
+  border-width: 1px; /* Reduced border thickness */
+}
+.place-node .token {
+  width: 20px; /* Adjusted size */
+}
+.transition-node {
+  border-radius: 3px; /* Adjusted border radius */
+  width: 30px; /* Slightly wider than place nodes */
+  height: 20px; /* Same height as place nodes */
+  border-color: rgb(34, 197, 94); /* Adjusted border color */
+  border-width: 1px; /* Reduced border thickness */
+}
+.react-flow__edge-path {
+  fill: none;
+  stroke: black; /* Ensure edges are visible */
+  stroke-width: 1; /* Slightly thicker for better visibility */
+  stroke-linecap: round; /* Smooth edge ends */
+}
+.react-flow__edge {
+  marker-start: url(#marker-start); /* Add markers for better visibility */
+  marker-end: url(#marker-end); /* Add markers for better visibility */
+}
+.h-500{
+  height: 600px;
+}

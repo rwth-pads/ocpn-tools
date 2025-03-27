@@ -6,7 +6,6 @@ const TransitionNode = ({ data, selected }) => {
     return (
         <div className="cpn-node transition-node">
             <NodeResizer
-                color="#ff0071"
                 isVisible={selected}
                 minWidth={15}
                 minHeight={30}

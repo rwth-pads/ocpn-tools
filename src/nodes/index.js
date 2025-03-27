@@ -1,21 +1,20 @@
 import { PlaceNode } from './PlaceNode';
-import { TransitionNode } from './TransitionNode';
+import TransitionNode from './TransitionNode';
 import { PositionLoggerNode } from './PositionLoggerNode';
 
 export const initialNodes = [
-  { id: 'a', type: 'input', position: { x: 0, y: 0 }, data: { label: 'wire' } },
+  { id: 'a', type: 'place', position: { x: -200, y: 0 }, data: { label: 'start' } },
   {
     id: 'b',
     type: 'transition-node',
     position: { x: -100, y: 100 },
-    data: { label: 'drag me!' },
+    data: { label: 'transition' },
   },
-  { id: 'c', position: { x: 100, y: 100 }, data: { label: 'your ideas' } },
   {
-    id: 'd',
+    id: 'c',
     type: 'place',
     position: { x: 0, y: 200 },
-    data: { label: 'with React Flow' },
+    data: { label: 'end place' },
   },
 ];
 

@@ -4,29 +4,7 @@
 .react-flow__node{
   visibility: visible !important;
 }
-.my-custom-node{
-  background-color: #fff;
-  border: 2px solid;
-  padding: 0.5rem;
-  text-align: center;
-  box-shadow: 0 0 #0000, 0 0 #0000, 0 0 #0000, 0 0 #0000, 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 200ms;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: default;
-}
-.my-custom-node label{
-  font-weight: 500;
-  font-size: 9px; /* Reduced font size */
-  position: absolute;
-  bottom: -15px; /* Adjusted position */
-  max-width: 100px; /* Adjusted width */
-  overflow: hidden;
-  white-space: nowrap;
-}
+
 .place-node{
   border-radius: 50%;
   width: 20px; /* Further reduced size */
@@ -37,13 +15,114 @@
 .place-node .token {
   width: 20px; /* Adjusted size */
 }
-.transition-node {
-  border-radius: 3px; /* Adjusted border radius */
-  width: 30px; /* Slightly wider than place nodes */
-  height: 20px; /* Same height as place nodes */
-  border-color: rgb(34, 197, 94); /* Adjusted border color */
-  border-width: 1px; /* Reduced border thickness */
+
+.react-flow {
+  /* Custom Variables */
+  --xy-theme-selected: red;
+  --xy-theme-hover: black;
+  --xy-theme-edge-hover: black;
+  --xy-theme-color-focus: #E8E8E8;
+
+  /* Built-in Variables see https://reactflow.dev/learn/customization/theming */
+  --xy-node-border-default: 1px solid #000;
+
+  --xy-node-boxshadow-default: 
+    0px 3.54px 4.55px 0px #00000005, 
+    0px 3.54px 4.55px 0px #0000000D, 
+    0px 0.51px 1.01px 0px #0000001A;
+
+  --xy-node-border-radius-default: 0;
+
+  --xy-handle-background-color-default: #ffffff;
+  --xy-handle-border-color-default: #AAAAAA;
+
+  --xy-edge-label-color-default: #505050;
 }
+
+.react-flow.dark { 
+  --xy-node-boxshadow-default: 
+  0px 3.54px 4.55px 0px rgba(255, 255, 255, 0.05), /* light shadow */
+  0px 3.54px 4.55px 0px rgba(255, 255, 255, 0.13), /* medium shadow */
+  0px 0.51px 1.01px 0px rgba(255, 255, 255, 0.2);  /* smallest shadow */  
+  --xy-theme-color-focus: #535353;
+}
+
+/* Customizing Default Theming */
+
+.react-flow__node {
+  /* box-shadow: var(--xy-node-boxshadow-default); */
+  border-radius: var(--xy-node-border-radius-default);
+  /* background-color: var(--xy-node-background-color-default); */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  font-size: 12px;
+  flex-direction: column;
+  /* border: var(--xy-node-border-default); */
+  color: var(--xy-node-color, var(--xy-node-color-default));
+}
+
+.react-flow__node.selectable:focus {
+  /* box-shadow: 0px 0px 0px 4px var(--xy-theme-color-focus); */
+  border-color: #d9d9d9;
+}
+
+.react-flow__node.selectable:focus:active {
+  /* box-shadow: var(--xy-node-boxshadow-default); */
+}
+
+
+.react-flow__node.selectable:hover, 
+.react-flow__node.draggable:hover {
+  border-color: var(--xy-theme-hover);
+}
+
+.react-flow__node.selectable.selected {
+  /* border-color: var(--xy-theme-selected);
+  box-shadow: var(--xy-node-boxshadow-default); */
+}
+
+.react-flow__node-group {
+  background-color: rgba(207, 182, 255, 0.4);
+  border-color: #9E86ED;
+}
+
+.react-flow__edge.selectable:hover .react-flow__edge-path,
+.react-flow__edge.selectable.selected .react-flow__edge-path {
+  stroke: var(--xy-theme-edge-hover);
+}
+
+.react-flow__handle {
+  display: none;
+  background-color: var(--xy-handle-background-color-default);
+}
+
+.react-flow__handle.connectionindicator:hover {
+  pointer-events: all;
+  border-color: var(--xy-theme-edge-hover);
+  background-color: white;
+}
+
+.react-flow__handle.connectionindicator:focus , 
+.react-flow__handle.connectingfrom,
+.react-flow__handle.connectingto {
+  border-color: var(--xy-theme-edge-hover);
+}
+
+.react-flow__node-resizer {
+  border-radius: 0;
+  border: none;
+}
+
+.react-flow__resize-control.handle {
+  background-color: #ffffff;
+  border-color: #9E86ED;
+  border-radius: 0;
+  width: 5px;
+  height: 5px;
+}
+
 .react-flow__edge-path {
   fill: none;
   stroke: black; /* Ensure edges are visible */
@@ -54,6 +133,36 @@
   marker-start: url(#marker-start); /* Add markers for better visibility */
   marker-end: url(#marker-end); /* Add markers for better visibility */
 }
-.h-500{
-  height: 600px;
+
+.cpn-node{
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--xy-node-background-color-default);
+}
+
+.cpn-node label{
+  font-weight: 500;
+  font-size: 9px; /* Reduced font size */
+  position: absolute;
+  bottom: -15px; /* Adjusted position */
+  max-width: 100px; /* Adjusted width */
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.transition-node {
+  min-width: 15px;
+  min-height: 30px;
+  width: 100%;
+  height: 100%;
+  border: var(--xy-node-border-default);
+}
+
+.place-node {
+  min-width: 50px;
+  min-height: 30px;
+  border-radius: 50px/30px;
+  border: 1px solid;
 }

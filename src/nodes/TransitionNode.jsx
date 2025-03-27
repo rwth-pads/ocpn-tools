@@ -1,13 +1,21 @@
-import React from 'react'
-import { Handle, Position } from '@xyflow/react';
+import { memo } from 'react';
+import { Handle, Position, NodeResizer } from '@xyflow/react';
 
-export const TransitionNode = ({ data }) => {
+const TransitionNode = ({ data, selected }) => {
 
     return (
-        <div className="my-custom-node transition-node">
-            <Handle type="source" position={Position.Right} />
+        <div className="cpn-node transition-node">
+            <NodeResizer
+                color="#ff0071"
+                isVisible={selected}
+                minWidth={15}
+                minHeight={30}
+            />
             <label htmlFor="text">{data.label}</label>
+            <Handle type="source" position={Position.Right} />
             <Handle type="target" position={Position.Left} />
         </div>
     )
 }
+
+export default memo(TransitionNode);

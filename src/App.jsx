@@ -21,7 +21,9 @@ const defaultEdgeOptions = {
   type: 'floating',
   markerEnd: {
     type: MarkerType.ArrowClosed,
-    color: '#b1b1b7',
+    color: '#000',
+    width: 15,
+    height: 15,
   },
 };
 

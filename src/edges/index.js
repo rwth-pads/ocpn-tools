@@ -1,9 +1,8 @@
 import FloatingEdge from "./FloatingEdge";
 
 export const initialEdges = [
-  { id: 'a->c', source: 'a', target: 'c', animated: true },
-  { id: 'b->d', source: 'b', target: 'd' },
-  { id: 'c->d', source: 'c', target: 'd', animated: true },
+  { id: 'a->b', source: 'a', target: 'b'},
+  { id: 'b->c', source: 'b', target: 'c' },
 ];
 
 export const edgeTypes = {

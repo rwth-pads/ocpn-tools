@@ -1,24 +1,32 @@
+import React from 'react';
 import { getStraightPath, useInternalNode } from '@xyflow/react';
- 
 import { getEdgeParams } from '../utils.js';
- 
-function FloatingEdge({ id, source, target, markerEnd, style }) {
+
+interface FloatingEdgeProps {
+  id: string;
+  source: string;
+  target: string;
+  markerEnd?: string;
+  style?: React.CSSProperties;
+}
+
+function FloatingEdge({ id, source, target, markerEnd, style }: FloatingEdgeProps): JSX.Element | null {
   const sourceNode = useInternalNode(source);
   const targetNode = useInternalNode(target);
- 
+
   if (!sourceNode || !targetNode) {
     return null;
   }
- 
+
   const { sx, sy, tx, ty } = getEdgeParams(sourceNode, targetNode);
- 
+
   const [edgePath] = getStraightPath({
     sourceX: sx,
     sourceY: sy,
     targetX: tx,
     targetY: ty,
   });
- 
+
   return (
     <path
       id={id}
@@ -29,5 +37,5 @@ function FloatingEdge({ id, source, target, markerEnd, style }) {
     />
   );
 }
- 
+
 export default FloatingEdge;

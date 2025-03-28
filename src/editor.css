@@ -94,7 +94,6 @@
 }
 
 .react-flow__handle {
-  display: none;
   background-color: var(--xy-handle-background-color-default);
 }
 

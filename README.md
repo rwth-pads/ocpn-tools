@@ -4,4 +4,4 @@
 
 - [x] add arc inscriptions
 - [ ] add priorities
-- [ ] create arcs
+- [x] create arcs

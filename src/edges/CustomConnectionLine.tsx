@@ -33,7 +33,7 @@ const CustomConnectionLine: React.FC<ConnectionLineComponentProps> = ({
     <g>
       {/* Edge Path */}
       <path
-        style={connectionLineStyle || { stroke: 'black', strokeWidth: 2 }}
+        style={connectionLineStyle || { stroke: 'black', strokeWidth: 1 }}
         fill="none"
         d={edgePath}
       />

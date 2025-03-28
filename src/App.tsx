@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import {
   ReactFlow,
   Background,
@@ -41,7 +41,7 @@ import { DnDProvider, useDnD } from './utils/DnDContext';
 let id = 0;
 const getId = () => `dndnode_${id++}`;
  
-const DnDFlow = () => {  
+const DnDFlow = ({ isArcMode }) => {  
   const reactFlowWrapper = useRef(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -89,6 +89,15 @@ const DnDFlow = () => {
     },
     [screenToFlowPosition, type],
   );
+
+  const toggleArcMode = useCallback((state) => {
+    setNodes((nds) =>
+      nds.map((node) => ({
+        ...node,
+        data: { ...node.data, isArcMode: state },
+      }))
+    );
+  }, [setNodes]);
  
   return (
     <div className="dndflow">
@@ -131,7 +140,10 @@ const DnDFlow = () => {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span>
-                    <Toggle aria-label="Toggle Arc">
+                    <Toggle
+                      aria-label="Toggle Arc"
+                      onPressedChange={toggleArcMode}
+                    >
                       <MoveRight className="h-4 w-4" />
                       <span className="sr-only">Add Arc</span>
                     </Toggle>
@@ -214,6 +226,8 @@ const defaultEdgeOptions = {
 };
 
 export default function App() {
+  const [isArcMode, setIsArcMode] = useState(false);
+
   return (
     <div className="h-screen">
     <ResizablePanelGroup direction="horizontal">
@@ -239,7 +253,7 @@ export default function App() {
         <ResizablePanel>
           <ReactFlowProvider>
             <DnDProvider>
-              <DnDFlow />
+              <DnDFlow isArcMode={isArcMode} />
             </DnDProvider>
           </ReactFlowProvider>
         </ResizablePanel>

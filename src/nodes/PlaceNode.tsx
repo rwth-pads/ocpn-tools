@@ -1,7 +1,6 @@
-import React from 'react';
 import { Handle, Position, NodeResizer } from '@xyflow/react';
 
-export const PlaceNode = ({ data, selected }) => {
+export const PlaceNode = ({ id, data, selected }) => {
   return (
     <div className="cpn-node place-node">
       <NodeResizer
@@ -9,9 +8,13 @@ export const PlaceNode = ({ data, selected }) => {
         minWidth={30}
         minHeight={30}
       />
-      <Handle type="source" position={Position.Right} />
       <label htmlFor="text">{data.label}</label>
-      <Handle type="target" position={Position.Left} />
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{ visibility: data.isArcMode ? 'visible' : 'hidden' }}
+      />
+      <Handle type="target" position={Position.Left} style={{ visibility: data.isArcMode ? 'visible' : 'hidden' }} />
     </div>
   );
 };

@@ -31,6 +31,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Button } from '@/components/ui/button';
+import { Toggle } from './components/ui/toggle';
 import { Separator } from '@/components/ui/separator';
 
 import { Circle, Square, MoveRight, Play } from 'lucide-react';
@@ -130,10 +131,10 @@ const DnDFlow = () => {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span>
-                      <Button variant="ghost" size="icon">
-                        <MoveRight className="h-4 w-4" />
-                        <span className="sr-only">Add Arc</span>
-                      </Button>
+                    <Toggle aria-label="Toggle Arc">
+                      <MoveRight className="h-4 w-4" />
+                      <span className="sr-only">Add Arc</span>
+                    </Toggle>
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -247,7 +248,7 @@ export default function App() {
       {/* Right Panel */}
       <ResizablePanel collapsible defaultSize={20}>
         <div className="p-4">
-          <h2 className="font-bold">Transition Properties</h2>
+          <h2 className="font-bold">Properties</h2>
           {/* Add content for the right panel here */}
         </div>
       </ResizablePanel>

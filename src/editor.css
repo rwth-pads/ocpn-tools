@@ -134,6 +134,17 @@
   marker-end: url(#marker-end); /* Add markers for better visibility */
 }
 
+.edge-label-renderer__custom-edge {
+  position: absolute;
+  background-color: white;
+  padding: 0 2px;
+  font-size: 8px;
+}
+ 
+.react-flow__edge-textbg {
+  fill: #f7f9fb;
+}
+
 .cpn-node{
   text-align: center;
   display: flex;
@@ -150,6 +161,9 @@
   max-width: 100px; /* Adjusted width */
   overflow: hidden;
   white-space: nowrap;
+  background-color: white;
+  padding: 0 2px;
+  font-size: 8px;
 }
 
 .transition-node {

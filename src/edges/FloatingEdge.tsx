@@ -1,5 +1,5 @@
 import React from 'react';
-import { getStraightPath, useInternalNode } from '@xyflow/react';
+import { getStraightPath, useInternalNode, EdgeLabelRenderer } from '@xyflow/react';
 import { getEdgeParams } from '../utils.js';
 
 interface FloatingEdgeProps {
@@ -8,9 +8,10 @@ interface FloatingEdgeProps {
   target: string;
   markerEnd?: string;
   style?: React.CSSProperties;
+  label?: string; // Optional label for the edge
 }
 
-function FloatingEdge({ id, source, target, markerEnd, style }: FloatingEdgeProps): JSX.Element | null {
+function FloatingEdge({ id, source, target, markerEnd, style, label }: FloatingEdgeProps): JSX.Element | null {
   const sourceNode = useInternalNode(source);
   const targetNode = useInternalNode(target);
 
@@ -20,7 +21,7 @@ function FloatingEdge({ id, source, target, markerEnd, style }: FloatingEdgeProp
 
   const { sx, sy, tx, ty } = getEdgeParams(sourceNode, targetNode);
 
-  const [edgePath] = getStraightPath({
+  const [edgePath, labelX, labelY] = getStraightPath({
     sourceX: sx,
     sourceY: sy,
     targetX: tx,
@@ -28,13 +29,27 @@ function FloatingEdge({ id, source, target, markerEnd, style }: FloatingEdgeProp
   });
 
   return (
-    <path
-      id={id}
-      className="react-flow__edge-path"
-      d={edgePath}
-      markerEnd={markerEnd}
-      style={style}
-    />
+    <g>
+      {/* Edge Path */}
+      <path
+        id={id}
+        className="react-flow__edge-path"
+        d={edgePath}
+        markerEnd={markerEnd}
+        style={style}
+      />
+      {/* Label using EdgeLabelRenderer */}
+      {label && (
+        <EdgeLabelRenderer>
+          <div style={{
+            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+          }}
+            className="edge-label-renderer__custom-edge nodrag nopan">
+            {label}
+          </div>
+        </EdgeLabelRenderer>
+      )}
+    </g>
   );
 }
 

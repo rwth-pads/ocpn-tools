@@ -1,7 +1,20 @@
 import { memo } from 'react';
 import { Handle, Position, NodeResizer, useConnection } from '@xyflow/react';
 
-const TransitionNode = ({ id, data, selected }) => {
+// Export the interface so it can be imported elsewhere
+export interface TransitionNodeData {
+  label: string;
+  isArcMode: boolean;
+  type: string;
+}
+
+export interface TransitionNodeProps {
+  id: string;
+  data: TransitionNodeData;
+  selected: boolean;
+}
+
+const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, selected }) => {
   const connection = useConnection();
 
   const isTarget = connection.inProgress && connection.fromNode.id !== id;

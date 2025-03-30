@@ -11,16 +11,29 @@ import {
   useEdgesState,
   useReactFlow,
 } from '@xyflow/react';
+import { useShallow } from 'zustand/react/shallow';
 
 import '@xyflow/react/dist/style.css';
 
 import { Toolbar } from "@/components/Toolbar";
 
-import { initialNodes, nodeTypes } from '../nodes'
-import { initialEdges, edgeTypes } from '../edges';
-
 import CustomConnectionLine from '../edges/CustomConnectionLine';
 import { useDnD } from '../utils/DnDContext';
+
+import useStore from '@/stores/store';
+
+import { nodeTypes } from '../nodes';
+import { edgeTypes } from '../edges';
+
+const selector = (state) => ({
+  nodes: state.nodes,
+  edges: state.edges,
+  onNodesChange: state.onNodesChange,
+  onEdgesChange: state.onEdgesChange,
+  onConnect: state.onConnect,
+  setSelectedElement: state.setSelectedElement,
+  toggleArcMode: state.toggleArcMode,
+});
 
 const defaultEdgeOptions = {
   type: 'floating',
@@ -32,17 +45,20 @@ const defaultEdgeOptions = {
   },
 };
 
-const CPNCanvas = ({ isArcMode, setSelectedElement }) => {
+const CPNCanvas = () => {
   const reactFlowWrapper = useRef(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  
+  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, setSelectedElement, toggleArcMode } = useStore(
+    useShallow(selector),
+  );
+
   const { screenToFlowPosition } = useReactFlow();
   const [type, setType] = useDnD();
 
-  const onConnect = useCallback(
-    (connection) => setEdges((eds) => addEdge(connection, eds)),
-    [setEdges]
-  );
+  // const onConnect = useCallback(
+  //   (connection) => setEdges((eds) => addEdge(connection, eds)),
+  //   [setEdges]
+  // );
 
   const onDragOver = useCallback((event) => {
     event.preventDefault();
@@ -68,43 +84,31 @@ const CPNCanvas = ({ isArcMode, setSelectedElement }) => {
       });
 
       const newNode = {
-        id: `dndnode_${Date.now()}`,
+        id: `node_${Date.now()}`,
         type,
         position,
         data: { label: `${type}` },
       };
 
-      setNodes((nds) => nds.concat(newNode));
+      useStore.getState().addNode(newNode);
     },
     [screenToFlowPosition, type]
   );
 
   // Handle node selection
   const onNodeClick = useCallback((event: React.MouseEvent, node: any) => {
-    setSelectedElement({ type: "node", data: node })
-  }, []);
+    setSelectedElement({ type: "node", element: node })
+  }, [setSelectedElement]);
 
   // Handle edge selection
   const onEdgeClick = useCallback((event: React.MouseEvent, edge: any) => {
-    setSelectedElement({ type: "edge", data: edge })
-  }, [])
+    setSelectedElement({ type: "edge", element: edge })
+  }, [setSelectedElement])
 
   // Handle background click (deselect)
   const onPaneClick = useCallback(() => {
     setSelectedElement(null)
-  }, [])
-
-  const toggleArcMode = useCallback(
-    (state) => {
-      setNodes((nds) =>
-        nds.map((node) => ({
-          ...node,
-          data: { ...node.data, isArcMode: state },
-        }))
-      );
-    },
-    [setNodes]
-  );
+  }, [setSelectedElement])
 
   return (
     <div className="dndflow">

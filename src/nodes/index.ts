@@ -2,7 +2,11 @@ import { PlaceNode } from './PlaceNode';
 import TransitionNode from './TransitionNode';
 
 export const initialNodes = [
-  { id: 'a', type: 'place', position: { x: -200, y: 0 }, data: { label: 'start' } },
+  { id: 'a',
+    type: 'place',
+    position: { x: -200, y: 0 },
+    data: { label: 'start', colorSet: 'INT', initialMarking: '0' }
+  },
   {
     id: 'b',
     type: 'transition',
@@ -13,7 +17,7 @@ export const initialNodes = [
     id: 'c',
     type: 'place',
     position: { x: 0, y: 200 },
-    data: { label: 'end place' },
+    data: { label: 'end place', colorSet: 'INT', initialMarking: '0' },
   },
 ];
 

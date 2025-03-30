@@ -1,13 +1,26 @@
 import React from 'react';
+import useStore from '@/stores/store';
 
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SelectedElement } from '@/types'; // Import the SelectedElement type
 
-const PlaceProperties = ({ selectedElement, updateNodeData, colorSets }) => {
-  const { id, data, style } = selectedElement?.data || {}
-  const nodeWidth = style?.width || 80
-  const nodeHeight = style?.height || 80
+const PlaceProperties = ({ colorSets }) => {
+  const selectedElement = useStore((state) => state.selectedElement) as SelectedElement | null;
+  const updateNodeData = useStore((state) => state.updateNodeData);
+
+  // Ensure selectedElement is a node and has the correct data type
+  if (!selectedElement || selectedElement.type !== 'node' || !selectedElement.element) {
+    return <div>No node selected</div>;
+  }
+
+  const { id, data } = selectedElement.element;
+
+  // Type guard to ensure data is of type PlaceNodeData
+  if (!('colorSet' in data)) {
+    return <div>Invalid node type</div>;
+  }
 
   return (
     <div className="space-y-4">
@@ -15,7 +28,7 @@ const PlaceProperties = ({ selectedElement, updateNodeData, colorSets }) => {
         <Label htmlFor="label">Label</Label>
         <Input
           id="label"
-          value={data?.label || ""}
+          value={data.label || ""}
           onChange={(e) => updateNodeData(id, { ...data, label: e.target.value })}
         />
       </div>
@@ -23,14 +36,14 @@ const PlaceProperties = ({ selectedElement, updateNodeData, colorSets }) => {
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="colorSet">Color Set</Label>
         <Select
-          value={data?.colorSet || "INT"}
+          value={data.colorSet || "INT"}
           onValueChange={(value) => {
-            const colorSetObj = colorSets.find((cs) => cs.name === value)
+            const colorSetObj = colorSets.find((cs) => cs.name === value);
             updateNodeData(id, {
               ...data,
               colorSet: value,
               colorSetColor: colorSetObj?.color,
-            })
+            });
           }}
         >
           <SelectTrigger>
@@ -40,7 +53,10 @@ const PlaceProperties = ({ selectedElement, updateNodeData, colorSets }) => {
             {colorSets.map((cs) => (
               <SelectItem key={cs.id} value={cs.name}>
                 <div className="flex items-center">
-                  <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: cs.color || "#3b82f6" }}></div>
+                  <div
+                    className="w-3 h-3 rounded-full mr-2"
+                    style={{ backgroundColor: cs.color || "#3b82f6" }}
+                  ></div>
                   {cs.name}
                 </div>
               </SelectItem>
@@ -53,7 +69,7 @@ const PlaceProperties = ({ selectedElement, updateNodeData, colorSets }) => {
         <Label htmlFor="initialMarking">Initial Marking</Label>
         <Input
           id="initialMarking"
-          value={data?.initialMarking || ""}
+          value={data.initialMarking || ""}
           onChange={(e) => updateNodeData(id, { ...data, initialMarking: e.target.value })}
         />
       </div>

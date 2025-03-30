@@ -10,9 +10,6 @@ import type { ColorSet, Variable, Priority } from '@/components/DeclarationManag
 import { v4 as uuidv4 } from 'uuid';
 
 export default function App() {
-  const [isArcMode, setIsArcMode] = useState(false);
-  const [selectedElement, setSelectedElement] = useState<any>(null);
-
   // Declaration states
   const [colorSets, setColorSets] = useState<ColorSet[]>([
     { id: uuidv4(), name: "INT", type: "basic", definition: "colset INT = int;", color: "#3b82f6" },
@@ -34,7 +31,6 @@ export default function App() {
       <ResizablePanelGroup direction="horizontal">
         {/* Left Panel */}
         <Sidebar
-          selectedElement={selectedElement}
           colorSets={colorSets}
           variables={variables}
           priorities={priorities}
@@ -54,7 +50,7 @@ export default function App() {
         <ResizablePanel>
           <ReactFlowProvider>
             <DnDProvider>
-              <CPNCanvas isArcMode={isArcMode} setSelectedElement={setSelectedElement} />
+              <CPNCanvas />
             </DnDProvider>
           </ReactFlowProvider>
         </ResizablePanel>

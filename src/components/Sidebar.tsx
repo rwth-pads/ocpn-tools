@@ -1,17 +1,17 @@
 import React from 'react';
+import useStore from '@/stores/store';
 import { ResizablePanel } from '@/components/ui/resizable';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-import { Save, Trash2, CircleIcon, SquareIcon, ArrowRightIcon, Settings } from 'lucide-react';
+import { Save, Trash2 } from 'lucide-react';
 import PlaceProperties from './PlaceProperties';
 
 import { DeclarationManager, type ColorSet, type Variable, type Priority } from '@/components/DeclarationManager';
 
 const Sidebar = ({
-  selectedElement,
   colorSets,
   variables,
   priorities,
@@ -25,70 +25,36 @@ const Sidebar = ({
   onReorderVariables,
   onReorderPriorities,
 }) => {
-
-  const updateNodeData = (id: string, newData: any) => {
-    // setNodes((nds) =>
-    //   nds.map((node) => {
-    //     if (node.id === id) {
-    //       // Create a completely new node object with the updated data
-    //       return {
-    //         ...node,
-    //         data: newData,
-    //       }
-    //     }
-    //     return node
-    //   }),
-    // )
-
-    // // Update place colors if color set changed
-    // if (newData.colorSet) {
-    //   updatePlaceColors()
-    // }
-  }
-
-  const updateNodeStyle = (id: string, style: { width: number; height: number }) => {
-    // setNodes((nds) =>
-    //   nds.map((node) => {
-    //     if (node.id === id) {
-    //       return {
-    //         ...node,
-    //         style: style,
-    //       }
-    //     }
-    //     return node
-    //   }),
-    // )
-  }
+  // Access selectedElement from the store
+  const selectedElement = useStore((state) => state.selectedElement);
 
   const renderElementProperties = () => {
     if (!selectedElement) {
-      return <div className="p-4 text-center text-muted-foreground">Select an element to view its properties</div>
+      return <div className="p-4 text-center text-muted-foreground">Select an element to view its properties</div>;
     }
 
-    if (selectedElement.type === "node") {
-      const nodeType = selectedElement.data.type
+    if (selectedElement.type === 'node') {
+      const nodeType = selectedElement.element.type;
 
-      if (nodeType === "place") {
+      if (nodeType === 'place') {
         return (
           <PlaceProperties
-            selectedElement={selectedElement}
-            updateNodeData={updateNodeData}
-            colorSets={colorSets} />
+            colorSets={colorSets}
+          />
         );
-      } else if (nodeType === "transition") {
-        //return renderTransitionProperties()
+      } else if (nodeType === 'transition') {
+        // return renderTransitionProperties();
       }
-    } else if (selectedElement.type === "edge") {
-      //return renderArcProperties()
+    } else if (selectedElement.type === 'edge') {
+      // return renderArcProperties();
     }
 
-    return null
-  }
+    return null;
+  };
 
   return (
     <ResizablePanel defaultSize={20} className="min-w-[400px]">
       <ScrollArea className="h-full">
-
         <div className="px-4 py-2">
           <div className="space-y-4">
             <div className="space-y-2">
@@ -97,12 +63,12 @@ const Sidebar = ({
                 <CardHeader className="px-4 pb-2">
                   <CardTitle className="text-md">
                     {selectedElement
-                      ? selectedElement.type === "node"
-                        ? selectedElement.data.type === "place"
-                          ? "Place Properties"
-                          : "Transition Properties"
-                        : "Arc Properties"
-                      : "Element Properties"}
+                      ? selectedElement.type === 'node'
+                        ? selectedElement.element.type === 'place'
+                          ? 'Place Properties'
+                          : 'Transition Properties'
+                        : 'Arc Properties'
+                      : 'Element Properties'}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 pt-2">

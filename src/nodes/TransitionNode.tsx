@@ -1,7 +1,11 @@
 import { memo } from 'react';
-import { Handle, Position, NodeResizer } from '@xyflow/react';
+import { Handle, Position, NodeResizer, useConnection } from '@xyflow/react';
 
-const TransitionNode = ({ data, selected }) => {
+const TransitionNode = ({ id, data, selected }) => {
+  const connection = useConnection();
+
+  const isTarget = connection.inProgress && connection.fromNode.id !== id;
+
   return (
     <div className="cpn-node transition-node">
       <NodeResizer
@@ -10,18 +14,17 @@ const TransitionNode = ({ data, selected }) => {
         minHeight={30}
       />
       <label htmlFor="text">{data.label}</label>
-      {/* Source Handle with visibility toggled */}
       <Handle
+        className="custom-handle"
         type="source"
         position={Position.Right}
-        style={{ visibility: data.isArcMode ? 'visible' : 'hidden' }}
+        style={{ visibility: (data.isArcMode && !connection.inProgress) ? 'visible' : 'hidden' }}
       />
-      {/* Target Handle with visibility toggled */}
       <Handle
+        className="custom-handle"
         type="target"
         position={Position.Left}
-        style={{ visibility: data.isArcMode ? 'visible' : 'hidden' }}
-      />
+        style={{ visibility: (data.isArcMode && isTarget) ? 'visible' : 'hidden' }} />
     </div>
   );
 };

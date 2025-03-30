@@ -8,7 +8,7 @@ interface FloatingEdgeProps {
   target: string;
   markerEnd?: string;
   style?: React.CSSProperties;
-  label?: string; // Optional label for the edge
+  label?: React.ReactNode; // Optional label for the edge
 }
 
 function FloatingEdge({ id, source, target, markerEnd, style, label }: FloatingEdgeProps): JSX.Element | null {

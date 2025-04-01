@@ -68,7 +68,7 @@
   border-color: #d9d9d9;
 }
 
-/* .react-flow__node.selectable:focus:active {
+/*.react-flow__node.selectable:focus:active {
   /* box-shadow: var(--xy-node-boxshadow-default);
 } */
 
@@ -78,10 +78,10 @@
   border-color: var(--xy-theme-hover);
 }
 
-/* .react-flow__node.selectable.selected {
+/*.react-flow__node.selectable.selected {
   /* border-color: var(--xy-theme-selected);
   box-shadow: var(--xy-node-boxshadow-default);
-} */
+}*/
 
 .react-flow__node-group {
   background-color: rgba(207, 182, 255, 0.4);
@@ -94,6 +94,7 @@
 }
 
 .react-flow__handle {
+  display: none;
   background-color: var(--xy-handle-background-color-default);
 }
 
@@ -133,17 +134,6 @@
   marker-end: url(#marker-end); /* Add markers for better visibility */
 }
 
-.edge-label-renderer__custom-edge {
-  position: absolute;
-  background-color: white;
-  padding: 0 2px;
-  font-size: 8px;
-}
- 
-.react-flow__edge-textbg {
-  fill: #f7f9fb;
-}
-
 .cpn-node{
   text-align: center;
   display: flex;
@@ -153,16 +143,13 @@
 }
 
 .cpn-node label{
-  /* font-weight: 500; */
-  font-size: 7px; /* Reduced font size */
+  font-weight: 500;
+  font-size: 9px; /* Reduced font size */
   position: absolute;
-  /* bottom: -15px; Adjusted position */
+  bottom: -15px; /* Adjusted position */
   max-width: 100px; /* Adjusted width */
   overflow: hidden;
   white-space: nowrap;
-  background-color: white;
-  padding: 0 2px;
-  font-size: 8px;
 }
 
 .transition-node {
@@ -180,24 +167,4 @@
   height: 100%;
   border-radius: calc(100% * (var(--current-width, 30) / var(--current-height, 30)));
   border: 1px solid;
-}
-
-.place-node .initial-marking {
-  position: absolute;
-  top: 0;
-  left: 0;
-  border-radius: calc(100% * (var(--current-width, 30) / var(--current-height, 30)));
-}
-
-.custom-handle {
-  width: 100%;
-  height: 100%;
-  background: blue;
-  position: absolute;
-  top: 0;
-  left: 0;
-  border-radius: 0;
-  transform: none;
-  border: none;
-  opacity: 0;
 }

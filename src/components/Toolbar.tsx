@@ -11,6 +11,8 @@ import {
   TooltipProvider,
 } from '@/components/ui/tooltip';
 
+import { useDnD } from '@/utils/DnDContext';
+
 // import { SaveDialog } from "@/components/dialogs/save-dialog"
 // import { OpenDialog } from "@/components/dialogs/open-dialog"
 // import {
@@ -25,9 +27,12 @@ export function Toolbar({ toggleArcMode }) {
   //const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   //const [openDialogOpen, setOpenDialogOpen] = useState(false)
 
+  const [_, setType] = useDnD();
+
   const onDragStart = (event: DragEvent<HTMLButtonElement>, nodeType: string) => {
-    event.dataTransfer.setData("application/reactflow", nodeType)
-    event.dataTransfer.effectAllowed = "move"
+    //event.dataTransfer.setData("application/reactflow", nodeType);
+    setType(nodeType);
+    event.dataTransfer.effectAllowed = "move";
   }
 
   // const handleSave = (format: string) => {

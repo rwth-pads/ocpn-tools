@@ -93,7 +93,7 @@
   stroke: var(--xy-theme-edge-hover);
 }
 
-.react-flow__handle {
+/* .react-flow__handle {
   display: none;
   background-color: var(--xy-handle-background-color-default);
 }
@@ -108,7 +108,7 @@
 .react-flow__handle.connectingfrom,
 .react-flow__handle.connectingto {
   border-color: var(--xy-theme-edge-hover);
-}
+} */
 
 .react-flow__node-resizer {
   border-radius: 0;
@@ -146,7 +146,6 @@
   font-weight: 500;
   font-size: 9px; /* Reduced font size */
   position: absolute;
-  bottom: -15px; /* Adjusted position */
   max-width: 100px; /* Adjusted width */
   overflow: hidden;
   white-space: nowrap;
@@ -167,4 +166,17 @@
   height: 100%;
   border-radius: calc(100% * (var(--current-width, 30) / var(--current-height, 30)));
   border: 1px solid;
+}
+
+.custom-handle {
+  width: 100%;
+  height: 100%;
+  background: blue;
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 0;
+  transform: none;
+  border: none;
+  opacity: 0;
 }

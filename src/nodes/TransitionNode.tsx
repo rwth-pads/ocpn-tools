@@ -17,7 +17,7 @@ export interface TransitionNodeProps {
 const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, selected }) => {
   const connection = useConnection();
 
-  const isTarget = connection.inProgress && connection.fromNode.id !== id;
+  const isTarget = connection.inProgress && connection.fromNode.id !== id && connection.fromNode.type === 'place';
 
   return (
     <div className="cpn-node transition-node">
@@ -37,7 +37,9 @@ const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, selected }) =
         className="custom-handle"
         type="target"
         position={Position.Left}
-        style={{ visibility: (data.isArcMode && isTarget) ? 'visible' : 'hidden' }} />
+        style={{ visibility: (data.isArcMode && isTarget) ? 'visible' : 'hidden' }}
+        isConnectable={isTarget}
+      />
     </div>
   );
 };

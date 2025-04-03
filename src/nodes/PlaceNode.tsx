@@ -22,7 +22,7 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
   const minWidth = 30
   const minHeight = 30
 
-  const isTarget = connection.inProgress && connection.fromNode.id !== id;
+  const isTarget = connection.inProgress && connection.fromNode.id !== id && connection.fromNode.type === 'transition';
 
   return (
     <div className="relative cpn-node place-node">
@@ -60,6 +60,7 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
         type="target"
         position={Position.Left}
         style={{ visibility: data.isArcMode && isTarget ? 'visible' : 'hidden' }}
+        isConnectable={isTarget}
       />
     </div>
   );

@@ -148,6 +148,7 @@
   position: absolute;
   max-width: 100px;
   overflow: hidden;
+  cursor: pointer;
 }
 
 .transition-node {
@@ -156,6 +157,7 @@
   width: 100%;
   height: 100%;
   border: var(--xy-node-border-default);
+  cursor: pointer;
 }
 
 .place-node {
@@ -165,6 +167,7 @@
   height: 100%;
   border-radius: calc(100% * (var(--current-width, 30) / var(--current-height, 30)));
   border: 1px solid;
+  cursor: pointer;
 }
 
 .custom-handle {

@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { Save, Trash2 } from 'lucide-react';
 import PlaceProperties from './PlaceProperties';
+import TransitionProperties from './TransitionProperties';
 
 import { DeclarationManager, type ColorSet, type Variable, type Priority } from '@/components/DeclarationManager';
 
@@ -43,7 +44,11 @@ const Sidebar = ({
           />
         );
       } else if (nodeType === 'transition') {
-        // return renderTransitionProperties();
+        return (
+          <TransitionProperties
+            priorities={priorities}
+          />
+        );
       }
     } else if (selectedElement.type === 'edge') {
       // return renderArcProperties();

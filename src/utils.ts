@@ -1,22 +1,34 @@
 import { Position, MarkerType } from '@xyflow/react';
- 
+
 // this helper function returns the intersection point
 // of the line between the center of the intersectionNode and the target node
 function getNodeIntersection(intersectionNode, targetNode) {
-  // https://math.stackexchange.com/questions/1724792/an-algorithm-for-finding-the-intersection-point-between-a-center-of-vision-and-a
   const { width: intersectionNodeWidth, height: intersectionNodeHeight } =
     intersectionNode.measured;
   const intersectionNodePosition = intersectionNode.internals.positionAbsolute;
   const targetPosition = targetNode.internals.positionAbsolute;
- 
+
   const w = intersectionNodeWidth / 2;
   const h = intersectionNodeHeight / 2;
- 
+
   const x2 = intersectionNodePosition.x + w;
   const y2 = intersectionNodePosition.y + h;
   const x1 = targetPosition.x + targetNode.measured.width / 2;
   const y1 = targetPosition.y + targetNode.measured.height / 2;
- 
+
+  if (intersectionNode.type === 'place') {
+    // Adjust for elliptical nodes
+    const dx = x1 - x2;
+    const dy = y1 - y2;
+    const angle = Math.atan2(dy, dx);
+    const rx = w;
+    const ry = h;
+    const x = x2 + rx * Math.cos(angle);
+    const y = y2 + ry * Math.sin(angle);
+    return { x, y };
+  }
+
+  // Default for rectangular nodes
   const xx1 = (x1 - x2) / (2 * w) - (y1 - y2) / (2 * h);
   const yy1 = (x1 - x2) / (2 * w) + (y1 - y2) / (2 * h);
   const a = 1 / (Math.abs(xx1) + Math.abs(yy1) || 1);
@@ -24,18 +36,29 @@ function getNodeIntersection(intersectionNode, targetNode) {
   const yy3 = a * yy1;
   const x = w * (xx3 + yy3) + x2;
   const y = h * (-xx3 + yy3) + y2;
- 
+
   return { x, y };
 }
- 
-// returns the position (top,right,bottom or right) passed node compared to the intersection point
+
+// returns the position (top, right, bottom, or left) of the node compared to the intersection point
 function getEdgePosition(node, intersectionPoint) {
   const n = { ...node.internals.positionAbsolute, ...node };
   const nx = Math.round(n.x);
   const ny = Math.round(n.y);
   const px = Math.round(intersectionPoint.x);
   const py = Math.round(intersectionPoint.y);
- 
+
+  if (node.type === 'place') {
+    // Adjust for elliptical nodes
+    const dx = px - (nx + n.measured.width / 2);
+    const dy = py - (ny + n.measured.height / 2);
+    const angle = Math.atan2(dy, dx);
+    if (Math.abs(angle) < Math.PI / 4) return Position.Right;
+    if (Math.abs(angle) > (3 * Math.PI) / 4) return Position.Left;
+    return angle > 0 ? Position.Bottom : Position.Top;
+  }
+
+  // Default for rectangular nodes
   if (px <= nx + 1) {
     return Position.Left;
   }
@@ -48,18 +71,18 @@ function getEdgePosition(node, intersectionPoint) {
   if (py >= n.y + n.measured.height - 1) {
     return Position.Bottom;
   }
- 
+
   return Position.Top;
 }
- 
+
 // returns the parameters (sx, sy, tx, ty, sourcePos, targetPos) you need to create an edge
 export function getEdgeParams(source, target) {
   const sourceIntersectionPoint = getNodeIntersection(source, target);
   const targetIntersectionPoint = getNodeIntersection(target, source);
- 
+
   const sourcePos = getEdgePosition(source, sourceIntersectionPoint);
   const targetPos = getEdgePosition(target, targetIntersectionPoint);
- 
+
   return {
     sx: sourceIntersectionPoint.x,
     sy: sourceIntersectionPoint.y,

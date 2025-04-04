@@ -6,6 +6,10 @@ export interface TransitionNodeData {
   label: string;
   isArcMode: boolean;
   type: string;
+  guard: string;
+  time: string;
+  priority: string;
+  codeSegment: string;
 }
 
 export interface TransitionNodeProps {

@@ -13,7 +13,7 @@ export const initialNodes = [
     position: { x: -100, y: 100 },
     width: 50,
     height: 30,
-    data: { label: 'transition' },
+    data: { label: 'transition', guard: '', time: '', priority: '', codeSegment: '' },
   },
   {
     id: 'c',

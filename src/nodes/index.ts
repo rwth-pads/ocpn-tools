@@ -11,12 +11,16 @@ export const initialNodes = [
     id: 'b',
     type: 'transition',
     position: { x: -100, y: 100 },
+    width: 50,
+    height: 30,
     data: { label: 'transition' },
   },
   {
     id: 'c',
     type: 'place',
     position: { x: 0, y: 200 },
+    width: 50,
+    height: 30,
     data: { label: 'end place', colorSet: 'INT', initialMarking: '0' },
   },
 ];
@@ -25,3 +29,4 @@ export const nodeTypes = {
   'place': PlaceNode,
   'transition': TransitionNode,
 };
+3

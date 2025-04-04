@@ -144,11 +144,10 @@
 
 .cpn-node label{
   font-weight: 500;
-  font-size: 9px; /* Reduced font size */
+  font-size: 9px;
   position: absolute;
-  max-width: 100px; /* Adjusted width */
+  max-width: 100px;
   overflow: hidden;
-  white-space: nowrap;
 }
 
 .transition-node {
@@ -179,4 +178,10 @@
   transform: none;
   border: none;
   opacity: 0;
+}
+
+.edge-label-renderer__custom-edge {
+  position: absolute;
+  background-color: white;
+  font-size: 9px;
 }

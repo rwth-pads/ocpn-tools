@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { Handle, Position, NodeResizer, useConnection } from '@xyflow/react';
+import { Code } from 'lucide-react';
 
 // Export the interface so it can be imported elsewhere
 export interface TransitionNodeData {
@@ -25,6 +26,35 @@ const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, selected }) =
 
   return (
     <div className="cpn-node transition-node">
+
+      {/* Guard - top left corner */}
+      {data.guard && (
+        <div className="absolute text-[8px] font-mono bg-background/80 px-1 top-0 right-full transform -translate-y-4 rounded-md">
+          {data.guard}
+        </div>
+      )}
+
+      {/* Time - top right corner */}
+      {data.time && (
+        <div className="absolute text-[8px] font-mono bg-background/80 px-1 top-0 left-full transform -translate-y-4 rounded-md">
+          {data.time}
+        </div>
+      )}
+
+      {/* Code Segment - bottom right corner */}
+      {data.codeSegment && (
+        <div className="absolute text-[8px] font-mono bg-background/80 px-1 bottom-0 left-full transform translate-y-4 rounded-md">
+          <Code className="h-3 w-3" />
+        </div>
+      )}
+
+      {/* Priority - bottom left corner */}
+      {data.priority && (
+        <div className="absolute text-[8px] font-mono bg-background/80 px-1 bottom-0 right-full transform translate-y-4 rounded-md">
+          {data.priority}
+        </div>
+      )}
+
       <NodeResizer
         isVisible={selected}
         minWidth={15}

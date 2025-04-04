@@ -3,7 +3,7 @@
 ## ToDos
 
 - [x] add arc inscriptions
-- [ ] add priorities
+- [x] add priorities
 - [x] create arcs
 - [x] select element even when dragging
 - [x] add TransitionProperties.tsx

@@ -1,6 +1,6 @@
 import { useState, type DragEvent } from "react"
 import { Button } from "@/components/ui/button"
-import { Circle, Square, ArrowRight, Save, FolderOpen, Play } from "lucide-react"
+import { Circle, Square, ArrowRight, Network, FolderOpen, Play } from "lucide-react"
 
 import { Toggle } from '@/components/ui/toggle';
 
@@ -10,6 +10,8 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from '@/components/ui/tooltip';
+
+import { Separator } from '@/components/ui/separator';
 
 import { useDnD } from '@/utils/DnDContext';
 
@@ -23,7 +25,7 @@ import { useDnD } from '@/utils/DnDContext';
 //   parseFileContent,
 // } from "@/utils/file-operations"
 
-export function Toolbar({ toggleArcMode }) {
+export function Toolbar({ toggleArcMode, layoutGraph }) {
   //const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   //const [openDialogOpen, setOpenDialogOpen] = useState(false)
 
@@ -111,10 +113,17 @@ export function Toolbar({ toggleArcMode }) {
           </TooltipProvider>
         </div>
 
-        {/* <div className="flex items-center gap-2 h-6">
+        <div className="flex items-center gap-2 h-6">
           <Separator orientation="vertical" className="mx-1 h-6" />
         </div>
 
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" title="Layout Graph" onClick={layoutGraph}>
+            <Network className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/*
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" title="Save">
             <Save className="h-5 w-5" />
@@ -123,7 +132,7 @@ export function Toolbar({ toggleArcMode }) {
             <FolderOpen className="h-5 w-5" />
           </Button>
         </div>
-
+        
         <div className="flex items-center gap-2 h-6">
           <Separator orientation="vertical" className="mx-1 h-6" />
         </div>

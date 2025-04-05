@@ -13,6 +13,8 @@ import {
 } from '@xyflow/react';
 import { useShallow } from 'zustand/react/shallow';
 
+import Dagre from '@dagrejs/dagre';
+
 import '@xyflow/react/dist/style.css';
 
 import { Toolbar } from "@/components/Toolbar";
@@ -30,6 +32,8 @@ const selector = (state) => ({
   edges: state.edges,
   onNodesChange: state.onNodesChange,
   onEdgesChange: state.onEdgesChange,
+  setNodes: state.setNodes,
+  setEdges: state.setEdges,
   onConnect: state.onConnect,
   setSelectedElement: state.setSelectedElement,
   toggleArcMode: state.toggleArcMode,
@@ -45,14 +49,43 @@ const defaultEdgeOptions = {
   },
 };
 
+const getLayoutedElements = (nodes, edges, options) => {
+  const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
+  g.setGraph({ rankdir: options.direction });
+ 
+  edges.forEach((edge) => g.setEdge(edge.source, edge.target));
+  nodes.forEach((node) =>
+    g.setNode(node.id, {
+      ...node,
+      width: node.measured?.width ?? 0,
+      height: node.measured?.height ?? 0,
+    }),
+  );
+ 
+  Dagre.layout(g);
+ 
+  return {
+    nodes: nodes.map((node) => {
+      const position = g.node(node.id);
+      // We are shifting the dagre node position (anchor=center center) to the top left
+      // so it matches the React Flow node anchor point (top left).
+      const x = position.x - (node.measured?.width ?? 0) / 2;
+      const y = position.y - (node.measured?.height ?? 0) / 2;
+ 
+      return { ...node, position: { x, y } };
+    }),
+    edges,
+  };
+};
+
 const CPNCanvas = () => {
   const reactFlowWrapper = useRef(null);
   
-  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, setSelectedElement, toggleArcMode } = useStore(
+  const { nodes, edges, onNodesChange, onEdgesChange, setNodes, setEdges, onConnect, setSelectedElement, toggleArcMode } = useStore(
     useShallow(selector),
   );
 
-  const { screenToFlowPosition } = useReactFlow();
+  const { fitView, screenToFlowPosition } = useReactFlow();
   const [type, setType] = useDnD();
 
   // const onConnect = useCallback(
@@ -110,6 +143,19 @@ const CPNCanvas = () => {
     setSelectedElement(null)
   }, [setSelectedElement])
 
+  const onLayout = useCallback(
+    () => {
+      const direction = 'LR';
+      const layouted = getLayoutedElements(nodes, edges, { direction });
+ 
+      setNodes([...layouted.nodes]);
+      setEdges([...layouted.edges]);
+ 
+      fitView();
+    },
+    [nodes, edges],
+  );
+
   return (
     <div className="dndflow">
       <div className="flex flex-col h-screen">
@@ -141,7 +187,7 @@ const CPNCanvas = () => {
             onInit={(instance) => {
               setTimeout(() => {
                 instance.fitView({
-                  maxZoom: 2,
+                  maxZoom: 4,
                 });
               }, 0);
             }}
@@ -150,7 +196,7 @@ const CPNCanvas = () => {
             <MiniMap />
             <Controls />
             <Panel position="top-center">
-              <Toolbar toggleArcMode={toggleArcMode} />
+              <Toolbar toggleArcMode={toggleArcMode} layoutGraph={onLayout} />
             </Panel>
           </ReactFlow>
         </div>

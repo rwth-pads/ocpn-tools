@@ -4,11 +4,18 @@ import { AppState, AppNode, SelectedElement } from '@/types';
  
 import { initialNodes } from '@/nodes';
 import { initialEdges } from '@/edges';
+
+import { initialColorSets } from '@/declarations';
+import { initialVariables } from '@/declarations';
+import { initialPriorities } from '@/declarations';
  
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useStore = create<AppState>((set, get) => ({
   nodes: initialNodes,
   edges: initialEdges,
+  colorSets: initialColorSets,
+  variables: initialVariables,
+  priorities: initialPriorities,
   selectedElement: null as SelectedElement | null,
 
   // Actions

@@ -199,8 +199,8 @@ export function DeclarationManager({
     <div className="space-y-4">
       {/* Color Sets Section */}
       <div className="space-y-3">
-        <Label>Color Sets</Label>
-        <div className="flex items-center gap-2">
+        <h2 className="font-bold">Color Sets</h2>
+        {/* <div className="flex items-center gap-2">
           <Input
             placeholder="Name (e.g., DATA)"
             className="flex-1"
@@ -222,7 +222,7 @@ export function DeclarationManager({
 
         <Button size="sm" variant="outline" onClick={handleAddColorSet}>
           Add Color Set
-        </Button>
+        </Button> */}
 
         <div className="space-y-2 max-h-[200px] overflow-y-auto">
           {colorSets.map((cs) => (
@@ -272,7 +272,7 @@ export function DeclarationManager({
                 setAdvancedEditorOpen(true)
               }}
             >
-              Advanced Color Set Editor
+              Create New Color Set
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
@@ -292,35 +292,7 @@ export function DeclarationManager({
 
       {/* Variables Section */}
       <div className="space-y-3">
-        <Label>Variables</Label>
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Name (e.g., n)"
-            className="flex-1"
-            value={newVariable.name}
-            onChange={(e) => setNewVariable({ ...newVariable, name: e.target.value })}
-          />
-          <Select
-            value={newVariable.colorSet}
-            onValueChange={(value) => setNewVariable({ ...newVariable, colorSet: value })}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Color Set" />
-            </SelectTrigger>
-            <SelectContent>
-              {colorSets.map((cs) => (
-                <SelectItem key={cs.id} value={cs.name}>
-                  {cs.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Button size="sm" variant="outline" onClick={handleAddVariable}>
-          Add Variable
-        </Button>
-
+        <h2 className="font-bold">Variables</h2>
         <div className="space-y-2 max-h-[200px] overflow-y-auto">
           {variables.map((v) => (
             <div
@@ -349,31 +321,38 @@ export function DeclarationManager({
             </div>
           ))}
         </div>
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Name (e.g., n)"
+            className="flex-1"
+            value={newVariable.name}
+            onChange={(e) => setNewVariable({ ...newVariable, name: e.target.value })}
+          /> : 
+          <Select
+            value={newVariable.colorSet}
+            onValueChange={(value) => setNewVariable({ ...newVariable, colorSet: value })}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Color Set" />
+            </SelectTrigger>
+            <SelectContent>
+              {colorSets.map((cs) => (
+                <SelectItem key={cs.id} value={cs.name}>
+                  {cs.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Button size="sm" variant="outline" onClick={handleAddVariable}>
+          Add Variable
+        </Button>
       </div>
 
       {/* Priorities Section */}
       <div className="space-y-3">
-        <Label>Priorities</Label>
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Name (e.g., HIGH)"
-            className="flex-1"
-            value={newPriority.name}
-            onChange={(e) => setNewPriority({ ...newPriority, name: e.target.value })}
-          />
-          <Input
-            type="number"
-            placeholder="Level (e.g., 100)"
-            className="w-[120px]"
-            value={newPriority.level || ""}
-            onChange={(e) => setNewPriority({ ...newPriority, level: Number.parseInt(e.target.value) || 0 })}
-          />
-        </div>
-
-        <Button size="sm" variant="outline" onClick={handleAddPriority}>
-          Add Priority
-        </Button>
-
+        <h2 className="font-bold">Priorities</h2>
         <div className="space-y-2 max-h-[200px] overflow-y-auto">
           {priorities.map((p) => (
             <div
@@ -402,6 +381,26 @@ export function DeclarationManager({
             </div>
           ))}
         </div>
+        
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Name (e.g., HIGH)"
+            className="flex-1"
+            value={newPriority.name}
+            onChange={(e) => setNewPriority({ ...newPriority, name: e.target.value })}
+          />
+          <Input
+            type="number"
+            placeholder="Level (e.g., 100)"
+            className="w-[120px]"
+            value={newPriority.level || ""}
+            onChange={(e) => setNewPriority({ ...newPriority, level: Number.parseInt(e.target.value) || 0 })}
+          />
+        </div>
+
+        <Button size="sm" variant="outline" onClick={handleAddPriority}>
+          Add Priority
+        </Button>
       </div>
     </div>
   )

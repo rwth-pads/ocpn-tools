@@ -12,22 +12,13 @@ import TransitionProperties from './TransitionProperties';
 
 import { DeclarationManager, type ColorSet, type Variable, type Priority } from '@/components/DeclarationManager';
 
-const Sidebar = ({
-  colorSets,
-  variables,
-  priorities,
-  onAddColorSet,
-  onAddVariable,
-  onAddPriority,
-  onDeleteColorSet,
-  onDeleteVariable,
-  onDeletePriority,
-  onReorderColorSets,
-  onReorderVariables,
-  onReorderPriorities,
-}) => {
+const Sidebar = () => {
   // Access selectedElement from the store
   const selectedElement = useStore((state) => state.selectedElement);
+
+  const colorSets = useStore((state) => state.colorSets);
+  const variables = useStore((state) => state.variables);
+  const priorities = useStore((state) => state.priorities);
 
   const renderElementProperties = () => {
     if (!selectedElement) {
@@ -98,22 +89,19 @@ const Sidebar = ({
             <Separator orientation="horizontal" className="mt-2" />
 
             <div className="p-4">
-              {/* Variables Section */}
-              <h2 className="font-bold">Variables</h2>
-
               <DeclarationManager
                 colorSets={colorSets}
                 variables={variables}
                 priorities={priorities}
-                onAddColorSet={onAddColorSet}
-                onAddVariable={onAddVariable}
-                onAddPriority={onAddPriority}
-                onDeleteColorSet={onDeleteColorSet}
-                onDeleteVariable={onDeleteVariable}
-                onDeletePriority={onDeletePriority}
-                onReorderColorSets={onReorderColorSets}
-                onReorderVariables={onReorderVariables}
-                onReorderPriorities={onReorderPriorities}
+                onAddColorSet={() => {}}
+                onAddVariable={() => {}}
+                onAddPriority={() => {}}
+                onDeleteColorSet={() => {}}
+                onDeleteVariable={() => {}}
+                onDeletePriority={() => {}}
+                onReorderColorSets={() => {}}
+                onReorderVariables={() => {}}
+                onReorderPriorities={() => {}} 
               />
             </div>
           </div>

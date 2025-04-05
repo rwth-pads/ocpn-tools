@@ -137,6 +137,7 @@ const CPNCanvas = () => {
             fitView
             defaultEdgeOptions={defaultEdgeOptions}
             connectionLineComponent={CustomConnectionLine}
+            maxZoom={4}
             onInit={(instance) => {
               setTimeout(() => {
                 instance.fitView({

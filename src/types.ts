@@ -8,6 +8,8 @@ import {
 import { PlaceNodeProps } from '@/nodes/PlaceNode'; // Import PlaceNodeData
 import { TransitionNodeProps } from '@/nodes/TransitionNode'; // Import TransitionNodeData
 
+import type { ColorSet, Variable, Priority } from '@/components/DeclarationManager';
+
 export type AppNode = Node;
 
 // Define the type for selectedElement
@@ -19,6 +21,9 @@ export type SelectedElement =
 export type AppState = {
   nodes: AppNode[];
   edges: Edge[];
+  colorSets: ColorSet[];
+  variables: Variable[];
+  priorities: Priority[];
   selectedElement: SelectedElement; // Add selectedElement to AppState
   onNodesChange: OnNodesChange<AppNode>;
   onEdgesChange: OnEdgesChange;

@@ -303,9 +303,6 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
                   <SelectValue placeholder="Select base color set" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="INT">INT</SelectItem>
-                  <SelectItem value="BOOL">BOOL</SelectItem>
-                  <SelectItem value="STRING">STRING</SelectItem>
                   {existingColorSets.map((cs) => (
                     <SelectItem key={cs.id} value={cs.name}>
                       {cs.name}
@@ -335,9 +332,6 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
                     <SelectValue placeholder="Add color set" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="INT">INT</SelectItem>
-                    <SelectItem value="BOOL">BOOL</SelectItem>
-                    <SelectItem value="STRING">STRING</SelectItem>
                     {existingColorSets.map((cs) => (
                       <SelectItem key={cs.id} value={cs.name}>
                         {cs.name}
@@ -369,9 +363,6 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
                       <SelectValue placeholder="Type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="INT">INT</SelectItem>
-                      <SelectItem value="BOOL">BOOL</SelectItem>
-                      <SelectItem value="STRING">STRING</SelectItem>
                       {existingColorSets.map((cs) => (
                         <SelectItem key={cs.id} value={cs.name}>
                           {cs.name}
@@ -401,9 +392,6 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
                     <SelectValue placeholder="Select parent color set" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="INT">INT</SelectItem>
-                    <SelectItem value="BOOL">BOOL</SelectItem>
-                    <SelectItem value="STRING">STRING</SelectItem>
                     {existingColorSets.map((cs) => (
                       <SelectItem key={cs.id} value={cs.name}>
                         {cs.name}

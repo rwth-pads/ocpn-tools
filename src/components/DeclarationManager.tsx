@@ -1,68 +1,38 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import type React from "react";
+import useStore from '@/stores/store';
+import { useState } from "react";
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Trash2, GripVertical, Edit } from "lucide-react"
 import { AdvancedColorSetEditor } from "@/components/AdvancedColorSetEditor"
 
-export interface ColorSet {
-  id: string
-  name: string
-  type: string
-  definition: string
-  color?: string // Add color property
-}
-
-export interface Variable {
-  id: string
-  name: string
-  colorSet: string
-}
-
-export interface Priority {
-  id: string
-  name: string
-  level: number
-}
+import { ColorSet } from "@/declarations"
 
 interface DeclarationManagerProps {
-  colorSets: ColorSet[]
-  variables: Variable[]
-  priorities: Priority[]
-  onAddColorSet: (colorSet: Omit<ColorSet, "id">) => void
-  onAddVariable: (variable: Omit<Variable, "id">) => void
-  onAddPriority: (priority: Omit<Priority, "id">) => void
-  onDeleteColorSet: (id: string) => void
-  onDeleteVariable: (id: string) => void
-  onDeletePriority: (id: string) => void
-  onReorderColorSets: (newOrder: ColorSet[]) => void
-  onReorderVariables: (newOrder: Variable[]) => void
-  onReorderPriorities: (newOrder: Priority[]) => void
 }
 
 export function DeclarationManager({
-  colorSets,
-  variables,
-  priorities,
-  onAddColorSet,
-  onAddVariable,
-  onAddPriority,
-  onDeleteColorSet,
-  onDeleteVariable,
-  onDeletePriority,
-  onReorderColorSets,
-  onReorderVariables,
-  onReorderPriorities,
 }: DeclarationManagerProps) {
+  const colorSets = useStore((state) => state.colorSets);
+  const setColorSets = useStore((state) => state.setColorSets);
+  const onAddColorSet = useStore((state) => state.addColorSet);
+  const onDeleteColorSet = useStore((state) => state.deleteColorSet);
+  const variables = useStore((state) => state.variables);
+  const setVariables = useStore((state) => state.setVariables);
+  const onAddVariable = useStore((state) => state.addVariable);
+  const onDeleteVariable = useStore((state) => state.deleteVariable);
+  const priorities = useStore((state) => state.priorities);
+  const setPriorities = useStore((state) => state.setPriorities);
+  const onAddPriority = useStore((state) => state.addPriority);
+  const onDeletePriority = useStore((state) => state.deletePriority);
+
   const [newColorSet, setNewColorSet] = useState({ name: "", type: "basic" })
   const [newVariable, setNewVariable] = useState({ name: "", colorSet: "INT" })
-  const [newPriority, setNewPriority] = useState({ name: "", level: 100 })
+  const [newPriority, setNewPriority] = useState({ name: "", level: 250 })
   const [selectedColorSet, setSelectedColorSet] = useState<ColorSet | undefined>(undefined)
   const [advancedEditorOpen, setAdvancedEditorOpen] = useState(false)
 
@@ -110,7 +80,8 @@ export function DeclarationManager({
     if (selectedColorSet) {
       // Update existing color set
       const updatedColorSets = colorSets.map((cs) => (cs.id === selectedColorSet.id ? { ...cs, ...colorSet } : cs))
-      onReorderColorSets(updatedColorSets)
+      //onReorderColorSets(updatedColorSets)
+      setColorSets(updatedColorSets);
     } else {
       // Add new color set
       onAddColorSet(colorSet)
@@ -162,7 +133,8 @@ export function DeclarationManager({
       if (draggedIndex !== -1 && targetIndex !== -1) {
         newOrder.splice(draggedIndex, 1)
         newOrder.splice(targetIndex, 0, draggedItem)
-        onReorderColorSets(newOrder)
+        //onReorderColorSets(newOrder)
+        setColorSets(newOrder);
       }
     } else if (draggedType === "variable") {
       const newOrder = [...variables]
@@ -172,7 +144,8 @@ export function DeclarationManager({
       if (draggedIndex !== -1 && targetIndex !== -1) {
         newOrder.splice(draggedIndex, 1)
         newOrder.splice(targetIndex, 0, draggedItem)
-        onReorderVariables(newOrder)
+        //onReorderVariables(newOrder)
+        setVariables(newOrder);
       }
     } else if (draggedType === "priority") {
       const newOrder = [...priorities]
@@ -182,7 +155,8 @@ export function DeclarationManager({
       if (draggedIndex !== -1 && targetIndex !== -1) {
         newOrder.splice(draggedIndex, 1)
         newOrder.splice(targetIndex, 0, draggedItem)
-        onReorderPriorities(newOrder)
+        //onReorderPriorities(newOrder)
+        setPriorities(newOrder);
       }
     }
 
@@ -224,7 +198,7 @@ export function DeclarationManager({
           Add Color Set
         </Button> */}
 
-        <div className="space-y-2 max-h-[200px] overflow-y-auto">
+        <div className="space-y-2">
           {colorSets.map((cs) => (
             <div
               key={cs.id}
@@ -293,7 +267,7 @@ export function DeclarationManager({
       {/* Variables Section */}
       <div className="space-y-3">
         <h2 className="font-bold">Variables</h2>
-        <div className="space-y-2 max-h-[200px] overflow-y-auto">
+        <div className="space-y-2">
           {variables.map((v) => (
             <div
               key={v.id}
@@ -353,45 +327,39 @@ export function DeclarationManager({
       {/* Priorities Section */}
       <div className="space-y-3">
         <h2 className="font-bold">Priorities</h2>
-        <div className="space-y-2 max-h-[200px] overflow-y-auto">
-          {priorities.map((p) => (
-            <div
-              key={p.id}
-              className="border rounded-md p-3 bg-muted/20 transition-colors"
-              draggable
-              onDragStart={(e) => handleDragStart(e, p, "priority")}
-              onDragOver={(e) => handleDragOver(e, p)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, p)}
-              onDragEnd={handleDragEnd}
-            >
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <div className="cursor-grab active:cursor-grabbing">
-                    <GripVertical className="h-4 w-4 text-muted-foreground" />
+        <div className="space-y-2">
+          {priorities
+            .slice()
+            .sort((a, b) => a.level - b.level) // Sort by level ascending
+            .map((p) => (
+              <div
+                key={p.id}
+                className="border rounded-md p-3 bg-muted/20 transition-colors"
+              >
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <div className="font-mono text-sm">
+                      {p.name} = {p.level}
+                    </div>
                   </div>
-                  <div className="font-mono text-sm">
-                    {p.name} = {p.level}
-                  </div>
+                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeletePriority(p.id)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
                 </div>
-                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeletePriority(p.id)}>
-                  <Trash2 className="h-3 w-3" />
-                </Button>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Input
-            placeholder="Name (e.g., HIGH)"
+            placeholder="Name (e.g., P_MEDIUM)"
             className="flex-1"
             value={newPriority.name}
             onChange={(e) => setNewPriority({ ...newPriority, name: e.target.value })}
           />
           <Input
             type="number"
-            placeholder="Level (e.g., 100)"
+            placeholder="Level (e.g., 250)"
             className="w-[120px]"
             value={newPriority.level || ""}
             onChange={(e) => setNewPriority({ ...newPriority, level: Number.parseInt(e.target.value) || 0 })}

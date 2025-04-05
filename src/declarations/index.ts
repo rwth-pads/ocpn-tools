@@ -1,6 +1,24 @@
-import type { ColorSet, Variable, Priority } from '@/components/DeclarationManager';
-
 import { v4 as uuidv4 } from 'uuid';
+
+export interface ColorSet {
+  id?: string
+  name: string
+  type: string
+  definition: string
+  color?: string // Add color property
+}
+
+export interface Variable {
+  id?: string
+  name: string
+  colorSet: string
+}
+
+export interface Priority {
+  id?: string
+  name: string
+  level: number
+}
 
 export const initialColorSets: ColorSet[] = [
   { id: uuidv4(), name: "INT", type: "basic", definition: "colset INT = int;", color: "#3b82f6" },
@@ -15,6 +33,6 @@ export const initialVariables: Variable[] = [
 
 export const initialPriorities: Priority[] = [
   { id: uuidv4(), name: "P_HIGH", level: 100 },
-  { id: uuidv4(), name: "P_NORMAL", level: 50 },
-  { id: uuidv4(), name: "P_LOW", level: 10 },
+  { id: uuidv4(), name: "P_NORMAL", level: 1000 },
+  { id: uuidv4(), name: "P_LOW", level: 10000 },
 ];

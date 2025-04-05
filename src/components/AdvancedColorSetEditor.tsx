@@ -1,16 +1,14 @@
-"use client"
-
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PlusCircle, Trash2 } from "lucide-react"
-import { v4 as uuidv4 } from "uuid"
-import type { ColorSet } from "@/components/DeclarationManager"
-import { HexColorPicker } from "react-colorful"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PlusCircle, Trash2 } from "lucide-react";
+import { v4 as uuidv4 } from "uuid";
+import type { ColorSet } from "@/declarations";
+import { HexColorPicker } from "react-colorful";
 
 interface AdvancedColorSetEditorProps {
   colorSet?: ColorSet

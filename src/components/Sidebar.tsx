@@ -10,7 +10,7 @@ import { Save, Trash2 } from 'lucide-react';
 import PlaceProperties from './PlaceProperties';
 import TransitionProperties from './TransitionProperties';
 
-import { DeclarationManager, type ColorSet, type Variable, type Priority } from '@/components/DeclarationManager';
+import { DeclarationManager } from '@/components/DeclarationManager';
 
 const Sidebar = () => {
   // Access selectedElement from the store
@@ -89,20 +89,7 @@ const Sidebar = () => {
             <Separator orientation="horizontal" className="mt-2" />
 
             <div className="p-4">
-              <DeclarationManager
-                colorSets={colorSets}
-                variables={variables}
-                priorities={priorities}
-                onAddColorSet={() => {}}
-                onAddVariable={() => {}}
-                onAddPriority={() => {}}
-                onDeleteColorSet={() => {}}
-                onDeleteVariable={() => {}}
-                onDeletePriority={() => {}}
-                onReorderColorSets={() => {}}
-                onReorderVariables={() => {}}
-                onReorderPriorities={() => {}} 
-              />
+              <DeclarationManager />
             </div>
           </div>
         </div>

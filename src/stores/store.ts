@@ -8,6 +8,8 @@ import { initialEdges } from '@/edges';
 import { initialColorSets } from '@/declarations';
 import { initialVariables } from '@/declarations';
 import { initialPriorities } from '@/declarations';
+
+import { v4 as uuidv4 } from 'uuid';
  
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useStore = create<AppState>((set, get) => ({
@@ -40,11 +42,60 @@ const useStore = create<AppState>((set, get) => ({
   setEdges: (edges) => {
     set({ edges });
   },
+  setColorSets: (colorSets) => {
+    set({ colorSets });
+  },
+  setVariables: (variables) => {
+    set({ variables });
+  },
+  setPriorities: (priorities) => {
+    set({ priorities });
+  },
 
   // Add a new node
   addNode: (newNode: AppNode) =>
     set((state) => ({
       nodes: [...state.nodes, newNode],
+    })),
+
+  // Add a new color set
+  addColorSet: (newColorSet) =>
+    set((state) => ({
+      colorSets: [
+        ...state.colorSets,
+        { ...newColorSet, id: newColorSet.id ?? uuidv4() },
+      ],
+    })),
+  // Add a new variable
+  addVariable: (newVariable) =>
+    set((state) => ({
+      variables: [
+        ...state.variables,
+        { ...newVariable, id: newVariable.id ?? uuidv4() },
+      ],
+    })),
+  // Add a new priority
+  addPriority: (newPriority) =>
+    set((state) => ({
+      priorities: [
+        ...state.priorities,
+        { ...newPriority, id: newPriority.id ?? uuidv4() },
+      ],
+    })),
+  // Remove a color set
+  deleteColorSet: (id) =>
+    set((state) => ({
+      colorSets: state.colorSets.filter((colorSet) => colorSet.id !== id),
+    })),
+  // Remove a variable
+  deleteVariable: (id) =>
+    set((state) => ({
+      variables: state.variables.filter((variable) => variable.id !== id),
+    })),
+  // Remove a priority
+  deletePriority: (id) =>
+    set((state) => ({
+      priorities: state.priorities.filter((priority) => priority.id !== id),
     })),
 
   // Update node data

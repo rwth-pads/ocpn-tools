@@ -1,5 +1,3 @@
-"use client"
-
 import type React from "react";
 import useStore from '@/stores/store';
 import { useState } from "react";
@@ -7,11 +5,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Trash2, GripVertical, Edit } from "lucide-react"
+import { Trash2, GripVertical, Edit, ChevronRight, ChevronDown } from "lucide-react"
 import { AdvancedColorSetEditor } from "@/components/AdvancedColorSetEditor";
 import { VariableEditor } from '@/components/VariableEditor';
 import { PriorityEditor } from "@/components/PriorityEditor";
 import { FunctionEditor } from "@/components/FunctionEditor";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 
 import { ColorSet, Variable, Priority, Function } from "@/declarations"
 
@@ -20,6 +23,11 @@ interface DeclarationManagerProps {
 
 export function DeclarationManager({
 }: DeclarationManagerProps) {
+  const [isPrioritiesOpen, setIsPrioritiesOpen] = useState(false);
+  const [isColorSetsOpen, setIsColorSetsOpen] = useState(false);
+  const [isVariablesOpen, setIsVariablesOpen] = useState(false);
+  const [isFunctionsOpen, setIsFunctionsOpen] = useState(false);
+
   const colorSets = useStore((state) => state.colorSets);
   const setColorSets = useStore((state) => state.setColorSets);
   const onAddColorSet = useStore((state) => state.addColorSet);
@@ -251,307 +259,348 @@ export function DeclarationManager({
 
   return (
     <div className="space-y-4">
+
+      {/* Priorities Section */}
+      <div className="space-y-3">
+        <Collapsible open={isPrioritiesOpen} onOpenChange={setIsPrioritiesOpen}>
+            <CollapsibleTrigger asChild>
+            <div className="flex items-center -ml-3 mb-2 cursor-pointer">
+              <Button variant="ghost" size="sm">
+                {isPrioritiesOpen ? (
+                  <ChevronDown className="h-4 w-4" strokeWidth={4} />
+                ) : (
+                  <ChevronRight className="h-4 w-4" strokeWidth={4} />
+                )}
+                <span className="sr-only">Toggle</span>
+              </Button>
+              <h2 className="font-bold flex-1">Priorities</h2>
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3 mb-8">
+            <div className="space-y-2">
+              {priorities
+                .slice()
+                .sort((a, b) => a.level - b.level) // Sort by level ascending
+                .map((p) => (
+                  <div
+                    key={p.id}
+                    className="border rounded-md p-3 bg-muted/20 transition-colors"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div className="font-mono text-sm">
+                          {p.name} = {p.level}
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditPriority(p)}>
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeletePriority(p.id)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Name (e.g., P_MEDIUM)"
+                className="flex-1"
+                value={newPriority.name}
+                onChange={(e) => setNewPriority({ ...newPriority, name: e.target.value })}
+              />
+              <Input
+                type="number"
+                placeholder="Level (e.g., 250)"
+                className="w-[120px]"
+                value={newPriority.level || ""}
+                onChange={(e) => setNewPriority({ ...newPriority, level: Number.parseInt(e.target.value) || 0 })}
+              />
+            </div>
+
+            <Button size="sm" variant="outline" onClick={handleAddPriority}>
+              Add Priority
+            </Button>
+
+            <Dialog open={priorityEditorOpen} onOpenChange={setPriorityEditorOpen}>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>
+                    {selectedPriority ? `Edit Priority: ${selectedPriority.name}` : "Create New Priority"}
+                  </DialogTitle>
+                </DialogHeader>
+                <PriorityEditor
+                  priority={selectedPriority}
+                  onSave={handleSavePriority}
+                />
+              </DialogContent>
+            </Dialog>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+
       {/* Color Sets Section */}
       <div className="space-y-3">
-        <h2 className="font-bold">Color Sets</h2>
-        {/* <div className="flex items-center gap-2">
-          <Input
-            placeholder="Name (e.g., DATA)"
-            className="flex-1"
-            value={newColorSet.name}
-            onChange={(e) => setNewColorSet({ ...newColorSet, name: e.target.value })}
-          />
-          <Select value={newColorSet.type} onValueChange={(value) => setNewColorSet({ ...newColorSet, type: value })}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="basic">Basic</SelectItem>
-              <SelectItem value="compound">Compound</SelectItem>
-              <SelectItem value="list">List</SelectItem>
-              <SelectItem value="record">Record</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Button size="sm" variant="outline" onClick={handleAddColorSet}>
-          Add Color Set
-        </Button> */}
-
-        <div className="space-y-2">
-          {colorSets.map((cs) => (
-            <div
-              key={cs.id}
-              className="border rounded-md p-3 bg-muted/20 transition-colors"
-              draggable
-              onDragStart={(e) => handleDragStart(e, cs, "colorSet")}
-              onDragOver={(e) => handleDragOver(e, cs)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, cs)}
-              onDragEnd={handleDragEnd}
-            >
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <div className="cursor-grab active:cursor-grabbing">
-                    <GripVertical className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div className="font-mono text-sm">
-                    colset {cs.name} = {cs.type};
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <div
-                    className="w-3 h-3 rounded-full mr-2"
-                    style={{ backgroundColor: cs.color || "#3b82f6" }}
-                  ></div>
-                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditColorSet(cs)}>
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeleteColorSet(cs.id)}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
+        <Collapsible open={isColorSetsOpen} onOpenChange={setIsColorSetsOpen}>
+          <CollapsibleTrigger asChild>
+            <div className="flex items-center -ml-3 mb-2 cursor-pointer">
+              <Button variant="ghost" size="sm">
+                {isColorSetsOpen ? (
+                  <ChevronDown className="h-4 w-4" strokeWidth={4} />
+                ) : (
+                  <ChevronRight className="h-4 w-4" strokeWidth={4} />
+                )}
+                <span className="sr-only">Toggle</span>
+              </Button>
+              <h2 className="font-bold flex-1">Color Sets</h2>
             </div>
-          ))}
-        </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3">
+            <div className="space-y-2">
+              {colorSets.map((cs) => (
+                <div
+                  key={cs.id}
+                  className="border rounded-md p-3 bg-muted/20 transition-colors"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, cs, "colorSet")}
+                  onDragOver={(e) => handleDragOver(e, cs)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, cs)}
+                  onDragEnd={handleDragEnd}
+                >
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <div className="cursor-grab active:cursor-grabbing">
+                        <GripVertical className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="font-mono text-sm">
+                        colset {cs.name} = {cs.type};
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <div
+                        className="w-3 h-3 rounded-full mr-2"
+                        style={{ backgroundColor: cs.color || "#3b82f6" }}
+                      ></div>
+                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditColorSet(cs)}>
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeleteColorSet(cs.id)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
 
-        <Dialog open={advancedEditorOpen} onOpenChange={setAdvancedEditorOpen}>
-          <DialogTrigger asChild>
-            <Button
-              className="w-full"
-              variant="outline"
-              onClick={() => {
-                setSelectedColorSet(undefined)
-                setAdvancedEditorOpen(true)
-              }}
-            >
-              Create New Color Set
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedColorSet ? `Edit Color Set: ${selectedColorSet.name}` : "Create New Color Set"}
-              </DialogTitle>
-            </DialogHeader>
-            <AdvancedColorSetEditor
-              colorSet={selectedColorSet}
-              existingColorSets={colorSets}
-              onSave={handleSaveAdvancedColorSet}
-            />
-          </DialogContent>
-        </Dialog>
+            <Dialog open={advancedEditorOpen} onOpenChange={setAdvancedEditorOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedColorSet(undefined)
+                    setAdvancedEditorOpen(true)
+                  }}
+                >
+                  Create New Color Set
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>
+                    {selectedColorSet ? `Edit Color Set: ${selectedColorSet.name}` : "Create New Color Set"}
+                  </DialogTitle>
+                </DialogHeader>
+                <AdvancedColorSetEditor
+                  colorSet={selectedColorSet}
+                  existingColorSets={colorSets}
+                  onSave={handleSaveAdvancedColorSet}
+                />
+              </DialogContent>
+            </Dialog>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
       {/* Variables Section */}
       <div className="space-y-3">
-        <h2 className="font-bold">Variables</h2>
-        <div className="space-y-2">
-          {variables.map((v) => (
-            <div
-              key={v.id}
-              className="border rounded-md p-3 bg-muted/20 transition-colors"
-              draggable
-              onDragStart={(e) => handleDragStart(e, v, "variable")}
-              onDragOver={(e) => handleDragOver(e, v)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, v)}
-              onDragEnd={handleDragEnd}
-            >
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <div className="cursor-grab active:cursor-grabbing">
-                    <GripVertical className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div className="font-mono text-sm">
-                    var {v.name}: {v.colorSet};
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditVariable(v)}>
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeleteVariable(v.id)}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
+        <Collapsible open={isVariablesOpen} onOpenChange={setIsVariablesOpen}>
+          <CollapsibleTrigger asChild>
+            <div className="flex items-center -ml-3 mb-2 cursor-pointer">
+              <Button variant="ghost" size="sm">
+                {isVariablesOpen ? (
+                  <ChevronDown className="h-4 w-4" strokeWidth={4} />
+                ) : (
+                  <ChevronRight className="h-4 w-4" strokeWidth={4} />
+                )}
+                <span className="sr-only">Toggle</span>
+              </Button>
+              <h2 className="font-bold flex-1">Variables</h2>
             </div>
-          ))}
-        </div>
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Name (e.g., n)"
-            className="flex-1"
-            value={newVariable.name}
-            onChange={(e) => setNewVariable({ ...newVariable, name: e.target.value })}
-          /> : 
-          <Select
-            value={newVariable.colorSet}
-            onValueChange={(value) => setNewVariable({ ...newVariable, colorSet: value })}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Color Set" />
-            </SelectTrigger>
-            <SelectContent>
-              {colorSets.map((cs) => (
-                <SelectItem key={cs.id} value={cs.name}>
-                  {cs.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Button size="sm" variant="outline" onClick={handleAddVariable}>
-          Add Variable
-        </Button>
-
-        <Dialog open={variableEditorOpen} onOpenChange={setVariableEditorOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedVariable ? `Edit Variable: ${selectedVariable.name}` : "Create New Variable"}
-              </DialogTitle>
-            </DialogHeader>
-            <VariableEditor
-              variable={selectedVariable}
-              existingColorSets={colorSets}
-              onSave={handleSaveVariable}
-            />
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Priorities Section */}
-      <div className="space-y-3">
-        <h2 className="font-bold">Priorities</h2>
-        <div className="space-y-2">
-          {priorities
-            .slice()
-            .sort((a, b) => a.level - b.level) // Sort by level ascending
-            .map((p) => (
-              <div
-                key={p.id}
-                className="border rounded-md p-3 bg-muted/20 transition-colors"
-              >
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <div className="font-mono text-sm">
-                      {p.name} = {p.level}
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3">
+            <div className="space-y-2">
+              {variables.map((v) => (
+                <div
+                  key={v.id}
+                  className="border rounded-md p-3 bg-muted/20 transition-colors"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, v, "variable")}
+                  onDragOver={(e) => handleDragOver(e, v)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, v)}
+                  onDragEnd={handleDragEnd}
+                >
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <div className="cursor-grab active:cursor-grabbing">
+                        <GripVertical className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="font-mono text-sm">
+                        var {v.name}: {v.colorSet};
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditVariable(v)}>
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeleteVariable(v.id)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center">
-                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditPriority(p)}>
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeletePriority(p.id)}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
                 </div>
-              </div>
-            ))}
-        </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Name (e.g., n)"
+                className="flex-1"
+                value={newVariable.name}
+                onChange={(e) => setNewVariable({ ...newVariable, name: e.target.value })}
+              /> : 
+              <Select
+                value={newVariable.colorSet}
+                onValueChange={(value) => setNewVariable({ ...newVariable, colorSet: value })}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Color Set" />
+                </SelectTrigger>
+                <SelectContent>
+                  {colorSets.map((cs) => (
+                    <SelectItem key={cs.id} value={cs.name}>
+                      {cs.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Name (e.g., P_MEDIUM)"
-            className="flex-1"
-            value={newPriority.name}
-            onChange={(e) => setNewPriority({ ...newPriority, name: e.target.value })}
-          />
-          <Input
-            type="number"
-            placeholder="Level (e.g., 250)"
-            className="w-[120px]"
-            value={newPriority.level || ""}
-            onChange={(e) => setNewPriority({ ...newPriority, level: Number.parseInt(e.target.value) || 0 })}
-          />
-        </div>
+            <Button size="sm" variant="outline" onClick={handleAddVariable}>
+              Add Variable
+            </Button>
 
-        <Button size="sm" variant="outline" onClick={handleAddPriority}>
-          Add Priority
-        </Button>
-
-        <Dialog open={priorityEditorOpen} onOpenChange={setPriorityEditorOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedPriority ? `Edit Priority: ${selectedPriority.name}` : "Create New Priority"}
-              </DialogTitle>
-            </DialogHeader>
-            <PriorityEditor
-              priority={selectedPriority}
-              onSave={handleSavePriority}
-            />
-          </DialogContent>
-        </Dialog>
+            <Dialog open={variableEditorOpen} onOpenChange={setVariableEditorOpen}>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>
+                    {selectedVariable ? `Edit Variable: ${selectedVariable.name}` : "Create New Variable"}
+                  </DialogTitle>
+                </DialogHeader>
+                <VariableEditor
+                  variable={selectedVariable}
+                  existingColorSets={colorSets}
+                  onSave={handleSaveVariable}
+                />
+              </DialogContent>
+            </Dialog>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
       {/* Functions Section */}
       <div className="space-y-3">
-        <h2 className="font-bold">Functions</h2>
-        <div className="space-y-2">
-          {functions.map((f) => (
-            <div
-              key={f.id}
-              className="border rounded-md p-3 bg-muted/20 transition-colors"
-              draggable
-              onDragStart={(e) => handleDragStart(e, f, "function")}
-              onDragOver={(e) => handleDragOver(e, f)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, f)}
-              onDragEnd={handleDragEnd}
-            >
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <div className="cursor-grab active:cursor-grabbing">
-                    <GripVertical className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div className="font-mono text-sm">
-                    fun {f.name}
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditFunction(f)}>
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeleteFunction(f.id)}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
+        <Collapsible open={isFunctionsOpen} onOpenChange={setIsFunctionsOpen}>
+          <CollapsibleTrigger asChild>
+            <div className="flex items-center -ml-3 mb-2 cursor-pointer">
+              <Button variant="ghost" size="sm">
+                {isFunctionsOpen ? (
+                  <ChevronDown className="h-4 w-4" strokeWidth={4} />
+                ) : (
+                  <ChevronRight className="h-4 w-4" strokeWidth={4} />
+                )}
+                <span className="sr-only">Toggle</span>
+              </Button>
+              <h2 className="font-bold flex-1">Functions</h2>
             </div>
-          ))}
-        </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3">
+            <div className="space-y-2">
+              {functions.map((f) => (
+                <div
+                  key={f.id}
+                  className="border rounded-md p-3 bg-muted/20 transition-colors"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, f, "function")}
+                  onDragOver={(e) => handleDragOver(e, f)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, f)}
+                  onDragEnd={handleDragEnd}
+                >
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <div className="cursor-grab active:cursor-grabbing">
+                        <GripVertical className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="font-mono text-sm">
+                        fun {f.name}
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditFunction(f)}>
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeleteFunction(f.id)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
 
-        <Dialog open={functionEditorOpen} onOpenChange={setFunctionEditorOpen}>
-          <DialogTrigger asChild>
-            <Button
-              className="w-full"
-              variant="outline"
-              onClick={() => {
-                setSelectedFunction(undefined)
-                setFunctionEditorOpen(true)
-              }}
-            >
-              Create New Function
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedFunction ? `Edit Function: ${selectedFunction.name}` : "Create New Function"}
-              </DialogTitle>
-            </DialogHeader>
-            <FunctionEditor
-              existingFunction={selectedFunction}
-              onSave={handleSaveFunction}
-            />
-          </DialogContent>
-        </Dialog>
+            <Dialog open={functionEditorOpen} onOpenChange={setFunctionEditorOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedFunction(undefined)
+                    setFunctionEditorOpen(true)
+                  }}
+                >
+                  Create New Function
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>
+                    {selectedFunction ? `Edit Function: ${selectedFunction.name}` : "Create New Function"}
+                  </DialogTitle>
+                </DialogHeader>
+                <FunctionEditor
+                  existingFunction={selectedFunction}
+                  onSave={handleSaveFunction}
+                />
+              </DialogContent>
+            </Dialog>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     </div>
   )

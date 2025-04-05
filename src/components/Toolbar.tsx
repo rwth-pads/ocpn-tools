@@ -75,24 +75,52 @@ export function Toolbar({ toggleArcMode, layoutGraph }) {
     <>
       <div className="flex items-center gap-2 bg-background border rounded-lg p-2 shadow-sm">
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            draggable
-            onDragStart={(event) => onDragStart(event, "place")}
-            title="Place"
-          >
-            <Circle className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            draggable
-            onDragStart={(event) => onDragStart(event, "transition")}
-            title="Transition"
-          >
-            <Square className="h-5 w-5" />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    draggable
+                    onDragStart={(event) => onDragStart(event, "place")}
+                    title="Place"
+                    className="cursor-grab"
+                  >
+                    <Circle className="h-5 w-5" />
+                    <span className="sr-only">Drag a Place from Here</span>
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Drag a Place from Here</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    draggable
+                    onDragStart={(event) => onDragStart(event, "transition")}
+                    title="Transition"
+                    className="cursor-grab"
+                  >
+                    <Square className="h-5 w-5" />
+                    <span className="sr-only">Drag a Transition from Here</span>
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Drag a Transition from Here</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -102,12 +130,12 @@ export function Toolbar({ toggleArcMode, layoutGraph }) {
                     onPressedChange={toggleArcMode}
                   >
                     <ArrowRight className="h-4 w-4" />
-                    <span className="sr-only">Add Arc</span>
+                    <span className="sr-only">Toggle Arc Mode</span>
                   </Toggle>
                 </span>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Add Arc</p>
+                <p>Toggle Arc Mode</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -118,9 +146,21 @@ export function Toolbar({ toggleArcMode, layoutGraph }) {
         </div>
 
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" title="Layout Graph" onClick={layoutGraph}>
-            <Network className="h-5 w-5" />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button variant="ghost" size="icon" title="Layout Graph" onClick={layoutGraph}>
+                    <Network className="h-5 w-5" />
+                    <span className="sr-only">Layout Graph</span>
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Layout Graph</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {/*

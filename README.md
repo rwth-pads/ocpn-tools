@@ -22,5 +22,9 @@
 - [ ] import CPN Tools file
 - [ ] mark incompatible edge inscriptions red
 - [ ] raw code segments should only be readonly
-- [ ] make declarations collapsible
+- [x] make declarations collapsible
 - [ ] add "use" declaration for importing files
+- [ ] make dialog content scrollable for functions when adding multiple patterns
+- [ ] add arc properties
+- [ ] fix delete button for node and edge properties
+- [x] add proper tooltips for Toolbar

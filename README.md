@@ -16,8 +16,9 @@
 - [ ] color place like colorsets (if color mode toggle in toolbar is on)
 - [ ] check whether all object-centric-petri-net things can be implemented
 - [x] fix declaration reordering
-- [ ] editing variables and priorities
+- [x] editing variables and priorities
 - [ ] adding function declarations
 - [ ] import CPN Tools file
 - [ ] mark incompatible edge inscriptions red
 - [ ] raw code segments should only be readonly
+- [ ] make declarations collapsible

@@ -8,9 +8,11 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Trash2, GripVertical, Edit } from "lucide-react"
-import { AdvancedColorSetEditor } from "@/components/AdvancedColorSetEditor"
+import { AdvancedColorSetEditor } from "@/components/AdvancedColorSetEditor";
+import { VariableEditor } from '@/components/VariableEditor';
+import { PriorityEditor } from "@/components/PriorityEditor";
 
-import { ColorSet } from "@/declarations"
+import { ColorSet, Variable, Priority } from "@/declarations"
 
 interface DeclarationManagerProps {
 }
@@ -33,8 +35,14 @@ export function DeclarationManager({
   const [newColorSet, setNewColorSet] = useState({ name: "", type: "basic" })
   const [newVariable, setNewVariable] = useState({ name: "", colorSet: "INT" })
   const [newPriority, setNewPriority] = useState({ name: "", level: 250 })
-  const [selectedColorSet, setSelectedColorSet] = useState<ColorSet | undefined>(undefined)
-  const [advancedEditorOpen, setAdvancedEditorOpen] = useState(false)
+  const [selectedColorSet, setSelectedColorSet] = useState<ColorSet | undefined>(undefined);
+  const [advancedEditorOpen, setAdvancedEditorOpen] = useState(false);
+
+  const [selectedVariable, setSelectedVariable] = useState<Variable | undefined>(undefined);
+  const [variableEditorOpen, setVariableEditorOpen] = useState(false);
+
+  const [selectedPriority, setSelectedPriority] = useState<Priority>(undefined);
+  const [priorityEditorOpen, setPriorityEditorOpen] = useState(false);
 
   // Drag and drop state
   const [draggedItem, setDraggedItem] = useState<any>(null)
@@ -76,6 +84,16 @@ export function DeclarationManager({
     setAdvancedEditorOpen(true)
   }
 
+  const handleEditVariable = (variable: Variable) => {
+    setSelectedVariable(variable);
+    setVariableEditorOpen(true);
+  }
+
+  const handleEditPriority = (priority: Priority) => {
+    setSelectedPriority(priority);
+    setPriorityEditorOpen(true);
+  }
+
   const handleSaveAdvancedColorSet = (colorSet: Omit<ColorSet, "id">) => {
     if (selectedColorSet) {
       // Update existing color set
@@ -88,7 +106,35 @@ export function DeclarationManager({
     }
     setAdvancedEditorOpen(false)
     setSelectedColorSet(undefined)
-  }
+  };
+
+  const handleSaveVariable = (variable: Omit<Variable, "id">) => {
+    if (selectedVariable) {
+      // Update existing variable
+      const updatedVariables = variables.map((v) => (v.id === selectedVariable.id ? { ...v, ...variable } : v));
+      //onReorderVariables(updatedVariables)
+      setVariables(updatedVariables);
+    } else {
+      // Add new variable
+      onAddVariable(variable)
+    }
+    setVariableEditorOpen(false)
+    setSelectedVariable(undefined)
+  };
+
+  const handleSavePriority = (priority: Omit<Priority, "id">) => {
+    if (selectedPriority) {
+      // Update existing priority
+      const updatedPriorities = priorities.map((p) => (p.id === selectedPriority.id ? { ...p, ...priority } : p));
+      //onReorderPriorities(updatedPriorities)
+      setPriorities(updatedPriorities);
+    } else {
+      // Add new priority
+      onAddPriority(priority)
+    }
+    setPriorityEditorOpen(false)
+    setSelectedPriority(undefined)
+  };
 
   // Drag handlers
   const handleDragStart = (e: React.DragEvent, item: any, type: "colorSet" | "variable" | "priority") => {
@@ -288,9 +334,14 @@ export function DeclarationManager({
                     var {v.name}: {v.colorSet};
                   </div>
                 </div>
-                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeleteVariable(v.id)}>
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+                <div className="flex items-center">
+                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditVariable(v)}>
+                    <Edit className="h-3 w-3" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeleteVariable(v.id)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
@@ -322,6 +373,21 @@ export function DeclarationManager({
         <Button size="sm" variant="outline" onClick={handleAddVariable}>
           Add Variable
         </Button>
+
+        <Dialog open={variableEditorOpen} onOpenChange={setVariableEditorOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedVariable ? `Edit Variable: ${selectedVariable.name}` : "Create New Variable"}
+              </DialogTitle>
+            </DialogHeader>
+            <VariableEditor
+              variable={selectedVariable}
+              existingColorSets={colorSets}
+              onSave={handleSaveVariable}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Priorities Section */}
@@ -342,9 +408,14 @@ export function DeclarationManager({
                       {p.name} = {p.level}
                     </div>
                   </div>
-                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeletePriority(p.id)}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  <div className="flex items-center">
+                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditPriority(p)}>
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeletePriority(p.id)}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -369,6 +440,20 @@ export function DeclarationManager({
         <Button size="sm" variant="outline" onClick={handleAddPriority}>
           Add Priority
         </Button>
+
+        <Dialog open={priorityEditorOpen} onOpenChange={setPriorityEditorOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedPriority ? `Edit Priority: ${selectedPriority.name}` : "Create New Priority"}
+              </DialogTitle>
+            </DialogHeader>
+            <PriorityEditor
+              priority={selectedPriority}
+              onSave={handleSavePriority}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )

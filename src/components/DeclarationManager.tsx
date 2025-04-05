@@ -11,8 +11,9 @@ import { Trash2, GripVertical, Edit } from "lucide-react"
 import { AdvancedColorSetEditor } from "@/components/AdvancedColorSetEditor";
 import { VariableEditor } from '@/components/VariableEditor';
 import { PriorityEditor } from "@/components/PriorityEditor";
+import { FunctionEditor } from "@/components/FunctionEditor";
 
-import { ColorSet, Variable, Priority } from "@/declarations"
+import { ColorSet, Variable, Priority, Function } from "@/declarations"
 
 interface DeclarationManagerProps {
 }
@@ -31,6 +32,10 @@ export function DeclarationManager({
   const setPriorities = useStore((state) => state.setPriorities);
   const onAddPriority = useStore((state) => state.addPriority);
   const onDeletePriority = useStore((state) => state.deletePriority);
+  const functions = useStore((state) => state.functions);
+  const setFunctions = useStore((state) => state.setFunctions);
+  const onAddFunction = useStore((state) => state.addFunction);
+  const onDeleteFunction = useStore((state) => state.deleteFunction);
 
   const [newColorSet, setNewColorSet] = useState({ name: "", type: "basic" })
   const [newVariable, setNewVariable] = useState({ name: "", colorSet: "INT" })
@@ -44,9 +49,12 @@ export function DeclarationManager({
   const [selectedPriority, setSelectedPriority] = useState<Priority>(undefined);
   const [priorityEditorOpen, setPriorityEditorOpen] = useState(false);
 
+  const [selectedFunction, setSelectedFunction] = useState<Function | undefined>(undefined);
+  const [functionEditorOpen, setFunctionEditorOpen] = useState(false);
+
   // Drag and drop state
   const [draggedItem, setDraggedItem] = useState<any>(null)
-  const [draggedType, setDraggedType] = useState<"colorSet" | "variable" | "priority" | null>(null)
+  const [draggedType, setDraggedType] = useState<"colorSet" | "variable" | "priority" | "function" | null>(null)
 
   const handleAddColorSet = () => {
     if (newColorSet.name) {
@@ -94,6 +102,25 @@ export function DeclarationManager({
     setPriorityEditorOpen(true);
   }
 
+  const handleEditFunction = (func: Function) => {
+    setSelectedFunction(func);
+    setFunctionEditorOpen(true);
+  }
+
+  const handleSaveFunction = (func: Omit<Function, "id">) => {
+    if (selectedFunction) {
+      // Update existing function
+      const updatedFunctions = functions.map((f) => (f.id === selectedFunction.id ? { ...f, ...func } : f));
+      //onReorderFunctions(updatedFunctions)
+      setFunctions(updatedFunctions);
+    } else {
+      // Add new function
+      onAddFunction(func);
+    }
+    setFunctionEditorOpen(false);
+    setSelectedFunction(undefined);
+  };
+
   const handleSaveAdvancedColorSet = (colorSet: Omit<ColorSet, "id">) => {
     if (selectedColorSet) {
       // Update existing color set
@@ -137,7 +164,7 @@ export function DeclarationManager({
   };
 
   // Drag handlers
-  const handleDragStart = (e: React.DragEvent, item: any, type: "colorSet" | "variable" | "priority") => {
+  const handleDragStart = (e: React.DragEvent, item: any, type: "colorSet" | "variable" | "priority" | "function") => {
     setDraggedItem(item)
     setDraggedType(type)
     e.dataTransfer.effectAllowed = "move"
@@ -162,53 +189,60 @@ export function DeclarationManager({
   }
 
   const handleDrop = (e: React.DragEvent, targetItem: any) => {
-    e.preventDefault()
-    const target = e.currentTarget as HTMLElement
-    target.classList.remove("bg-muted")
+    e.preventDefault();
+    const target = e.currentTarget as HTMLElement;
+    target.classList.remove("bg-muted");
 
-    if (!draggedItem || !draggedType) return
+    if (!draggedItem || !draggedType) return;
 
-    if (draggedItem.id === targetItem.id) return
+    if (draggedItem.id === targetItem.id) return;
 
     // Reorder the items
     if (draggedType === "colorSet") {
-      const newOrder = [...colorSets]
-      const draggedIndex = newOrder.findIndex((item) => item.id === draggedItem.id)
-      const targetIndex = newOrder.findIndex((item) => item.id === targetItem.id)
+      const newOrder = [...colorSets];
+      const draggedIndex = newOrder.findIndex((item) => item.id === draggedItem.id);
+      const targetIndex = newOrder.findIndex((item) => item.id === targetItem.id);
 
       if (draggedIndex !== -1 && targetIndex !== -1) {
-        newOrder.splice(draggedIndex, 1)
-        newOrder.splice(targetIndex, 0, draggedItem)
-        //onReorderColorSets(newOrder)
+        newOrder.splice(draggedIndex, 1);
+        newOrder.splice(targetIndex, 0, draggedItem);
         setColorSets(newOrder);
       }
     } else if (draggedType === "variable") {
-      const newOrder = [...variables]
-      const draggedIndex = newOrder.findIndex((item) => item.id === draggedItem.id)
-      const targetIndex = newOrder.findIndex((item) => item.id === targetItem.id)
+      const newOrder = [...variables];
+      const draggedIndex = newOrder.findIndex((item) => item.id === draggedItem.id);
+      const targetIndex = newOrder.findIndex((item) => item.id === targetItem.id);
 
       if (draggedIndex !== -1 && targetIndex !== -1) {
-        newOrder.splice(draggedIndex, 1)
-        newOrder.splice(targetIndex, 0, draggedItem)
-        //onReorderVariables(newOrder)
+        newOrder.splice(draggedIndex, 1);
+        newOrder.splice(targetIndex, 0, draggedItem);
         setVariables(newOrder);
       }
     } else if (draggedType === "priority") {
-      const newOrder = [...priorities]
-      const draggedIndex = newOrder.findIndex((item) => item.id === draggedItem.id)
-      const targetIndex = newOrder.findIndex((item) => item.id === targetItem.id)
+      const newOrder = [...priorities];
+      const draggedIndex = newOrder.findIndex((item) => item.id === draggedItem.id);
+      const targetIndex = newOrder.findIndex((item) => item.id === targetItem.id);
 
       if (draggedIndex !== -1 && targetIndex !== -1) {
-        newOrder.splice(draggedIndex, 1)
-        newOrder.splice(targetIndex, 0, draggedItem)
-        //onReorderPriorities(newOrder)
+        newOrder.splice(draggedIndex, 1);
+        newOrder.splice(targetIndex, 0, draggedItem);
         setPriorities(newOrder);
+      }
+    } else if (draggedType === "function") {
+      const newOrder = [...functions];
+      const draggedIndex = newOrder.findIndex((item) => item.id === draggedItem.id);
+      const targetIndex = newOrder.findIndex((item) => item.id === targetItem.id);
+
+      if (draggedIndex !== -1 && targetIndex !== -1) {
+        newOrder.splice(draggedIndex, 1);
+        newOrder.splice(targetIndex, 0, draggedItem);
+        setFunctions(newOrder);
       }
     }
 
-    setDraggedItem(null)
-    setDraggedType(null)
-  }
+    setDraggedItem(null);
+    setDraggedType(null);
+  };
 
   const handleDragEnd = () => {
     setDraggedItem(null)
@@ -451,6 +485,70 @@ export function DeclarationManager({
             <PriorityEditor
               priority={selectedPriority}
               onSave={handleSavePriority}
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Functions Section */}
+      <div className="space-y-3">
+        <h2 className="font-bold">Functions</h2>
+        <div className="space-y-2">
+          {functions.map((f) => (
+            <div
+              key={f.id}
+              className="border rounded-md p-3 bg-muted/20 transition-colors"
+              draggable
+              onDragStart={(e) => handleDragStart(e, f, "function")}
+              onDragOver={(e) => handleDragOver(e, f)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, f)}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <div className="cursor-grab active:cursor-grabbing">
+                    <GripVertical className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div className="font-mono text-sm">
+                    fun {f.name}
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditFunction(f)}>
+                    <Edit className="h-3 w-3" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeleteFunction(f.id)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <Dialog open={functionEditorOpen} onOpenChange={setFunctionEditorOpen}>
+          <DialogTrigger asChild>
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={() => {
+                setSelectedFunction(undefined)
+                setFunctionEditorOpen(true)
+              }}
+            >
+              Create New Function
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedFunction ? `Edit Function: ${selectedFunction.name}` : "Create New Function"}
+              </DialogTitle>
+            </DialogHeader>
+            <FunctionEditor
+              existingFunction={selectedFunction}
+              onSave={handleSaveFunction}
             />
           </DialogContent>
         </Dialog>

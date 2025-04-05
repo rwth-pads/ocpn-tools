@@ -8,7 +8,7 @@ import {
 import { PlaceNodeProps } from '@/nodes/PlaceNode'; // Import PlaceNodeData
 import { TransitionNodeProps } from '@/nodes/TransitionNode'; // Import TransitionNodeData
 
-import type { ColorSet, Variable, Priority } from '@/declarations';
+import type { ColorSet, Variable, Priority, Function } from '@/declarations';
 
 export type AppNode = Node;
 
@@ -24,6 +24,7 @@ export type AppState = {
   colorSets: ColorSet[];
   variables: Variable[];
   priorities: Priority[];
+  functions: Function[];
   selectedElement: SelectedElement; // Add selectedElement to AppState
   onNodesChange: OnNodesChange<AppNode>;
   onEdgesChange: OnEdgesChange;
@@ -33,13 +34,16 @@ export type AppState = {
   setColorSets: (colorSets: ColorSet[]) => void;
   setVariables: (variables: Variable[]) => void;
   setPriorities: (priorities: Priority[]) => void;
+  setFunctions: (functions: Function[]) => void;
   addNode: (newNode: AppNode) => void;
   addColorSet: (newColorSet: ColorSet) => void;
   addVariable: (newVariable: Variable) => void;
   addPriority: (newPriority: Priority) => void;
+  addFunction: (newFunction: Function) => void;
   deleteColorSet: (id: string) => void;
   deleteVariable: (id: string) => void;
   deletePriority: (id: string) => void;
+  deleteFunction: (id: string) => void;
   updateNodeData: (id: string, newData: any) => void;
   setSelectedElement: (element: SelectedElement) => void; // Add setter for selectedElement
 };

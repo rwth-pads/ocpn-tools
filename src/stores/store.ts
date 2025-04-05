@@ -8,6 +8,7 @@ import { initialEdges } from '@/edges';
 import { initialColorSets } from '@/declarations';
 import { initialVariables } from '@/declarations';
 import { initialPriorities } from '@/declarations';
+import { initialFunctions } from '@/declarations';
 
 import { v4 as uuidv4 } from 'uuid';
  
@@ -18,6 +19,7 @@ const useStore = create<AppState>((set, get) => ({
   colorSets: initialColorSets,
   variables: initialVariables,
   priorities: initialPriorities,
+  functions: initialFunctions,
   selectedElement: null as SelectedElement | null,
 
   // Actions
@@ -51,6 +53,9 @@ const useStore = create<AppState>((set, get) => ({
   setPriorities: (priorities) => {
     set({ priorities });
   },
+  setFunctions: (functions) => {
+    set({ functions });
+  },
 
   // Add a new node
   addNode: (newNode: AppNode) =>
@@ -82,6 +87,14 @@ const useStore = create<AppState>((set, get) => ({
         { ...newPriority, id: newPriority.id ?? uuidv4() },
       ],
     })),
+  // Add a new function
+  addFunction: (newFunction) =>
+    set((state) => ({
+      functions: [
+        ...state.functions,
+        { ...newFunction, id: newFunction.id ?? uuidv4() },
+      ],
+    })),
   // Remove a color set
   deleteColorSet: (id) =>
     set((state) => ({
@@ -96,6 +109,11 @@ const useStore = create<AppState>((set, get) => ({
   deletePriority: (id) =>
     set((state) => ({
       priorities: state.priorities.filter((priority) => priority.id !== id),
+    })),
+  // Remove a function
+  deleteFunction: (id) =>
+    set((state) => ({
+      functions: state.functions.filter((func) => func.id !== id),
     })),
 
   // Update node data

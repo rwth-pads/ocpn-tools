@@ -22,7 +22,7 @@ const Sidebar = () => {
 
   const renderElementProperties = () => {
     if (!selectedElement) {
-      return <div className="p-4 text-center text-muted-foreground">Select an element to view its properties</div>;
+      return <div className="p-4 text-center text-muted-foreground">Select an element to edit its properties</div>;
     }
 
     if (selectedElement.type === 'node') {

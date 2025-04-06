@@ -59,25 +59,56 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
   useEffect(() => {
     // When editing an existing color set, try to parse its definition
     if (colorSet) {
-      setName(colorSet.name)
-      setType(colorSet.type)
-      setDefinition(colorSet.definition)
+      setName(colorSet.name);
+      setType(colorSet.type);
+      setDefinition(colorSet.definition);
 
       // Try to parse the definition based on type
       if (colorSet.type === "basic") {
-        const withMatch = colorSet.definition.match(/colset\s+\w+\s*=\s*(\w+)(?:\s+with\s+(\d+)\.\.(\d+))?/)
+        const withMatch = colorSet.definition.match(/colset\s+\w+\s*=\s*(\w+)(?:\s+with\s+(\d+)\.\.(\d+))?/);
         if (withMatch) {
-          setBasicType(withMatch[1])
+          setBasicType(withMatch[1]);
           if (withMatch[2] && withMatch[3]) {
-            setWithRange(true)
-            setRangeStart(withMatch[2])
-            setRangeEnd(withMatch[3])
+            setWithRange(true);
+            setRangeStart(withMatch[2]);
+            setRangeEnd(withMatch[3]);
           }
         }
+      } else if (colorSet.type === "list") {
+        const listMatch = colorSet.definition.match(/list\s+(\w+)/);
+        if (listMatch) {
+          const baseSetName = listMatch[1];
+          const baseSet = existingColorSets.find((cs) => cs.name === baseSetName);
+          if (baseSet) {
+            setBaseColorSet(baseSet.name);
+          }
+        }
+      } else if (colorSet.type === "product") {
+        const productMatch = colorSet.definition.match(/product\s+([\w\s\*]+)/);
+        if (productMatch) {
+          const productSets = productMatch[1].split("*").map((cs) => cs.trim());
+          setProductColorSets(productSets);
+        }
+      } else if (colorSet.type === "record") {
+        const recordMatch = colorSet.definition.match(/record\s+([\w\s\:\*]+)/);
+        if (recordMatch) {
+          const fields = recordMatch[1]
+            .split("*")
+            .map((field) => {
+              const [name, type] = field.split(":").map((s) => s.trim());
+              return { id: uuidv4(), name, type };
+            });
+          setRecordFields(fields);
+        }
+      } else if (colorSet.type === "subset") {
+        const subsetMatch = colorSet.definition.match(/subset\s+(\w+)\s+by\s+(.+)/);
+        if (subsetMatch) {
+          setSubsetOf(subsetMatch[1]);
+          setPredicate(subsetMatch[2]);
+        }
       }
-      // Additional parsing for other types could be added here
     }
-  }, [colorSet])
+  }, [colorSet, existingColorSets]);
 
   const handleAddEnumValue = () => {
     setEnumValues([

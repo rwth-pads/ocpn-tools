@@ -26,6 +26,9 @@ export type AppState = {
   priorities: Priority[];
   functions: Function[];
   selectedElement: SelectedElement; // Add selectedElement to AppState
+};
+
+export type AppActions = {
   onNodesChange: OnNodesChange<AppNode>;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
@@ -45,7 +48,8 @@ export type AppState = {
   deletePriority: (id: string) => void;
   deleteFunction: (id: string) => void;
   updateNodeData: (id: string, newData: any) => void;
-  setSelectedElement: (element: SelectedElement) => void; // Add setter for selectedElement
+  setSelectedElement: (element: SelectedElement) => void;
+  reset: () => void;
 };
 
 

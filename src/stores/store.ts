@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { addEdge, applyNodeChanges, applyEdgeChanges } from '@xyflow/react';
-import { AppState, AppNode, SelectedElement } from '@/types';
+import { AppState, AppActions, AppNode, SelectedElement } from '@/types';
  
 import { initialNodes } from '@/nodes';
 import { initialEdges } from '@/edges';
@@ -11,9 +11,20 @@ import { initialPriorities } from '@/declarations';
 import { initialFunctions } from '@/declarations';
 
 import { v4 as uuidv4 } from 'uuid';
+
+// define the initial state
+const emptyState: AppState = {
+  nodes: [],
+  edges: [],
+  colorSets: [],
+  variables: [],
+  priorities: [],
+  functions: [],
+  selectedElement: null,
+}
  
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
-const useStore = create<AppState>((set, get) => ({
+const useStore = create<AppState & AppActions>((set, get) => ({
   nodes: initialNodes,
   edges: initialEdges,
   colorSets: initialColorSets,
@@ -145,6 +156,11 @@ const useStore = create<AppState>((set, get) => ({
         data: { ...node.data, isArcMode: state },
       })),
     })),
+  
+  reset: () => {
+    set(emptyState);
+    },
+
 }));
  
 export default useStore;

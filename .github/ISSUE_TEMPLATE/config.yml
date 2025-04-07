@@ -1,4 +1,16 @@
 blank_issues_enabled: false
+
+issue_templates:
+  - name: 🐛 Bug Report
+    path: bug_report.yml
+    description: Report something that isn't working as expected.
+  - name: 🚀 Feature Request
+    path: feature_request.yml
+    description: Suggest a new feature or enhancement.
+  - name: 🔧 Dev Task
+    path: dev_task.yml
+    description: Internal development TODOs or technical tasks.
+
 contact_links:
   - name: Questions or Help
     url: https://www.pads.rwth-aachen.de/cms/PADS/Der-Lehrstuhl/Team/Wissenschaftliche-Mitarbeiter/~mzkqs/Istvan-Koren/

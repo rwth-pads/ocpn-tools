@@ -1,5 +1,5 @@
 ---
-name: Internal Task
+name: 🔧 Task (Internal)
 about: Internal development TODOs or technical tasks.
 title: "[Dev Task]: "
 labels: 'dev task'

@@ -150,14 +150,14 @@ export function Toolbar({ toggleArcMode, layoutGraph }) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
-                  <Button variant="ghost" size="icon" title="Layout Graph" onClick={layoutGraph}>
+                  <Button variant="ghost" size="icon" title="Layout Petri Net" onClick={layoutGraph}>
                     <Network className="h-5 w-5" />
-                    <span className="sr-only">Layout Graph</span>
+                    <span className="sr-only">Layout Petri Net</span>
                   </Button>
                 </span>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Layout Graph</p>
+                <p>Layout Petri Net</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

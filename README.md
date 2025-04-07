@@ -46,4 +46,5 @@ Contributions are welcome! To contribute:
 
 ## License
 This project is licensed under the MIT License. See the `LICENSE` file for details.
-It is based on the project template [React Flow starter (Vite + TS)](https://github.com/xyflow/vite-react-flow-template) (c) 2023 by webkid GmbH.
+
+The project is based on the project template [React Flow starter (Vite + TS)](https://github.com/xyflow/vite-react-flow-template) (c) 2023 by webkid GmbH.

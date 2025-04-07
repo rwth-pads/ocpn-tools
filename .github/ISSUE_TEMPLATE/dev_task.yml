@@ -1,0 +1,53 @@
+name: 🔧 Task (Internal)
+description: Internal development TODOs or technical tasks.
+title: "[Dev Task]: "
+labels: ["dev task"]
+assignees:
+  - istvank
+body:
+  - type: textarea
+    id: task-description
+    attributes:
+      label: Task Description
+      description: Describe the task to be done. Include any related code stubs, comments, or TODOs if relevant.
+    validations:
+      required: true
+
+  - type: input
+    id: related-code
+    attributes:
+      label: Related Code
+      description: Mention file(s), function(s), or component(s) involved (optional).
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: context
+    attributes:
+      label: Context
+      description: Why is this task needed?
+      options:
+        - label: Polish
+        - label: Refactoring
+        - label: Filling in functionality
+        - label: Other
+
+  - type: dropdown
+    id: estimated-scope
+    attributes:
+      label: Estimated Scope
+      description: How large is this task?
+      options:
+        - Minor (quick fix or cosmetic change)
+        - Medium (small implementation or refactor)
+        - Larger (requires discussion or significant effort)
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-notes
+    attributes:
+      label: Additional Notes
+      description: Any other helpful information or related issues/PRs.
+    validations:
+      required: false

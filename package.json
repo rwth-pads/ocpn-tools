@@ -1,6 +1,6 @@
 {
-  "name": "cpn-designer",
-  "version": "0.0.0",
+  "name": "ocpn-tools",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",

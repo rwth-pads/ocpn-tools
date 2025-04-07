@@ -1,6 +1,5 @@
-import { useState, type DragEvent } from "react"
 import { Button } from "@/components/ui/button"
-import { Circle, Square, ArrowRight, Network, FolderOpen, Play } from "lucide-react"
+import { Circle, Square, ArrowRight, Network } from "lucide-react"
 
 import { Toggle } from '@/components/ui/toggle';
 
@@ -25,17 +24,24 @@ import { useDnD } from '@/utils/DnDContext';
 //   parseFileContent,
 // } from "@/utils/file-operations"
 
-export function Toolbar({ toggleArcMode, layoutGraph }) {
+interface ToolbarProps {
+  toggleArcMode: (pressed: boolean) => void;
+  layoutGraph: () => void;
+}
+
+export function Toolbar({ toggleArcMode, layoutGraph }: ToolbarProps) {
   //const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   //const [openDialogOpen, setOpenDialogOpen] = useState(false)
 
   const [_, setType] = useDnD();
 
-  const onDragStart = (event: DragEvent<HTMLButtonElement>, nodeType: string) => {
-    //event.dataTransfer.setData("application/reactflow", nodeType);
-    setType(nodeType);
-    event.dataTransfer.effectAllowed = "move";
-  }
+  const onDragStart = (event: React.DragEvent<HTMLElement>, nodeType: string) => {
+      //event.dataTransfer.setData("application/reactflow", nodeType);
+      if (setType) {
+        setType(nodeType);
+      }
+      event.dataTransfer.effectAllowed = "move";
+    }
 
   // const handleSave = (format: string) => {
   //   let content: string

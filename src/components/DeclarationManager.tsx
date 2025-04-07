@@ -45,7 +45,6 @@ export function DeclarationManager({
   const onAddFunction = useStore((state) => state.addFunction);
   const onDeleteFunction = useStore((state) => state.deleteFunction);
 
-  const [newColorSet, setNewColorSet] = useState({ name: "", type: "basic" })
   const [newVariable, setNewVariable] = useState({ name: "", colorSet: "INT" })
   const [newPriority, setNewPriority] = useState({ name: "", level: 250 })
   const [selectedColorSet, setSelectedColorSet] = useState<ColorSet | undefined>(undefined);
@@ -54,7 +53,7 @@ export function DeclarationManager({
   const [selectedVariable, setSelectedVariable] = useState<Variable | undefined>(undefined);
   const [variableEditorOpen, setVariableEditorOpen] = useState(false);
 
-  const [selectedPriority, setSelectedPriority] = useState<Priority>(undefined);
+  const [selectedPriority, setSelectedPriority] = useState<Priority | undefined>(undefined);
   const [priorityEditorOpen, setPriorityEditorOpen] = useState(false);
 
   const [selectedFunction, setSelectedFunction] = useState<Function | undefined>(undefined);
@@ -63,17 +62,6 @@ export function DeclarationManager({
   // Drag and drop state
   const [draggedItem, setDraggedItem] = useState<any>(null)
   const [draggedType, setDraggedType] = useState<"colorSet" | "variable" | "priority" | "function" | null>(null)
-
-  const handleAddColorSet = () => {
-    if (newColorSet.name) {
-      onAddColorSet({
-        name: newColorSet.name,
-        type: newColorSet.type,
-        definition: `colset ${newColorSet.name} = ${newColorSet.type === "basic" ? "int" : "product"};`,
-      })
-      setNewColorSet({ name: "", type: "basic" })
-    }
-  }
 
   const handleAddVariable = () => {
     if (newVariable.name && newVariable.colorSet) {
@@ -296,7 +284,7 @@ export function DeclarationManager({
                         <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditPriority(p)}>
                           <Edit className="h-3 w-3" />
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeletePriority(p.id)}>
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => p.id && onDeletePriority(p.id)}>
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
@@ -388,7 +376,7 @@ export function DeclarationManager({
                       <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditColorSet(cs)}>
                         <Edit className="h-3 w-3" />
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeleteColorSet(cs.id)}>
+                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => cs.id && onDeleteColorSet(cs.id)}>
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
@@ -469,7 +457,7 @@ export function DeclarationManager({
                       <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditVariable(v)}>
                         <Edit className="h-3 w-3" />
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeleteVariable(v.id)}>
+                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => v.id && onDeleteVariable(v.id)}>
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
@@ -565,7 +553,7 @@ export function DeclarationManager({
                       <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditFunction(f)}>
                         <Edit className="h-3 w-3" />
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDeleteFunction(f.id)}>
+                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => f.id && onDeleteFunction(f.id)}>
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>

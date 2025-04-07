@@ -1,20 +1,27 @@
-import { Position, MarkerType } from '@xyflow/react';
+import { Position } from '@xyflow/react';
+import type { Node } from '@xyflow/react';
+
+
+interface Point {
+  x: number;
+  y: number;
+}
 
 // this helper function returns the intersection point
 // of the line between the center of the intersectionNode and the target node
-function getNodeIntersection(intersectionNode, targetNode) {
-  const { width: intersectionNodeWidth, height: intersectionNodeHeight } =
-    intersectionNode.measured;
-  const intersectionNodePosition = intersectionNode.internals.positionAbsolute;
-  const targetPosition = targetNode.internals.positionAbsolute;
+function getNodeIntersection(intersectionNode: Node, targetNode: Node): Point {
+  const { width: intersectionNodeWidth = 0, height: intersectionNodeHeight = 0 } =
+    intersectionNode.measured || {};
+  const intersectionNodePosition = (intersectionNode as NodeWithInternals).internals.positionAbsolute;
+  const targetPosition = (targetNode as NodeWithInternals).internals.positionAbsolute;
 
   const w = intersectionNodeWidth / 2;
   const h = intersectionNodeHeight / 2;
 
   const x2 = intersectionNodePosition.x + w;
   const y2 = intersectionNodePosition.y + h;
-  const x1 = targetPosition.x + targetNode.measured.width / 2;
-  const y1 = targetPosition.y + targetNode.measured.height / 2;
+  const x1 = targetPosition.x + ((targetNode.measured?.width ?? 0) / 2);
+  const y1 = targetPosition.y + ((targetNode.measured?.height ?? 0) / 2);
 
   if (intersectionNode.type === 'place') {
     // Adjust for elliptical nodes
@@ -41,7 +48,23 @@ function getNodeIntersection(intersectionNode, targetNode) {
 }
 
 // returns the position (top, right, bottom, or left) of the node compared to the intersection point
-function getEdgePosition(node, intersectionPoint) {
+interface NodePosition {
+  x: number;
+  y: number;
+}
+
+interface NodeInternals {
+  positionAbsolute: NodePosition;
+}
+
+interface NodeWithInternals extends Node {
+  internals: NodeInternals;
+}
+
+function getEdgePosition(
+  node: NodeWithInternals,
+  intersectionPoint: Point
+): Position {
   const n = { ...node.internals.positionAbsolute, ...node };
   const nx = Math.round(n.x);
   const ny = Math.round(n.y);
@@ -50,8 +73,8 @@ function getEdgePosition(node, intersectionPoint) {
 
   if (node.type === 'place') {
     // Adjust for elliptical nodes
-    const dx = px - (nx + n.measured.width / 2);
-    const dy = py - (ny + n.measured.height / 2);
+    const dx = px - (nx + ((n.measured?.width ?? 0) / 2));
+    const dy = py - (ny + ((n.measured?.height ?? 0) / 2));
     const angle = Math.atan2(dy, dx);
     if (Math.abs(angle) < Math.PI / 4) return Position.Right;
     if (Math.abs(angle) > (3 * Math.PI) / 4) return Position.Left;
@@ -62,13 +85,13 @@ function getEdgePosition(node, intersectionPoint) {
   if (px <= nx + 1) {
     return Position.Left;
   }
-  if (px >= nx + n.measured.width - 1) {
+  if (px >= nx + (n.measured?.width ?? 0) - 1) {
     return Position.Right;
   }
   if (py <= ny + 1) {
     return Position.Top;
   }
-  if (py >= n.y + n.measured.height - 1) {
+  if (py >= n.y + ((n.measured?.height ?? 0) - 1)) {
     return Position.Bottom;
   }
 
@@ -76,12 +99,21 @@ function getEdgePosition(node, intersectionPoint) {
 }
 
 // returns the parameters (sx, sy, tx, ty, sourcePos, targetPos) you need to create an edge
-export function getEdgeParams(source, target) {
+interface EdgeParams {
+  sx: number;
+  sy: number;
+  tx: number;
+  ty: number;
+  sourcePos: Position;
+  targetPos: Position;
+}
+
+export function getEdgeParams(source: Node, target: Node): EdgeParams {
   const sourceIntersectionPoint = getNodeIntersection(source, target);
   const targetIntersectionPoint = getNodeIntersection(target, source);
 
-  const sourcePos = getEdgePosition(source, sourceIntersectionPoint);
-  const targetPos = getEdgePosition(target, targetIntersectionPoint);
+  const sourcePos = getEdgePosition(source as NodeWithInternals, sourceIntersectionPoint);
+  const targetPos = getEdgePosition(target as NodeWithInternals, targetIntersectionPoint);
 
   return {
     sx: sourceIntersectionPoint.x,

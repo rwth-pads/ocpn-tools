@@ -1,12 +1,11 @@
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PlusCircle, Trash2 } from "lucide-react"
-import { v4 as uuidv4 } from "uuid"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PlusCircle, Trash2 } from "lucide-react";
+import { v4 as uuidv4 } from "uuid";
 import type { Function, FunctionPattern } from "@/declarations";
 
 interface FunctionEditorProps {
@@ -185,7 +184,7 @@ export function FunctionEditor({ existingFunction, onSave }: FunctionEditorProps
               id="function-name"
               placeholder="e.g., listMult"
               value={func.name}
-              onChange={(e) => handleNameChange(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
             />
           </div>
 

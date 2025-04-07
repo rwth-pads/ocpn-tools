@@ -147,9 +147,9 @@ const useStore = create<AppState & AppActions>((set, get) => ({
     });
   },
 
-  setSelectedElement: (element) => set({ selectedElement: element }),
+  setSelectedElement: (element: SelectedElement | null) => set({ selectedElement: element }),
 
-  toggleArcMode: (state) =>
+  toggleArcMode: (state: boolean) =>
     set((store) => ({
       nodes: store.nodes.map((node) => ({
         ...node,

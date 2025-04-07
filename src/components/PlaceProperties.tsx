@@ -3,9 +3,10 @@ import useStore from '@/stores/store';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SelectedElement } from '@/types'; 
+import { SelectedElement } from '@/types';
+import { ColorSet } from '@/declarations';
 
-const PlaceProperties = ({ colorSets }) => {
+const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
   const selectedElement = useStore((state) => state.selectedElement) as SelectedElement | null;
   const updateNodeData = useStore((state) => state.updateNodeData);
 

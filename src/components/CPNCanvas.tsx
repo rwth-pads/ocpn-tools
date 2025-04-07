@@ -9,6 +9,8 @@ import {
   Panel,
   MarkerType,
   useReactFlow,
+  Node,
+  Edge,
 } from '@xyflow/react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -45,7 +47,7 @@ import {
 import { nodeTypes } from '../nodes';
 import { edgeTypes } from '../edges';
 
-const selector = (state) => ({
+const selector = (state: any) => ({
   nodes: state.nodes,
   edges: state.edges,
   onNodesChange: state.onNodesChange,
@@ -72,7 +74,7 @@ const defaultEdgeOptions = {
   },
 };
 
-const getLayoutedElements = (nodes, edges, options) => {
+const getLayoutedElements = (nodes: Node[], edges: Edge[], options: any) => {
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
   g.setGraph({ rankdir: options.direction, nodesep: 80, ranksep: 80 });
  
@@ -127,9 +129,9 @@ const CPNCanvas = () => {
   );
 
   const { fitView, screenToFlowPosition } = useReactFlow();
-  const [type, setType] = useDnD();
+  const [type] = useDnD();
 
-  const onOpenPetriNet = (data) => {
+  const onOpenPetriNet = (data: any) => {
     if (data) {
       // Reset the current state
       reset();
@@ -210,18 +212,13 @@ const CPNCanvas = () => {
   //   [setEdges]
   // );
 
-  const onDragOver = useCallback((event) => {
+  const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
   }, []);
 
-  const onDragStart = (event, nodeType) => {
-    setType(nodeType);
-    event.dataTransfer.effectAllowed = 'move';
-  };
-
   const onDrop = useCallback(
-    (event) => {
+    (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
 
       if (!type || typeof type !== 'string') {
@@ -246,12 +243,12 @@ const CPNCanvas = () => {
   );
 
   // Handle node selection
-  const onNodeClick = useCallback((event: React.MouseEvent, node: any) => {
+  const onNodeClick = useCallback((node: any) => {
     setSelectedElement({ type: "node", element: node })
   }, [setSelectedElement]);
 
   // Handle edge selection
-  const onEdgeClick = useCallback((event: React.MouseEvent, edge: any) => {
+  const onEdgeClick = useCallback((edge: any) => {
     setSelectedElement({ type: "edge", element: edge })
   }, [setSelectedElement])
 

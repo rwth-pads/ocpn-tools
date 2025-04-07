@@ -18,10 +18,6 @@ export interface PlaceNodeProps {
 export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
   const connection = useConnection();
 
-  // Default minimum size for the place node
-  const minWidth = 30
-  const minHeight = 30
-
   const isTarget = connection.inProgress && connection.fromNode.id !== id && connection.fromNode.type === 'transition';
 
   return (

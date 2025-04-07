@@ -7,7 +7,9 @@ import { Separator } from "@/components/ui/separator";
 import { SelectedElement } from '@/types';
 import { CodeSegmentEditor } from "@/components/CodeSegmentEditor";
 
-const TransitionProperties = ({ priorities }) => {
+import type { Priority } from "@/declarations";
+
+const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
   const selectedElement = useStore((state) => state.selectedElement) as SelectedElement | null;
   const updateNodeData = useStore((state) => state.updateNodeData);
 

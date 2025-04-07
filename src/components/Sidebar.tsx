@@ -1,4 +1,3 @@
-import React from 'react';
 import useStore from '@/stores/store';
 import { ResizablePanel } from '@/components/ui/resizable';
 import { Separator } from '@/components/ui/separator';
@@ -17,7 +16,6 @@ const Sidebar = () => {
   const selectedElement = useStore((state) => state.selectedElement);
 
   const colorSets = useStore((state) => state.colorSets);
-  const variables = useStore((state) => state.variables);
   const priorities = useStore((state) => state.priorities);
 
   const renderElementProperties = () => {

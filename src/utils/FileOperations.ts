@@ -197,14 +197,14 @@ function generateRandomColor(): string {
 // Parse CPN Tools XML (simplified)
 function parseCPNToolsXML(content: string): PetriNetData {
   const cpnet = {
-    arcs: [],
-    places: [],
-    transitions: [],
+    arcs: Array<{ id: string | null; orientation: string | null; transEnd: string; placeEnd: string; label: string }>(),
+    places: Array<{ id: string | null; x: number; y: number; width: number; height: number; text: string; type: string; initialMarking: string }>(),
+    transitions: Array<{ id: string | null; x: number; y: number; width: number; height: number; text: string; guard: string; time: string; priority: string }>(),
     auxs: [],
-    colorSets: [],
-    variables: [],
-    priorities: [],
-    functions: [],
+    colorSets: Array<{ id: string; name: string; type: string; range: string | null; definition: string; layout: string }>(),
+    variables: Array<{ id: string; type: string; layout: string }>(),
+    priorities: Array<{ name: string; value: number }>(),
+    functions: Array<{ id: string; name: string; patterns: FunctionPattern[] }>(),
   };
 
   const parser = new DOMParser();
@@ -360,7 +360,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
     name: cpnXML.querySelector('pageattr')?.getAttribute('name') || "Imported Petri Net",
     nodes: [
       ...cpnet.places.map((place) => ({
-        id: place.id,
+        id: place.id || uuidv4(), // Ensure id is a string
         type: "place",
         position: { x: place.x, y: place.y },
         width: place.width,
@@ -372,7 +372,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
         },
       })),
       ...cpnet.transitions.map((transition) => ({
-        id: transition.id,
+        id: transition.id || uuidv4(), // Ensure id is a string
         type: "transition",
         position: { x: transition.x, y: transition.y },
         width: transition.width,
@@ -386,7 +386,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
       })),
     ],
     edges: cpnet.arcs.map((arc) => ({
-      id: arc.id,
+      id: arc.id || uuidv4(), // Ensure id is a string by providing a fallback
       source: arc.orientation === "PtoT" ? arc.placeEnd : arc.transEnd,
       target: arc.orientation === "PtoT" ? arc.transEnd : arc.placeEnd,
       label: arc.label,
@@ -396,7 +396,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
       name: cs.id,
       type: cs.type || "basic",
       definition: cs.layout || `colset ${cs.id} = ${cs.type};`,
-      color: cs.color || generateRandomColor(), // Assign random color if not defined
+      color: generateRandomColor(), // Assign random color
     })),
     variables: cpnet.variables.map((v) => ({
       id: v.id,
@@ -404,7 +404,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
       colorSet: v.type,
     })),
     priorities: cpnet.priorities.map((p) => ({
-      id: p.id,
+      id: uuidv4(), // Generate a unique ID for each priority
       name: p.name,
       level: p.value,
     })),
@@ -417,7 +417,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
 }
 
 // Parse cpn-py XML (simplified)
-function parseCPNPyXML(content: string): PetriNetData {
+function parseCPNPyXML(_: string): PetriNetData {
   // This is a placeholder - in a real implementation, you would use a proper XML parser
   // and extract the data according to the cpn-py XML structure
 

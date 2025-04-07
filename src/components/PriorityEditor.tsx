@@ -47,7 +47,7 @@ export function PriorityEditor({ priority, onSave }: PriorityEditorProps) {
             placeholder="Level (e.g., 250)"
             className="w-[120px]"
             value={level || ""}
-            onChange={(e) => setLevel(e.target.value)}
+            onChange={(e) => setLevel(Number(e.target.value))}
           />
         </div>
       </div>

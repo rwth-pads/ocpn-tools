@@ -243,12 +243,12 @@ const CPNCanvas = () => {
   );
 
   // Handle node selection
-  const onNodeClick = useCallback((node: any) => {
+  const onNodeClick = useCallback((_: React.MouseEvent, node: any) => {
     setSelectedElement({ type: "node", element: node })
   }, [setSelectedElement]);
 
   // Handle edge selection
-  const onEdgeClick = useCallback((edge: any) => {
+  const onEdgeClick = useCallback((_: React.MouseEvent, edge: any) => {
     setSelectedElement({ type: "edge", element: edge })
   }, [setSelectedElement])
 

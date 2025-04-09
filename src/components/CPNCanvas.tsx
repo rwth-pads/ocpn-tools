@@ -19,8 +19,10 @@ import Dagre from '@dagrejs/dagre';
 import '@xyflow/react/dist/style.css';
 
 import { Toolbar } from "@/components/Toolbar";
-
 import { Button } from "@/components/ui/button"
+
+import { BoomerDial, type Slice } from "@/components/BoomerDial";
+
 import { Save, FolderOpen } from "lucide-react"
 
 import CustomConnectionLine from '../edges/CustomConnectionLine';
@@ -107,6 +109,9 @@ const CPNCanvas = () => {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [openDialogOpen, setOpenDialogOpen] = useState(false);
 
+  const [isDialOpen, setIsDialOpen] = useState(false);
+  const [dialPosition, setDialPosition] = useState({ x: 0, y: 0 });
+
   const reactFlowWrapper = useRef(null);
   
   const {
@@ -130,6 +135,15 @@ const CPNCanvas = () => {
 
   const { fitView, screenToFlowPosition } = useReactFlow();
   const [type] = useDnD();
+
+  const slices = [
+    { key: 'bottom', label: [''], angle: 90 },
+    { key: 'undo', label: ['Undo'], angle: 150, disabled: true },
+    { key: 'redo', label: ['Redo'], angle: 30, disabled: true },
+    { key: 'new-place', label: ['New', 'Place'], angle: 210 },
+    { key: 'create-aux', label: ['Create aux', 'text'], angle: 270, disabled: true },
+    { key: 'new-transition', label: ['New', 'Transition'], angle: 330 },
+  ];
 
   const onOpenPetriNet = (data: any) => {
     if (data) {
@@ -204,7 +218,6 @@ const CPNCanvas = () => {
     }
 
     saveFile(content, filename)
-    console.log(`Saved in ${format} format`);
   }
 
   // const onConnect = useCallback(
@@ -244,18 +257,64 @@ const CPNCanvas = () => {
 
   // Handle node selection
   const onNodeClick = useCallback((_: React.MouseEvent, node: any) => {
+    setIsDialOpen(false);
     setSelectedElement({ type: "node", element: node })
   }, [setSelectedElement]);
 
   // Handle edge selection
   const onEdgeClick = useCallback((_: React.MouseEvent, edge: any) => {
+    setIsDialOpen(false);
     setSelectedElement({ type: "edge", element: edge })
   }, [setSelectedElement])
 
   // Handle background click (deselect)
   const onPaneClick = useCallback(() => {
-    setSelectedElement(null)
+    setSelectedElement(null);
+    setIsDialOpen(false);
   }, [setSelectedElement])
+
+  const onPaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent) => {
+    event.preventDefault();
+    const reactEvent = event as React.MouseEvent<Element, MouseEvent>;
+    const position = {
+      x: reactEvent.clientX,
+      y: reactEvent.clientY,
+    };
+
+    // Show context menu
+    setDialPosition(position);
+    setIsDialOpen(true);
+  }
+  , [screenToFlowPosition]);
+
+  const handleSliceClick = (_: number, slice: Slice) => {
+    // Perform action based on slice.id
+    const nodeWidth = slice.key === 'new-place' ? 50 : 60; // Adjust width based on node type
+    const nodeHeight = slice.key === 'new-place' ? 50 : 40; // Adjust height based on node type
+    const position = {
+      x: screenToFlowPosition(dialPosition).x - nodeWidth / 2,
+      y: screenToFlowPosition(dialPosition).y - nodeHeight / 2,
+    };
+    if (slice.key === 'new-place') {
+      const newNode = {
+        id: `node_${Date.now()}`,
+        type: 'place',
+        position,
+        data: { label: 'place', isArcMode: false },
+      };
+      useStore.getState().addNode(newNode);
+    } else if (slice.key === 'new-transition') {
+      const newNode = {
+        id: `node_${Date.now()}`,
+        type: 'transition',
+        position,
+        width: 60,
+        data: { label: 'transition', isArcMode: false },
+      };
+      useStore.getState().addNode(newNode);
+    }
+    setIsDialOpen(false);
+  }
 
   const onLayout = useCallback(
     () => {
@@ -332,6 +391,7 @@ const CPNCanvas = () => {
             onNodeClick={onNodeClick}
             onEdgeClick={onEdgeClick}
             onPaneClick={onPaneClick}
+            onPaneContextMenu={onPaneContextMenu}
             onConnect={onConnect}
             onDrop={onDrop}
             onDragOver={onDragOver}
@@ -353,6 +413,14 @@ const CPNCanvas = () => {
             <Panel position="top-center">
               <Toolbar toggleArcMode={toggleArcMode} layoutGraph={onLayout} />
             </Panel>
+            <BoomerDial
+              slices={slices}
+              position={dialPosition}
+              isOpen={isDialOpen}
+              onClose={() => setIsDialOpen(false)}
+              onSliceClick={handleSliceClick}
+              size={200}
+            ></BoomerDial>
           </ReactFlow>
         </div>
       </div>

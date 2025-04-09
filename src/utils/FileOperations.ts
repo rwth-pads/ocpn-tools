@@ -3,7 +3,7 @@ import type { ColorSet, Variable, Priority, Function, FunctionPattern } from '@/
 
 import { v4 as uuidv4 } from 'uuid';
 
-interface PetriNetData {
+export type PetriNetData = {
   id: string
   name: string
   nodes: Node[]
@@ -173,7 +173,7 @@ export function parseFileContent(content: string, fileName: string): PetriNetDat
         return parseCPNToolsXML(content)
       } else if (content.includes("<pnml") || content.includes("http://www.pnml.org")) {
         // Parse cpn-py XML
-        return parseCPNPyXML(content)
+        return parseCPNPyXML();
       }
     }
 
@@ -218,7 +218,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
       const id = color.querySelector('id')?.textContent || '';
       const layout = color.querySelector('layout')?.textContent || '';
       let type = "basic"; // Default to "basic" type
-      let definition = layout;
+      const definition = layout;
 
       // Determine type based on the structure
       if (layout.includes("list")) {
@@ -417,7 +417,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
 }
 
 // Parse cpn-py XML (simplified)
-function parseCPNPyXML(_: string): PetriNetData {
+function parseCPNPyXML(): PetriNetData {
   // This is a placeholder - in a real implementation, you would use a proper XML parser
   // and extract the data according to the cpn-py XML structure
 

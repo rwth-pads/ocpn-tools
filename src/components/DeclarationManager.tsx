@@ -18,11 +18,7 @@ import {
 
 import { ColorSet, Variable, Priority, Function } from "@/declarations"
 
-interface DeclarationManagerProps {
-}
-
-export function DeclarationManager({
-}: DeclarationManagerProps) {
+export function DeclarationManager() {
   const [isPrioritiesOpen, setIsPrioritiesOpen] = useState(false);
   const [isColorSetsOpen, setIsColorSetsOpen] = useState(false);
   const [isVariablesOpen, setIsVariablesOpen] = useState(false);
@@ -60,7 +56,7 @@ export function DeclarationManager({
   const [functionEditorOpen, setFunctionEditorOpen] = useState(false);
 
   // Drag and drop state
-  const [draggedItem, setDraggedItem] = useState<any>(null)
+  const [draggedItem, setDraggedItem] = useState<ColorSet | Variable | Priority | Function | null>(null)
   const [draggedType, setDraggedType] = useState<"colorSet" | "variable" | "priority" | "function" | null>(null)
 
   const handleAddVariable = () => {
@@ -160,15 +156,19 @@ export function DeclarationManager({
   };
 
   // Drag handlers
-  const handleDragStart = (e: React.DragEvent, item: any, type: "colorSet" | "variable" | "priority" | "function") => {
+  const handleDragStart = (
+    e: React.DragEvent, 
+    item: ColorSet | Variable | Priority | Function, 
+    type: "colorSet" | "variable" | "priority" | "function"
+  ) => {
     setDraggedItem(item)
     setDraggedType(type)
     e.dataTransfer.effectAllowed = "move"
     // Required for Firefox
-    e.dataTransfer.setData("text/plain", item.id)
+    e.dataTransfer.setData("text/plain", item.id ?? '');
   }
 
-  const handleDragOver = (e: React.DragEvent, targetItem: any) => {
+  const handleDragOver = (e: React.DragEvent, targetItem: ColorSet | Variable | Function) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = "move"
 
@@ -184,7 +184,7 @@ export function DeclarationManager({
     target.classList.remove("bg-muted")
   }
 
-  const handleDrop = (e: React.DragEvent, targetItem: any) => {
+  const handleDrop = (e: React.DragEvent, targetItem: ColorSet | Variable | Function) => {
     e.preventDefault();
     const target = e.currentTarget as HTMLElement;
     target.classList.remove("bg-muted");
@@ -201,7 +201,7 @@ export function DeclarationManager({
 
       if (draggedIndex !== -1 && targetIndex !== -1) {
         newOrder.splice(draggedIndex, 1);
-        newOrder.splice(targetIndex, 0, draggedItem);
+        newOrder.splice(targetIndex, 0, draggedItem as ColorSet);
         setColorSets(newOrder);
       }
     } else if (draggedType === "variable") {
@@ -211,7 +211,7 @@ export function DeclarationManager({
 
       if (draggedIndex !== -1 && targetIndex !== -1) {
         newOrder.splice(draggedIndex, 1);
-        newOrder.splice(targetIndex, 0, draggedItem);
+        newOrder.splice(targetIndex, 0, draggedItem as Variable);
         setVariables(newOrder);
       }
     } else if (draggedType === "priority") {
@@ -221,7 +221,7 @@ export function DeclarationManager({
 
       if (draggedIndex !== -1 && targetIndex !== -1) {
         newOrder.splice(draggedIndex, 1);
-        newOrder.splice(targetIndex, 0, draggedItem);
+        newOrder.splice(targetIndex, 0, draggedItem as Priority);
         setPriorities(newOrder);
       }
     } else if (draggedType === "function") {
@@ -231,7 +231,7 @@ export function DeclarationManager({
 
       if (draggedIndex !== -1 && targetIndex !== -1) {
         newOrder.splice(draggedIndex, 1);
-        newOrder.splice(targetIndex, 0, draggedItem);
+        newOrder.splice(targetIndex, 0, draggedItem as Function);
         setFunctions(newOrder);
       }
     }

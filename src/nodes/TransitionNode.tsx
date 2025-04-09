@@ -19,7 +19,7 @@ export interface TransitionNodeProps {
   selected: boolean;
 }
 
-const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, selected }) => {
+export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, selected }) => {
   const connection = useConnection();
 
   const isTarget = connection.inProgress && connection.fromNode.id !== id && connection.fromNode.type === 'place';

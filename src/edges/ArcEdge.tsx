@@ -11,7 +11,7 @@ interface FloatingEdgeProps {
   label?: React.ReactNode; // Optional label for the edge
 }
 
-function FloatingEdge({ id, source, target, markerEnd, style, label }: FloatingEdgeProps): JSX.Element | null {
+function ArcEdge({ id, source, target, markerEnd, style, label }: FloatingEdgeProps) {
   const sourceNode = useInternalNode(source);
   const targetNode = useInternalNode(target);
 
@@ -53,4 +53,4 @@ function FloatingEdge({ id, source, target, markerEnd, style, label }: FloatingE
   );
 }
 
-export default FloatingEdge;
+export default ArcEdge;

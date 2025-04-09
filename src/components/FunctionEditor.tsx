@@ -138,7 +138,7 @@ export function FunctionEditor({ existingFunction, onSave }: FunctionEditorProps
         const match = line.match(regex)
         if (!match) continue
 
-        const [_, name, pattern, expression] = match
+        const [, name, pattern, expression] = match
 
         if (isFirstLine) {
           functionName = name

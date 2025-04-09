@@ -33,7 +33,7 @@ export function Toolbar({ toggleArcMode, layoutGraph }: ToolbarProps) {
   //const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   //const [openDialogOpen, setOpenDialogOpen] = useState(false)
 
-  const [_, setType] = useDnD();
+  const [, setType] = useDnD();
 
   const onDragStart = (event: React.DragEvent<HTMLElement>, nodeType: string) => {
       //event.dataTransfer.setData("application/reactflow", nodeType);

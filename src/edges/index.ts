@@ -1,5 +1,5 @@
 import type { Edge, EdgeTypes } from '@xyflow/react';
-import FloatingEdge from './FloatingEdge';
+import ArcEdge from './ArcEdge';
 
 export const initialEdges: Edge[] = [
   { id: 'a->b', source: 'a', target: 'b', label: 'var1' },
@@ -7,5 +7,5 @@ export const initialEdges: Edge[] = [
 ];
 
 export const edgeTypes = {
-  floating: FloatingEdge,
+  floating: ArcEdge,
 } satisfies EdgeTypes;

@@ -44,12 +44,15 @@ import {
   convertToJSON,
   saveFile,
   parseFileContent,
+  PetriNetData,
 } from '@/utils/FileOperations';
 
 import { nodeTypes } from '../nodes';
 import { edgeTypes } from '../edges';
 
-const selector = (state: any) => ({
+import { type StoreState } from '@/stores/store'; // Ensure this type is defined in your store
+
+const selector = (state: StoreState) => ({
   nodes: state.nodes,
   edges: state.edges,
   onNodesChange: state.onNodesChange,
@@ -76,7 +79,7 @@ const defaultEdgeOptions = {
   },
 };
 
-const getLayoutedElements = (nodes: Node[], edges: Edge[], options: any) => {
+const getLayoutedElements = (nodes: Node[], edges: Edge[], options: { direction: 'LR' | 'TB' }) => {
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
   g.setGraph({ rankdir: options.direction, nodesep: 80, ranksep: 80 });
  
@@ -145,7 +148,7 @@ const CPNCanvas = () => {
     { key: 'new-transition', label: ['New', 'Transition'], angle: 330 },
   ];
 
-  const onOpenPetriNet = (data: any) => {
+  const onOpenPetriNet = (data: PetriNetData) => {
     if (data) {
       // Reset the current state
       reset();
@@ -157,19 +160,19 @@ const CPNCanvas = () => {
         name: data.name || `Imported Net`, //${petriNets.length + 1}`,
         nodes: data.nodes || [],
         edges: data.edges || [],
-      }
+      };
 
       // Add new net and switch to it
       //setPetriNets((prev) => [...prev, newNet])
       //setActiveNetId(newId)
-      setNodes(newNet.nodes)
-      setEdges(newNet.edges)
+      setNodes(newNet.nodes);
+      setEdges(newNet.edges);
 
       // Update declarations if available
-      if (data.colorSets) setColorSets(data.colorSets)
-      if (data.variables) setVariables(data.variables)
-      if (data.priorities) setPriorities(data.priorities)
-      if (data.functions) setFunctions(data.functions)
+      if (data.colorSets) setColorSets(data.colorSets);
+      if (data.variables) setVariables(data.variables);
+      if (data.priorities) setPriorities(data.priorities);
+      if (data.functions) setFunctions(data.functions);
 
       fitView();
     }
@@ -190,7 +193,7 @@ const CPNCanvas = () => {
     let filename: string
 
     //TODO
-    let petriNetData = {
+    const petriNetData = {
       id: 'net',
       name: 'Petri Net',
       nodes: nodes,
@@ -256,13 +259,13 @@ const CPNCanvas = () => {
   );
 
   // Handle node selection
-  const onNodeClick = useCallback((_: React.MouseEvent, node: any) => {
+  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     setIsDialOpen(false);
     setSelectedElement({ type: "node", element: node })
   }, [setSelectedElement]);
 
   // Handle edge selection
-  const onEdgeClick = useCallback((_: React.MouseEvent, edge: any) => {
+  const onEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
     setIsDialOpen(false);
     setSelectedElement({ type: "edge", element: edge })
   }, [setSelectedElement])
@@ -285,7 +288,7 @@ const CPNCanvas = () => {
     setDialPosition(position);
     setIsDialOpen(true);
   }
-  , [screenToFlowPosition]);
+  , []);
 
   const handleSliceClick = (_: number, slice: Slice) => {
     // Perform action based on slice.id
@@ -326,7 +329,7 @@ const CPNCanvas = () => {
  
       fitView();
     },
-    [nodes, edges],
+    [nodes, edges, fitView, setNodes, setEdges],
   );
 
   return (

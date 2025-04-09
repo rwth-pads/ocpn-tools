@@ -18,9 +18,9 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
     return <div>No node selected</div>;
   }
 
-  const { id, data } = selectedElement.element;
+  const { id, data }: { id: string; data: { label?: string; colorSet?: string; isArcMode?: boolean; type?: string; initialMarking?: string; guard?: string; time?: string; priority?: string; codeSegment?: string } } = selectedElement.element;
 
-  // Type guard to ensure data is of type PlaceNodeData
+  // Type guard to ensure data is of type TransitionNodeData
   if (!('guard' in data)) {
     return <div>Invalid node type</div>;
   }
@@ -31,8 +31,8 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
         <Label htmlFor="label">Label</Label>
         <Input
           id="label"
-          value={data.label || ""}
-          onChange={(e) => updateNodeData(id, { ...data, label: e.target.value })}
+          value={data.label ?? ""}
+          onChange={(e) => updateNodeData(id, { ...data, label: e.target.value, isArcMode: data.isArcMode || false, type: data.type || 'defaultType', colorSet: data.colorSet || 'defaultColorSet', initialMarking: data.initialMarking || 'defaultMarking' })}
         />
       </div>
 
@@ -41,7 +41,15 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
         <Input
           id="guard"
           value={data.guard || ""}
-          onChange={(e) => updateNodeData(id, { ...data, guard: e.target.value })}
+          onChange={(e) => updateNodeData(id, {
+            ...data,
+            label: data.label || "",
+            guard: e.target.value,
+            isArcMode: data.isArcMode || false,
+            type: data.type || "defaultType",
+            colorSet: data.colorSet || "defaultColorSet",
+            initialMarking: data.initialMarking || "defaultMarking",
+          })}
         />
       </div>
 
@@ -50,7 +58,18 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
         <Input
           id="time"
           value={data.time || ""}
-          onChange={(e) => updateNodeData(id, { ...data, time: e.target.value })}
+          onChange={(e) => updateNodeData(id, {
+            ...data,
+            label: data.label || "",
+            time: e.target.value,
+            isArcMode: data.isArcMode || false,
+            type: data.type || "defaultType",
+            colorSet: data.colorSet,
+            initialMarking: data.initialMarking,
+            priority: data.priority || "NONE",
+            codeSegment: data.codeSegment || "",
+            guard: data.guard || "",
+          })}
         />
       </div>
 
@@ -58,7 +77,18 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
         <Label htmlFor="priority">Priority</Label>
         <Select
           value={data.priority || "NONE"}
-          onValueChange={(value) => updateNodeData(id, { ...data, priority: value })}
+          onValueChange={(value) => updateNodeData(id, {
+            ...data,
+            label: data.label || "",
+            priority: value,
+            isArcMode: data.isArcMode || false,
+            type: data.type || "defaultType",
+            colorSet: data.colorSet,
+            initialMarking: data.initialMarking,
+            guard: data.guard || "",
+            time: data.time || "",
+            codeSegment: data.codeSegment || "",
+          })}
         >
           <SelectTrigger id="priority">
             <SelectValue placeholder="Select priority" />
@@ -80,7 +110,18 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
         <Label htmlFor="codeSegment">Code Segment</Label>
         <CodeSegmentEditor
           value={data.codeSegment || ""}
-          onChange={(value) => updateNodeData(id, { ...data, codeSegment: value })}
+          onChange={(value) => updateNodeData(id, {
+            ...data,
+            label: data.label || "",
+            codeSegment: value,
+            isArcMode: data.isArcMode || false,
+            type: data.type || "defaultType",
+            colorSet: data.colorSet,
+            initialMarking: data.initialMarking,
+            guard: data.guard || "",
+            time: data.time || "",
+            priority: data.priority || "NONE",
+          })}
         />
       </div>
     </div>

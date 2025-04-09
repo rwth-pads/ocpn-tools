@@ -5,17 +5,19 @@ import {
   type OnEdgesChange,
   type OnConnect,
 } from '@xyflow/react';
-import { PlaceNodeProps } from '@/nodes/PlaceNode'; // Import PlaceNodeData
-import { TransitionNodeProps } from '@/nodes/TransitionNode'; // Import TransitionNodeData
+// import { PlaceNodeProps } from '@/nodes/PlaceNode'; // Import PlaceNodeData
+// import { TransitionNodeProps } from '@/nodes/TransitionNode'; // Import TransitionNodeData
 
 import type { ColorSet, Variable, Priority, Function } from '@/declarations';
+import { PlaceNodeData } from './nodes/PlaceNode';
+import { TransitionNodeData } from './nodes/TransitionNode';
 
 export type AppNode = Node;
 
 // Define the type for selectedElement
 export type SelectedElement =
-  | { type: 'node'; element: PlaceNodeProps & { type: string } | TransitionNodeProps & { type: string } }
-  | { type: 'edge'; element: Edge & { type: string } }
+  | { type: 'node'; element: Node }
+  | { type: 'edge'; element: Edge }
   | null;
 
 export type AppState = {
@@ -47,9 +49,10 @@ export type AppActions = {
   deleteVariable: (id: string) => void;
   deletePriority: (id: string) => void;
   deleteFunction: (id: string) => void;
-  updateNodeData: (id: string, newData: any) => void;
+  updateNodeData: (id: string, newData: PlaceNodeData | TransitionNodeData) => void;
   updateEdgeLabel: (id: string, newLabel: string) => void;
   setSelectedElement: (element: SelectedElement) => void;
+  toggleArcMode: (state: boolean) => void;
   reset: () => void;
 };
 

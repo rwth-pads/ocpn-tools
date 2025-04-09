@@ -29,4 +29,3 @@ export const nodeTypes = {
   'place': PlaceNode,
   'transition': TransitionNode,
 };
-3

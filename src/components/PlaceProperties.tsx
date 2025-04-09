@@ -15,7 +15,7 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
     return <div>No node selected</div>;
   }
 
-  const { id, data } = selectedElement.element;
+  const { id, data }: { id: string; data: { label?: string; colorSet?: string; isArcMode?: boolean; type?: string; initialMarking?: string } } = selectedElement.element;
 
   // Type guard to ensure data is of type PlaceNodeData
   if (!('colorSet' in data)) {
@@ -29,7 +29,16 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
         <Input
           id="label"
           value={data.label || ""}
-          onChange={(e) => updateNodeData(id, { ...data, label: e.target.value })}
+          onChange={(e) =>
+            updateNodeData(id, {
+              ...data,
+              label: e.target.value,
+              isArcMode: data.isArcMode || false,
+              type: data.type || "defaultType",
+              colorSet: data.colorSet || "defaultColorSet",
+              initialMarking: data.initialMarking || "defaultMarking",
+            })
+          }
         />
       </div>
 
@@ -38,11 +47,14 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
         <Select
           value={data.colorSet || "INT"}
           onValueChange={(value) => {
-            const colorSetObj = colorSets.find((cs) => cs.name === value);
+            // const colorSetObj = colorSets.find((cs) => cs.name === value);
             updateNodeData(id, {
               ...data,
+              label: data.label || "",
               colorSet: value,
-              colorSetColor: colorSetObj?.color,
+              isArcMode: data.isArcMode || false,
+              type: data.type || "defaultType",
+              initialMarking: data.initialMarking || "defaultMarking",
             });
           }}
         >
@@ -70,7 +82,16 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
         <Input
           id="initialMarking"
           value={data.initialMarking || ""}
-          onChange={(e) => updateNodeData(id, { ...data, initialMarking: e.target.value })}
+          onChange={(e) =>
+            updateNodeData(id, {
+              ...data,
+              label: data.label || "",
+              initialMarking: e.target.value,
+              isArcMode: data.isArcMode || false,
+              type: data.type || "defaultType",
+              colorSet: data.colorSet || "defaultColorSet",
+            })
+          }
         />
       </div>
     </div>

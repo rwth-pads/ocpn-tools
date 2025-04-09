@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { addEdge, applyNodeChanges, applyEdgeChanges } from '@xyflow/react';
 import { AppState, AppActions, AppNode, SelectedElement } from '@/types';
+
+import type { PlaceNodeData } from '@/nodes/PlaceNode';
  
 import { initialNodes } from '@/nodes';
 import { initialEdges } from '@/edges';
@@ -11,6 +13,7 @@ import { initialPriorities } from '@/declarations';
 import { initialFunctions } from '@/declarations';
 
 import { v4 as uuidv4 } from 'uuid';
+import { TransitionNodeData } from '@/nodes/TransitionNode';
 
 // define the initial state
 const emptyState: AppState = {
@@ -22,9 +25,11 @@ const emptyState: AppState = {
   functions: [],
   selectedElement: null,
 }
+
+export type StoreState = AppState & AppActions;
  
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
-const useStore = create<AppState & AppActions>((set, get) => ({
+const useStore = create<StoreState>((set, get) => ({
   nodes: initialNodes,
   edges: initialEdges,
   colorSets: initialColorSets,
@@ -128,7 +133,7 @@ const useStore = create<AppState & AppActions>((set, get) => ({
     })),
 
   // Update node data
-  updateNodeData: (id: string, newData: any) => {
+  updateNodeData: (id: string, newData: PlaceNodeData | TransitionNodeData) => {
     set((state) => {
       const updatedNodes = state.nodes.map((node) =>
         node.id === id ? { ...node, data: { ...node.data, ...newData } } : node

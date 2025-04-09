@@ -16,60 +16,481 @@ export type PetriNetData = {
 
 // Convert Petri Net data to CPN Tools XML format
 export function convertToCPNToolsXML(data: PetriNetData): string {
-  // This is a simplified version - in a real implementation,
-  // you would create a proper CPN Tools XML structure
   const xml = `<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE workspaceElements PUBLIC "-//CPN//DTD CPNXML 1.0//EN" "http://cpntools.org/DTD/6/cpn.dtd">
 <workspaceElements>
   <generator tool="CPN Tools" version="4.0.1" format="6"/>
   <cpnet>
     <globbox>
+      <block id="ID2">
+        <id>Standard priorities</id>
+        ${data.priorities
+          .map(
+            (p) => `<ml id="${p.id}">
+          val ${p.name} = ${p.level};
+          <layout>val ${p.name} = ${p.level};</layout>
+        </ml>`
+          )
+          .join("\n        ")}
+      </block>
       <block id="ID1">
         <id>Standard declarations</id>
-        ${data.colorSets.map((cs) => `<color id="${cs.name}">${cs.definition}</color>`).join("\n        ")}
-        ${data.variables.map((v) => `<var id="${v.name}">${v.colorSet}</var>`).join("\n        ")}
+        ${data.colorSets
+          .map((cs) => {
+            // Define the list of basic types
+            const basicTypes = ["int", "unit", "bool", "intinf", "time", "real", "string"];
+            
+            // Check if the definition ends with a basic type
+            const basicTypeMatch = cs.definition.match(/colset\s+\w+\s*=\s*(\w+);$/);
+            const basicType = basicTypeMatch ? basicTypeMatch[1].toLowerCase() : null;
+            return `<color id="${cs.id}">
+              <id>${cs.name}</id>
+              ${basicType && basicTypes.includes(basicType) ? `<${basicType}/>` : ""}
+              <layout>${cs.definition}</layout>
+            </color>`;
+          })
+          .join("\n        ")}
+        ${data.variables
+          .map(
+            (v) => `<var id="${v.id}">
+          <type>
+            <id>${v.colorSet}</id>
+          </type>
+          <id>${v.name}</id>
+          <layout>var ${v.name}:${v.colorSet};</layout>
+        </var>`
+          )
+          .join("\n        ")}
       </block>
     </globbox>
-    <page id="ID2">
+    <page id="ID6">
       <pageattr name="${data.name}"/>
       ${data.nodes
         .map((node) => {
           if (node.type === "place") {
             return `<place id="${node.id}">
-        <posattr x="${node.position.x}" y="${node.position.y}"/>
-        <text>${node.data.label}</text>
-        <ellipse w="60.000000" h="60.000000"/>
-        <token x="-10.000000" y="0.000000">
-          <value>${node.data.initialMarking || ""}</value>
-        </token>
-        <type id="${node.data.colorSet}"/>
-      </place>`
+          <posattr x="${node.position.x}" y="${node.position.y}"/>
+          <fillattr colour="White" pattern="" filled="false"/>
+          <lineattr colour="Black" thick="1" type="Solid"/>
+          <textattr colour="Black" bold="false"/>
+          <text>${node.data.label}</text>
+          <ellipse w="60.000000" h="40.000000"/>
+          <type id="${node.data.colorSet}">
+            <text>${node.data.colorSet}</text>
+          </type>
+          <initmark id="${node.id}_initmark">
+            <text>${node.data.initialMarking || ""}</text>
+          </initmark>
+        </place>`;
           } else {
             return `<trans id="${node.id}">
-        <posattr x="${node.position.x}" y="${node.position.y}"/>
-        <text>${node.data.label}</text>
-        <box w="60.000000" h="40.000000"/>
-        ${node.data.guard ? `<cond id="${node.id}_guard">${node.data.guard}</cond>` : ""}
-        ${node.data.time ? `<time id="${node.id}_time">${node.data.time}</time>` : ""}
-        ${node.data.priority ? `<priority id="${node.id}_priority">${node.data.priority}</priority>` : ""}
-      </trans>`
+          <posattr x="${node.position.x}" y="${node.position.y}"/>
+          <fillattr colour="White" pattern="" filled="false"/>
+          <lineattr colour="Black" thick="1" type="solid"/>
+          <textattr colour="Black" bold="false"/>
+          <text>${node.data.label}</text>
+          <box w="60.000000" h="40.000000"/>
+          ${
+            node.data.guard
+              ? `<cond id="${node.id}_guard">
+            <text>${node.data.guard}</text>
+          </cond>`
+              : ""
+          }
+          ${
+            node.data.time
+              ? `<time id="${node.id}_time">
+            <text>${node.data.time}</text>
+          </time>`
+              : ""
+          }
+          ${
+            node.data.priority
+              ? `<priority id="${node.id}_priority">
+            <text>${node.data.priority}</text>
+          </priority>`
+              : ""
+          }
+        </trans>`;
           }
         })
         .join("\n      ")}
       ${data.edges
         .map(
           (edge) => `<arc id="${edge.id}" orientation="PtoT">
-        <posattr x="0.000000" y="0.000000"/>
-        <transend idref="${edge.target}"/>
-        <placeend idref="${edge.source}"/>
-        <annot id="${edge.id}_inscription">${edge.data?.inscription || ""}</annot>
-      </arc>`,
+          <posattr x="0.000000" y="0.000000"/>
+          <fillattr colour="White" pattern="" filled="false"/>
+          <lineattr colour="Black" thick="1" type="Solid"/>
+          <textattr colour="Black" bold="false"/>
+          <arrowattr headsize="1.200000" currentcyckle="2"/>
+          <transend idref="${edge.target}"/>
+          <placeend idref="${edge.source}"/>
+          <annot id="${edge.id}_inscription">
+            <text>${edge.data?.inscription || ""}</text>
+          </annot>
+        </arc>`
         )
         .join("\n      ")}
+      <constraints/>
     </page>
+    <instances>
+      <instance id="ID2149"
+                page="ID6"/>
+    </instances>
+    <options>
+      <option name="realtimestamp">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="fair_be">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="global_fairness">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="outputdirectory">
+        <value>
+          <text>&lt;same as model&gt;</text>
+        </value>
+      </option>
+      <option name="extensions.10005.enable">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="extensions.10002.enable">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="extensions.10003.enable">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="extensions.10006.enable">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="extensions.10001.enable">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="repavg">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="repciavg">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="repcount">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="repfirstval">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="replastval">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="repmax">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="repmin">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="repssquare">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="repssqdev">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="repstddev">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="repsum">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="repvariance">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="avg">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="ciavg">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="count">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="firstval">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="lastval">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="max">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="min">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="ssquare">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="ssqdev">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="stddev">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="sum">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="variance">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="firstupdate">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="interval">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="lastupdate">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="untimedavg">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="untimedciavg">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="untimedcount">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="untimedfirstval">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="untimedlastval">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="untimedmax">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="untimedmin">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="untimedssquare">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="untimedssqdev">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="untimedstddev">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+      <option name="untimedsum">
+        <value>
+          <boolean>true</boolean>
+        </value>
+      </option>
+      <option name="untimedvariance">
+        <value>
+          <boolean>false</boolean>
+        </value>
+      </option>
+    </options>
+    <binders>
+      <cpnbinder id="ID2222"
+                 x="257"
+                 y="122"
+                 width="600"
+                 height="400">
+        <sheets>
+          <cpnsheet id="ID2215"
+                    panx="-6.000000"
+                    pany="-5.000000"
+                    zoom="1.000000"
+                    instance="ID2149">
+            <zorder>
+              <position value="0"/>
+            </zorder>
+          </cpnsheet>
+        </sheets>
+        <zorder>
+          <position value="0"/>
+        </zorder>
+      </cpnbinder>
+    </binders>
+    <monitorblock name="Monitors"/>
+    <IndexNode expanded="true">
+      <IndexNode expanded="false"/>
+      <IndexNode expanded="false"/>
+      <IndexNode expanded="false">
+        <IndexNode expanded="false"/>
+        <IndexNode expanded="false"/>
+        <IndexNode expanded="false"/>
+        <IndexNode expanded="false"/>
+        <IndexNode expanded="false">
+          <IndexNode expanded="false">
+            <IndexNode expanded="false">
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+            </IndexNode>
+            <IndexNode expanded="false">
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+              <IndexNode expanded="false"/>
+            </IndexNode>
+          </IndexNode>
+          <IndexNode expanded="false">
+            <IndexNode expanded="false"/>
+            <IndexNode expanded="false"/>
+            <IndexNode expanded="false"/>
+            <IndexNode expanded="false"/>
+            <IndexNode expanded="false"/>
+            <IndexNode expanded="false"/>
+            <IndexNode expanded="false"/>
+            <IndexNode expanded="false"/>
+            <IndexNode expanded="false"/>
+            <IndexNode expanded="false"/>
+            <IndexNode expanded="false"/>
+            <IndexNode expanded="false"/>
+          </IndexNode>
+        </IndexNode>
+        <IndexNode expanded="false">
+          <IndexNode expanded="false"/>
+          <IndexNode expanded="false"/>
+          <IndexNode expanded="false"/>
+          <IndexNode expanded="false"/>
+          <IndexNode expanded="false"/>
+        </IndexNode>
+      </IndexNode>
+      <IndexNode expanded="false"/>
+      <IndexNode expanded="false">
+        <IndexNode expanded="false">
+          <IndexNode expanded="true"/>
+          <IndexNode expanded="true"/>
+          <IndexNode expanded="true"/>
+        </IndexNode>
+        <IndexNode expanded="true">
+          <IndexNode expanded="false"/>
+          <IndexNode expanded="false"/>
+          <IndexNode expanded="false"/>
+          <IndexNode expanded="false"/>
+          <IndexNode expanded="false"/>
+          <IndexNode expanded="false"/>
+          <IndexNode expanded="false"/>
+        </IndexNode>
+      </IndexNode>
+      <IndexNode expanded="false"/>
+      <IndexNode expanded="true"/>
+    </IndexNode>
   </cpnet>
-</workspaceElements>`
+</workspaceElements>`;
 
-  return xml
+  return xml;
 }
 
 // Convert Petri Net data to cpn-py XML format

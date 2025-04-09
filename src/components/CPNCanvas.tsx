@@ -55,6 +55,10 @@ import { type StoreState } from '@/stores/store'; // Ensure this type is defined
 const selector = (state: StoreState) => ({
   nodes: state.nodes,
   edges: state.edges,
+  colorSets: state.colorSets,
+  variables: state.variables,
+  priorities: state.priorities,
+  functions: state.functions,
   onNodesChange: state.onNodesChange,
   onEdgesChange: state.onEdgesChange,
   setNodes: state.setNodes,
@@ -120,6 +124,10 @@ const CPNCanvas = () => {
   const {
     nodes,
     edges,
+    colorSets,
+    variables,
+    priorities,
+    functions,
     onNodesChange,
     onEdgesChange,
     setNodes,
@@ -192,17 +200,29 @@ const CPNCanvas = () => {
     let content: string
     let filename: string
 
-    //TODO
-    const petriNetData = {
+    // //TODO
+    // const petriNetData = {
+    //   id: 'net',
+    //   name: 'Petri Net',
+    //   nodes: nodes,
+    //   edges: edges,
+    //   colorSets: [],
+    //   variables: [],
+    //   priorities: [],
+    //   functions: [],
+    // }
+
+    const petriNetData: PetriNetData = {
       id: 'net',
-      name: 'Petri Net',
-      nodes: nodes,
-      edges: edges,
-      colorSets: [],
-      variables: [],
-      priorities: [],
-      functions: [],
+      name: 'PetriNet',
+      nodes,
+      edges,
+      colorSets,
+      variables,
+      priorities,
+      functions,
     }
+
 
     switch (format) {
       case "cpn-tools":
@@ -250,7 +270,11 @@ const CPNCanvas = () => {
         id: `node_${Date.now()}`,
         type,
         position,
-        data: { label: `${type}` },
+        width: type === 'transition' ? 60 : 30,
+        data: {
+          label: `${type}`,
+          ...(type === 'place' ? { colorSet: '' } : type === 'transition' ? { guard: '' } : {}),
+        },
       };
 
       useStore.getState().addNode(newNode);
@@ -303,7 +327,7 @@ const CPNCanvas = () => {
         id: `node_${Date.now()}`,
         type: 'place',
         position,
-        data: { label: 'place', isArcMode: false },
+        data: { label: 'place', isArcMode: false, colorSet: 'UNIT' },
       };
       useStore.getState().addNode(newNode);
     } else if (slice.key === 'new-transition') {
@@ -312,7 +336,7 @@ const CPNCanvas = () => {
         type: 'transition',
         position,
         width: 60,
-        data: { label: 'transition', isArcMode: false },
+        data: { label: 'transition', isArcMode: false, guard: '' },
       };
       useStore.getState().addNode(newNode);
     }

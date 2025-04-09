@@ -47,7 +47,7 @@ export function SaveDialog({ open, onOpenChange, onSave, petriNetName }: SaveDia
               </div>
             </div>
             <div className="flex items-start space-x-3 space-y-0">
-              <RadioGroupItem value="cpn-py" id="cpn-py" />
+              <RadioGroupItem value="cpn-py" id="cpn-py" disabled/>
               <div className="grid gap-1.5">
                 <Label htmlFor="cpn-py" className="font-medium">
                   cpn-py XML
@@ -58,7 +58,7 @@ export function SaveDialog({ open, onOpenChange, onSave, petriNetName }: SaveDia
               </div>
             </div>
             <div className="flex items-start space-x-3 space-y-0">
-              <RadioGroupItem value="json" id="json" />
+              <RadioGroupItem value="json" id="json" disabled/>
               <div className="grid gap-1.5">
                 <Label htmlFor="json" className="font-medium">
                   JSON
@@ -74,7 +74,7 @@ export function SaveDialog({ open, onOpenChange, onSave, petriNetName }: SaveDia
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled>Save</Button>
+          <Button onClick={handleSave}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

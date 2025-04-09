@@ -14,69 +14,21 @@ import { Separator } from '@/components/ui/separator';
 
 import { useDnD } from '@/utils/DnDContext';
 
-// import { SaveDialog } from "@/components/dialogs/save-dialog"
-// import { OpenDialog } from "@/components/dialogs/open-dialog"
-// import {
-//   convertToCPNToolsXML,
-//   convertToCPNPyXML,
-//   convertToJSON,
-//   saveFile,
-//   parseFileContent,
-// } from "@/utils/file-operations"
-
 interface ToolbarProps {
   toggleArcMode: (pressed: boolean) => void;
   layoutGraph: () => void;
 }
 
 export function Toolbar({ toggleArcMode, layoutGraph }: ToolbarProps) {
-  //const [saveDialogOpen, setSaveDialogOpen] = useState(false)
-  //const [openDialogOpen, setOpenDialogOpen] = useState(false)
-
   const [, setType] = useDnD();
 
   const onDragStart = (event: React.DragEvent<HTMLElement>, nodeType: string) => {
       //event.dataTransfer.setData("application/reactflow", nodeType);
-      console.log("Drag Start", nodeType);
       if (setType) {
         setType(nodeType);
       }
       event.dataTransfer.effectAllowed = "move";
     }
-
-  // const handleSave = (format: string) => {
-  //   let content: string
-  //   let filename: string
-
-  //   switch (format) {
-  //     case "cpn-tools":
-  //       content = convertToCPNToolsXML(petriNetData)
-  //       filename = `${petriNetData.name.replace(/\s+/g, "_")}.cpn`
-  //       break
-  //     case "cpn-py":
-  //       content = convertToCPNPyXML(petriNetData)
-  //       filename = `${petriNetData.name.replace(/\s+/g, "_")}.xml`
-  //       break
-  //     case "json":
-  //     default:
-  //       content = convertToJSON(petriNetData)
-  //       filename = `${petriNetData.name.replace(/\s+/g, "_")}.json`
-  //       break
-  //   }
-
-  //   saveFile(content, filename)
-  //   onSavePetriNet(format)
-  // }
-
-  // const handleFileLoaded = (fileContent: string, fileName: string) => {
-  //   const data = parseFileContent(fileContent, fileName)
-  //   if (data) {
-  //     onOpenPetriNet(data)
-  //   } else {
-  //     // Show error notification
-  //     alert("Failed to parse the file. Please check the file format.")
-  //   }
-  // }
 
   return (
     <>
@@ -176,35 +128,7 @@ export function Toolbar({ toggleArcMode, layoutGraph }: ToolbarProps) {
           </TooltipProvider>
         </div>
 
-        {/*
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" title="Save">
-            <Save className="h-5 w-5" />
-          </Button>
-          <Button variant="ghost" size="icon" title="Open">
-            <FolderOpen className="h-5 w-5" />
-          </Button>
-        </div>
-        
-        <div className="flex items-center gap-2 h-6">
-          <Separator orientation="vertical" className="mx-1 h-6" />
-        </div>
-
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" title="Simulate">
-            <Play className="h-5 w-5" />
-          </Button>
-        </div> */}
       </div>
-
-      {/* <SaveDialog
-        open={saveDialogOpen}
-        onOpenChange={setSaveDialogOpen}
-        onSave={handleSave}
-        petriNetName={activePetriNetName}
-      />
-
-      <OpenDialog open={openDialogOpen} onOpenChange={setOpenDialogOpen} onFileLoaded={handleFileLoaded} /> */}
     </>
   )
 }

@@ -365,7 +365,7 @@ export function DeclarationManager() {
                         <GripVertical className="h-4 w-4 text-muted-foreground" />
                       </div>
                       <div className="font-mono text-sm">
-                        colset {cs.name} = {cs.type};
+                        {cs.definition}
                       </div>
                     </div>
                     <div className="flex items-center">

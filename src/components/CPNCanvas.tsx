@@ -327,7 +327,7 @@ const CPNCanvas = () => {
         id: `node_${Date.now()}`,
         type: 'place',
         position,
-        data: { label: 'place', isArcMode: false, colorSet: 'UNIT' },
+        data: { label: 'place', isArcMode: false, colorSet: '' },
       };
       useStore.getState().addNode(newNode);
     } else if (slice.key === 'new-transition') {

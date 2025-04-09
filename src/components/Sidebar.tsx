@@ -2,12 +2,11 @@ import useStore from '@/stores/store';
 import { ResizablePanel } from '@/components/ui/resizable';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-import { Save, Trash2 } from 'lucide-react';
 import PlaceProperties from './PlaceProperties';
 import TransitionProperties from './TransitionProperties';
+import ArcProperties from './ArcProperties';
 
 import { DeclarationManager } from '@/components/DeclarationManager';
 
@@ -40,7 +39,9 @@ const Sidebar = () => {
         );
       }
     } else if (selectedElement.type === 'edge') {
-      // return renderArcProperties();
+      return (
+        <ArcProperties />
+      );
     }
 
     return null;
@@ -68,7 +69,7 @@ const Sidebar = () => {
                 <CardContent className="p-4 pt-2">
                   {renderElementProperties()}
 
-                  {selectedElement && (
+                  {/* {selectedElement && (
                     <div className="flex justify-between mt-4">
                       <Button variant="outline" size="sm">
                         <Trash2 className="h-4 w-4 mr-2" />
@@ -79,7 +80,7 @@ const Sidebar = () => {
                         Apply
                       </Button>
                     </div>
-                  )}
+                  )} */}
                 </CardContent>
               </Card>
             </div>

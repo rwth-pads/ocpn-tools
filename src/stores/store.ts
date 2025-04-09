@@ -147,6 +147,26 @@ const useStore = create<AppState & AppActions>((set, get) => ({
     });
   },
 
+  // Update edge data
+  updateEdgeLabel: (id: string, newLabel: string) => {
+    set((state) => {
+      const updatedEdges = state.edges.map((edge) =>
+        edge.id === id ? { ...edge, label: newLabel } : edge
+      );
+
+      // Update selectedElement if it matches the updated edge
+      const updatedSelectedElement =
+        state.selectedElement?.type === 'edge' && state.selectedElement.element.id === id
+          ? { ...state.selectedElement, element: { ...state.selectedElement.element, label: newLabel } }
+          : state.selectedElement;
+
+      return {
+        edges: updatedEdges,
+        selectedElement: updatedSelectedElement,
+      };
+    });
+  },
+
   setSelectedElement: (element: SelectedElement | null) => set({ selectedElement: element }),
 
   toggleArcMode: (state: boolean) =>

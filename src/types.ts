@@ -48,6 +48,7 @@ export type AppActions = {
   deletePriority: (id: string) => void;
   deleteFunction: (id: string) => void;
   updateNodeData: (id: string, newData: any) => void;
+  updateEdgeLabel: (id: string, newLabel: string) => void;
   setSelectedElement: (element: SelectedElement) => void;
   reset: () => void;
 };

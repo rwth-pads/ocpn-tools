@@ -37,6 +37,7 @@ export function Toolbar({ toggleArcMode, layoutGraph }: ToolbarProps) {
 
   const onDragStart = (event: React.DragEvent<HTMLElement>, nodeType: string) => {
       //event.dataTransfer.setData("application/reactflow", nodeType);
+      console.log("Drag Start", nodeType);
       if (setType) {
         setType(nodeType);
       }
@@ -88,13 +89,16 @@ export function Toolbar({ toggleArcMode, layoutGraph }: ToolbarProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    draggable
-                    onDragStart={(event) => onDragStart(event, "place")}
                     title="Place"
                     className="cursor-grab"
                   >
-                    <Circle className="h-5 w-5" />
-                    <span className="sr-only">Drag a Place from Here</span>
+                    <div
+                      draggable
+                      onDragStart={(event) => onDragStart(event, "place")}
+                    >
+                      <Circle className="h-5 w-5" />
+                      <span className="sr-only">Drag a Place from Here</span>
+                    </div>
                   </Button>
                 </span>
               </TooltipTrigger>
@@ -111,13 +115,16 @@ export function Toolbar({ toggleArcMode, layoutGraph }: ToolbarProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    draggable
-                    onDragStart={(event) => onDragStart(event, "transition")}
                     title="Transition"
                     className="cursor-grab"
                   >
-                    <Square className="h-5 w-5" />
-                    <span className="sr-only">Drag a Transition from Here</span>
+                    <div
+                      draggable
+                      onDragStart={(event) => onDragStart(event, "transition")}
+                    >
+                      <Square className="h-5 w-5" />
+                      <span className="sr-only">Drag a Transition from Here</span>
+                    </div>
                   </Button>
                 </span>
               </TooltipTrigger>

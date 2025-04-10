@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { Circle, Square, ArrowRight, Network } from "lucide-react"
+import { Circle, Square, ArrowRight } from "lucide-react"
 
 import { Toggle } from '@/components/ui/toggle';
 
@@ -12,14 +12,16 @@ import {
 
 import { Separator } from '@/components/ui/separator';
 
+import { LayoutPopover, LayoutOptions } from "@/components/LayoutPopover";
+
 import { useDnD } from '@/utils/DnDContext';
 
 interface ToolbarProps {
   toggleArcMode: (pressed: boolean) => void;
-  layoutGraph: () => void;
+  onApplyLayout: (options: LayoutOptions) => void;
 }
 
-export function Toolbar({ toggleArcMode, layoutGraph }: ToolbarProps) {
+export function Toolbar({ toggleArcMode, onApplyLayout }: ToolbarProps) {
   const [, setType] = useDnD();
 
   const onDragStart = (event: React.DragEvent<HTMLElement>, nodeType: string) => {
@@ -111,21 +113,27 @@ export function Toolbar({ toggleArcMode, layoutGraph }: ToolbarProps) {
         </div>
 
         <div className="flex items-center gap-1">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button variant="ghost" size="icon" title="Layout Petri Net" onClick={layoutGraph}>
-                    <Network className="h-5 w-5" />
-                    <span className="sr-only">Layout Petri Net</span>
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Layout Petri Net</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <LayoutPopover onApplyLayout={onApplyLayout} />
+        {/* <Popover>
+          <PopoverTrigger>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button variant="ghost" size="icon" title="Layout Petri Net" onClick={layoutGraph}>
+                      <Network className="h-5 w-5" />
+                      <span className="sr-only">Layout Petri Net</span>
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Layout Petri Net</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </PopoverTrigger>
+          <PopoverContent>Place content for the popover here.</PopoverContent>
+        </Popover> */}
         </div>
 
       </div>

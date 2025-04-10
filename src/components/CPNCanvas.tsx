@@ -14,7 +14,7 @@ import {
 } from '@xyflow/react';
 import { useShallow } from 'zustand/react/shallow';
 
-import Dagre from '@dagrejs/dagre';
+//import Dagre from '@dagrejs/dagre';
 
 import '@xyflow/react/dist/style.css';
 
@@ -52,6 +52,8 @@ import { edgeTypes } from '../edges';
 
 import { type StoreState } from '@/stores/store'; // Ensure this type is defined in your store
 
+import { LayoutOptions } from '@/components/LayoutPopover';
+
 const selector = (state: StoreState) => ({
   nodes: state.nodes,
   edges: state.edges,
@@ -81,35 +83,6 @@ const defaultEdgeOptions = {
     width: 15,
     height: 15,
   },
-};
-
-const getLayoutedElements = (nodes: Node[], edges: Edge[], options: { direction: 'LR' | 'TB' }) => {
-  const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: options.direction, nodesep: 80, ranksep: 80 });
- 
-  edges.forEach((edge) => g.setEdge(edge.source, edge.target));
-  nodes.forEach((node) =>
-    g.setNode(node.id, {
-      ...node,
-      width: node.measured?.width ?? 0,
-      height: node.measured?.height ?? 0,
-    }),
-  );
- 
-  Dagre.layout(g);
- 
-  return {
-    nodes: nodes.map((node) => {
-      const position = g.node(node.id);
-      // We are shifting the dagre node position (anchor=center center) to the top left
-      // so it matches the React Flow node anchor point (top left).
-      const x = position.x - (node.measured?.width ?? 0) / 2;
-      const y = position.y - (node.measured?.height ?? 0) / 2;
- 
-      return { ...node, position: { x, y } };
-    }),
-    edges,
-  };
 };
 
 const CPNCanvas = () => {
@@ -200,18 +173,6 @@ const CPNCanvas = () => {
     let content: string
     let filename: string
 
-    // //TODO
-    // const petriNetData = {
-    //   id: 'net',
-    //   name: 'Petri Net',
-    //   nodes: nodes,
-    //   edges: edges,
-    //   colorSets: [],
-    //   variables: [],
-    //   priorities: [],
-    //   functions: [],
-    // }
-
     const petriNetData: PetriNetData = {
       id: 'net',
       name: 'PetriNet',
@@ -222,7 +183,6 @@ const CPNCanvas = () => {
       priorities,
       functions,
     }
-
 
     switch (format) {
       case "cpn-tools":
@@ -242,11 +202,6 @@ const CPNCanvas = () => {
 
     saveFile(content, filename)
   }
-
-  // const onConnect = useCallback(
-  //   (connection) => setEdges((eds) => addEdge(connection, eds)),
-  //   [setEdges]
-  // );
 
   const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -343,18 +298,123 @@ const CPNCanvas = () => {
     setIsDialOpen(false);
   }
 
-  const onLayout = useCallback(
-    () => {
-      const direction = 'LR';
-      const layouted = getLayoutedElements(nodes, edges, { direction });
- 
-      setNodes([...layouted.nodes]);
-      setEdges([...layouted.edges]);
- 
-      fitView();
+  const applyLayout = useCallback(
+    async (options: LayoutOptions) => {
+      if (!nodes.length) return;
+
+
+      try {
+        if (options.algorithm === "dagre") {
+          // Dynamically import dagre
+          const Dagre = await import('@dagrejs/dagre');
+
+          // Create a new graph
+          const g = new Dagre.graphlib.Graph()
+          g.setGraph({
+            rankdir: options.direction,
+            nodesep: options.nodeSeparation,
+            ranksep: options.rankSeparation,
+            ranker: "network-simplex",
+          });
+          g.setDefaultEdgeLabel(() => ({}));
+
+          edges.forEach((edge) => g.setEdge(edge.source, edge.target));
+          nodes.forEach((node) =>
+            g.setNode(node.id, {
+              ...node,
+              width: node.measured?.width ?? 0,
+              height: node.measured?.height ?? 0,
+            }),
+          );
+
+          // Apply the layout
+          Dagre.layout(g)
+
+          edges.forEach((edge) => g.setEdge(edge.source, edge.target));
+          nodes.forEach((node) =>
+            g.setNode(node.id, {
+              ...node,
+              width: node.measured?.width ?? 0,
+              height: node.measured?.height ?? 0,
+            }),
+          );
+        
+          Dagre.layout(g);
+
+          const layoutedNodes = nodes.map((node) => {
+            const position = g.node(node.id);
+            // We are shifting the dagre node position (anchor=center center) to the top left
+            // so it matches the React Flow node anchor point (top left).
+            const x = position.x - (node.measured?.width ?? 0) / 2;
+            const y = position.y - (node.measured?.height ?? 0) / 2;
+
+            return { ...node, position: { x, y } };
+          });
+
+          setNodes([...layoutedNodes]);
+          setEdges([...edges]);
+
+        } else if (options.algorithm === "elk") {
+          // Dynamically import ELK
+          const { default: ELK } = await import("elkjs/lib/elk.bundled.js")
+
+          const elk = new ELK()
+
+          // Prepare the graph for ELK
+          const graph = {
+            id: "root",
+            layoutOptions: {
+              "elk.algorithm": "layered",
+              "elk.direction": options.direction === "TB" ? "DOWN" : "RIGHT",
+              "elk.spacing.nodeNode": options.nodeSeparation.toString(),
+              "elk.layered.spacing.nodeNodeBetweenLayers": options.rankSeparation.toString(),
+            },
+            children: nodes.map((node) => ({
+              id: node.id,
+              width: Number(node.style?.width || 80),
+              height: Number(node.style?.height || 80),
+            })),
+            edges: edges.map((edge) => ({
+              id: edge.id,
+              sources: [edge.source],
+              targets: [edge.target],
+            })),
+          }
+
+          // Apply the layout
+          const elkGraph = await elk.layout(graph);
+
+          // Get the new node positions
+          if (elkGraph.children) {
+            const layoutedNodes = nodes.map((node) => {
+              const elkNode = elkGraph.children?.find((n) => n.id === node.id)
+              if (elkNode && elkNode.x !== undefined && elkNode.y !== undefined) {
+                return {
+                  ...node,
+                  position: {
+                    x: elkNode.x,
+                    y: elkNode.y,
+                  },
+                }
+              }
+              return node
+            })
+
+            // Update the nodes
+            setNodes(layoutedNodes)
+          }
+        }
+
+        // After layout is applied, fit the view
+        setTimeout(() => {
+          fitView({ padding: 0.2 })
+        }, 50)
+      } catch (error) {
+        console.error("Error applying layout:", error)
+      }
     },
-    [nodes, edges, fitView, setNodes, setEdges],
-  );
+    [nodes, edges, setNodes, setEdges, fitView],
+  )
 
   return (
     <div className="dndflow">
@@ -438,7 +498,7 @@ const CPNCanvas = () => {
             <MiniMap />
             <Controls />
             <Panel position="top-center">
-              <Toolbar toggleArcMode={toggleArcMode} layoutGraph={onLayout} />
+              <Toolbar toggleArcMode={toggleArcMode} onApplyLayout={applyLayout}/>
             </Panel>
             <BoomerDial
               slices={slices}

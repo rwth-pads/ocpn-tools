@@ -2,8 +2,8 @@ import { create } from 'zustand';
 import { addEdge, applyNodeChanges, applyEdgeChanges } from '@xyflow/react';
 import { AppState, AppActions, AppNode, SelectedElement } from '@/types';
 
-import type { PlaceNodeData } from '@/nodes/PlaceNode';
- 
+import { v4 as uuidv4 } from 'uuid';
+
 import { initialNodes } from '@/nodes';
 import { initialEdges } from '@/edges';
 
@@ -12,8 +12,9 @@ import { initialVariables } from '@/declarations';
 import { initialPriorities } from '@/declarations';
 import { initialFunctions } from '@/declarations';
 
-import { v4 as uuidv4 } from 'uuid';
+import type { PlaceNodeData } from '@/nodes/PlaceNode';
 import { TransitionNodeData } from '@/nodes/TransitionNode';
+import { AuxTextNodeData } from '@/nodes/AuxTextNode';
 
 // define the initial state
 const emptyState: AppState = {
@@ -133,7 +134,7 @@ const useStore = create<StoreState>((set, get) => ({
     })),
 
   // Update node data
-  updateNodeData: (id: string, newData: PlaceNodeData | TransitionNodeData) => {
+  updateNodeData: (id: string, newData: PlaceNodeData | TransitionNodeData | AuxTextNodeData) => {
     set((state) => {
       const updatedNodes = state.nodes.map((node) =>
         node.id === id ? { ...node, data: { ...node.data, ...newData } } : node

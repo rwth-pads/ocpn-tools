@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 import PlaceProperties from './PlaceProperties';
 import TransitionProperties from './TransitionProperties';
+import AuxTextProperties from './AuxTextProperties';
 import ArcProperties from './ArcProperties';
 
 import { DeclarationManager } from '@/components/DeclarationManager';
@@ -36,6 +37,10 @@ const Sidebar = () => {
           <TransitionProperties
             priorities={priorities}
           />
+        );
+      } else if (nodeType === 'auxText') {
+        return (
+          <AuxTextProperties />
         );
       }
     } else if (selectedElement.type === 'edge') {

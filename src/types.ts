@@ -11,6 +11,7 @@ import {
 import type { ColorSet, Variable, Priority, Function } from '@/declarations';
 import { PlaceNodeData } from './nodes/PlaceNode';
 import { TransitionNodeData } from './nodes/TransitionNode';
+import { AuxTextNodeData } from './nodes/AuxTextNode';
 
 export type AppNode = Node;
 
@@ -49,7 +50,7 @@ export type AppActions = {
   deleteVariable: (id: string) => void;
   deletePriority: (id: string) => void;
   deleteFunction: (id: string) => void;
-  updateNodeData: (id: string, newData: PlaceNodeData | TransitionNodeData) => void;
+  updateNodeData: (id: string, newData: PlaceNodeData | TransitionNodeData | AuxTextNodeData) => void;
   updateEdgeLabel: (id: string, newLabel: string) => void;
   setSelectedElement: (element: SelectedElement) => void;
   toggleArcMode: (state: boolean) => void;

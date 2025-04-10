@@ -227,7 +227,7 @@ const CPNCanvas = () => {
         position,
         width: type === 'transition' ? 60 : 30,
         data: {
-          label: `${type}`,
+          label: type === 'auxText' ? 'Annotation' : `${type}`,
           ...(type === 'place' ? { colorSet: '' } : type === 'transition' ? { guard: '' } : {}),
         },
       };

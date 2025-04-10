@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { Circle, Square, ArrowRight } from "lucide-react"
+import { Circle, Square, LetterText, ArrowRight } from "lucide-react"
 
 import { Toggle } from '@/components/ui/toggle';
 
@@ -103,6 +103,32 @@ export function Toolbar({ toggleArcMode, onApplyLayout }: ToolbarProps) {
               </TooltipTrigger>
               <TooltipContent>
                 <p>Toggle Arc Mode</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Annotation"
+                    className="cursor-grab"
+                  >
+                    <div
+                      draggable
+                      onDragStart={(event) => onDragStart(event, "auxText")}
+                    >
+                      <LetterText className="h-5 w-5" />
+                      <span className="sr-only">Drag a Text Annotation from Here</span>
+                    </div>
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Drag a Text Annotation from Here</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

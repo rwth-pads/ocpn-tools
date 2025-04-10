@@ -1,5 +1,6 @@
 import { PlaceNode } from './PlaceNode';
 import TransitionNode from './TransitionNode';
+import AuxTextNode from './AuxTextNode';
 
 export const initialNodes = [
   { id: 'a',
@@ -28,4 +29,5 @@ export const initialNodes = [
 export const nodeTypes = {
   'place': PlaceNode,
   'transition': TransitionNode,
+  'auxText': AuxTextNode,
 };

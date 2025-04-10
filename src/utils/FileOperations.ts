@@ -621,7 +621,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
     arcs: Array<{ id: string | null; orientation: string | null; transEnd: string; placeEnd: string; label: string }>(),
     places: Array<{ id: string | null; x: number; y: number; width: number; height: number; text: string; type: string; initialMarking: string }>(),
     transitions: Array<{ id: string | null; x: number; y: number; width: number; height: number; text: string; guard: string; time: string; priority: string }>(),
-    auxs: [],
+    auxs: Array<{ id: string | null; x: number; y: number; text: string }>(),
     colorSets: Array<{ id: string; name: string; type: string; range: string | null; definition: string; layout: string }>(),
     variables: Array<{ id: string; type: string; layout: string }>(),
     priorities: Array<{ name: string; value: number }>(),
@@ -776,6 +776,14 @@ function parseCPNToolsXML(content: string): PetriNetData {
     label: arc.querySelector('annot text')?.textContent || '',
   }));
 
+  cpnet.auxs = Array.from(cpnXML.querySelectorAll('page Aux')).map((aux) => {
+    const id = aux.getAttribute('id');
+    const x = Math.round(Number(aux.querySelector('posattr')?.getAttribute('x')) || 0);
+    const y = Math.round(Number(aux.querySelector('posattr')?.getAttribute('y')) || 0);
+    const text = aux.querySelector('text')?.textContent || '';
+    return { id, x, y, text };
+  });
+
   return {
     id: "imported-net",
     name: cpnXML.querySelector('pageattr')?.getAttribute('name') || "Imported Petri Net",
@@ -803,6 +811,14 @@ function parseCPNToolsXML(content: string): PetriNetData {
           guard: transition.guard,
           time: transition.time,
           priority: transition.priority,
+        },
+      })),
+      ...cpnet.auxs.map((aux) => ({
+        id: aux.id || uuidv4(),
+        type: "auxText",
+        position: { x: aux.x, y: aux.y },
+        data: {
+          label: aux.text.replace(/\n/g, ' '),
         },
       })),
     ],

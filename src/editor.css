@@ -134,7 +134,7 @@
   marker-end: url(#marker-end); /* Add markers for better visibility */
 }
 
-.cpn-node{
+.cpn-node {
   text-align: center;
   display: flex;
   align-items: center;
@@ -146,9 +146,6 @@
   font-weight: 500;
   font-size: 9px;
   position: absolute;
-  max-width: 100px;
-  overflow: hidden;
-  cursor: pointer;
 }
 
 .transition-node {
@@ -168,6 +165,16 @@
   border-radius: calc(100% * (var(--current-width, 30) / var(--current-height, 30)));
   border: 1px solid;
   cursor: pointer;
+}
+
+.auxtext-node {
+  display: flex;
+  justify-content:left;
+  align-items: start;
+  white-space: pre-wrap;
+  text-align: left;
+  width: max-content;
+  font-size: 9px;
 }
 
 .custom-handle {

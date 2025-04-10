@@ -188,43 +188,43 @@ export function FunctionEditor({ existingFunction, onSave }: FunctionEditorProps
             />
           </div>
 
-          <div className="space-y-4">
+            <div className="space-y-4 max-h-[400px] overflow-y-auto">
             <Label>Function Patterns</Label>
 
             {func.patterns.map((pattern, index) => (
               <div key={pattern.id} className="space-y-2 border p-3 rounded-md">
-                <div className="flex justify-between items-center">
-                  <Label>Pattern {index + 1}</Label>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemovePattern(pattern.id)}
-                    disabled={func.patterns.length <= 1}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+              <div className="flex justify-between items-center">
+                <Label>Pattern {index + 1}</Label>
+                <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleRemovePattern(pattern.id)}
+                disabled={func.patterns.length <= 1}
+                >
+                <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor={`pattern-${pattern.id}`}>Pattern</Label>
-                  <Input
-                    id={`pattern-${pattern.id}`}
-                    placeholder="e.g., (c, x::xs)"
-                    value={pattern.pattern}
-                    onChange={(e) => handlePatternChange(pattern.id, "pattern", e.target.value)}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor={`pattern-${pattern.id}`}>Pattern</Label>
+                <Input
+                id={`pattern-${pattern.id}`}
+                placeholder="e.g., (c, x::xs)"
+                value={pattern.pattern}
+                onChange={(e) => handlePatternChange(pattern.id, "pattern", e.target.value)}
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor={`expression-${pattern.id}`}>Expression</Label>
-                  <Textarea
-                    id={`expression-${pattern.id}`}
-                    placeholder="e.g., (c * x)::listMult(c, xs)"
-                    className="font-mono h-[80px]"
-                    value={pattern.expression}
-                    onChange={(e) => handlePatternChange(pattern.id, "expression", e.target.value)}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor={`expression-${pattern.id}`}>Expression</Label>
+                <Textarea
+                id={`expression-${pattern.id}`}
+                placeholder="e.g., (c * x)::listMult(c, xs)"
+                className="font-mono h-[80px]"
+                value={pattern.expression}
+                onChange={(e) => handlePatternChange(pattern.id, "expression", e.target.value)}
+                />
+              </div>
               </div>
             ))}
 
@@ -232,7 +232,7 @@ export function FunctionEditor({ existingFunction, onSave }: FunctionEditorProps
               <PlusCircle className="h-4 w-4 mr-2" />
               Add Pattern
             </Button>
-          </div>
+            </div>
 
           <div className="pt-4">
             <Label>Preview</Label>

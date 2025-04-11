@@ -47,17 +47,17 @@ export function SaveDialog({ open, onOpenChange, onSave, petriNetName }: SaveDia
               </div>
             </div>
             <div className="flex items-start space-x-3 space-y-0">
-              <RadioGroupItem value="cpn-py" id="cpn-py" disabled/>
+              <RadioGroupItem value="cpn-py" id="cpn-py"/>
               <div className="grid gap-1.5">
                 <Label htmlFor="cpn-py" className="font-medium">
-                  cpn-py XML
+                  cpn-py JSON
                 </Label>
                 <p className="text-sm text-muted-foreground">
                   Format compatible with cpn-py library. Best for Python integration.
                 </p>
               </div>
             </div>
-            <div className="flex items-start space-x-3 space-y-0">
+            {/* <div className="flex items-start space-x-3 space-y-0">
               <RadioGroupItem value="json" id="json" disabled/>
               <div className="grid gap-1.5">
                 <Label htmlFor="json" className="font-medium">
@@ -67,7 +67,7 @@ export function SaveDialog({ open, onOpenChange, onSave, petriNetName }: SaveDia
                   Simple JSON format. Best for web applications and custom processing.
                 </p>
               </div>
-            </div>
+            </div> */}
           </RadioGroup>
         </div>
         <DialogFooter>

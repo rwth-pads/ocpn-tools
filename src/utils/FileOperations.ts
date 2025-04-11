@@ -2,6 +2,8 @@ import type { Node, Edge } from '@xyflow/react';
 import type { ColorSet, Variable, Priority, Function, FunctionPattern } from '@/declarations';
 
 import { v4 as uuidv4 } from 'uuid';
+import { PlaceNodeProps } from '@/nodes/PlaceNode';
+import { TransitionNodeProps } from '@/nodes/TransitionNode';
 
 export type PetriNetData = {
   id: string
@@ -493,70 +495,53 @@ export function convertToCPNToolsXML(data: PetriNetData): string {
   return xml;
 }
 
-// Convert Petri Net data to cpn-py XML format
-export function convertToCPNPyXML(data: PetriNetData): string {
-  // Simplified cpn-py XML format
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<pnml xmlns="http://www.pnml.org/version-2009/grammar/pnml">
-  <net id="${data.id}" type="http://www.cpntools.org/2009/cpn">
-    <name>
-      <text>${data.name}</text>
-    </name>
-    <declaration>
-      <structure>
-        <declarations>
-          ${data.colorSets.map((cs) => `<colorset name="${cs.name}">${cs.definition}</colorset>`).join("\n          ")}
-          ${data.variables.map((v) => `<variable name="${v.name}">${v.colorSet}</variable>`).join("\n          ")}
-        </declarations>
-      </structure>
-    </declaration>
-    <page id="page1">
-      ${data.nodes
-        .map((node) => {
-          if (node.type === "place") {
-            return `<place id="${node.id}">
-        <name>
-          <text>${node.data.label}</text>
-        </name>
-        <type>
-          <text>${node.data.colorSet}</text>
-        </type>
-        <initialMarking>
-          <text>${node.data.initialMarking || ""}</text>
-        </initialMarking>
-        <graphics>
-          <position x="${node.position.x}" y="${node.position.y}"/>
-        </graphics>
-      </place>`
-          } else {
-            return `<transition id="${node.id}">
-        <name>
-          <text>${node.data.label}</text>
-        </name>
-        ${node.data.guard ? `<condition><text>${node.data.guard}</text></condition>` : ""}
-        ${node.data.time ? `<time><text>${node.data.time}</text></time>` : ""}
-        ${node.data.priority ? `<priority><text>${node.data.priority}</text></priority>` : ""}
-        <graphics>
-          <position x="${node.position.x}" y="${node.position.y}"/>
-        </graphics>
-      </transition>`
-          }
-        })
-        .join("\n      ")}
-      ${data.edges
-        .map(
-          (edge) => `<arc id="${edge.id}" source="${edge.source}" target="${edge.target}">
-        <inscription>
-          <text>${edge.data?.inscription || ""}</text>
-        </inscription>
-      </arc>`,
-        )
-        .join("\n      ")}
-    </page>
-  </net>
-</pnml>`
+// Convert Petri Net data to cpn-py JSON format
+export function convertToCPNPyJSON(data: PetriNetData): string {
+  const json = {
+    $schema: "http://json-schema.org/draft-07/schema#",
+    colorSets: data.colorSets.map((cs) => cs.definition),
+    places: data.nodes
+      .filter((node) => node.type === "place")
+      .map((place) => ({
+        name: place.data.label,
+        colorSet: place.data.colorSet,
+      })),
+    transitions: data.nodes
+      .filter((node) => node.type === "transition")
+      .map((transition) => ({
+        name: transition.data.label,
+        variables: transition.data.variables || [],
+        guard: transition.data.guard || "True",
+        inArcs: data.edges
+          .filter((edge) => edge.target === transition.id)
+          .map((edge) => ({
+            place: data.nodes.find((node) => node.id === edge.source)?.data.label || "",
+            expression: edge.label || "",
+          })),
+        outArcs: data.edges
+          .filter((edge) => edge.source === transition.id)
+          .map((edge) => ({
+            place: data.nodes.find((node) => node.id === edge.target)?.data.label || "",
+            expression: edge.label || "",
+          })),
+      })),
+    initialMarking: data.nodes
+      .filter((node) => node.type === "place")
+      .reduce((acc: Record<string, { tokens: (string | number)[][] }>, place) => {
+        const marking = place.data.initialMarking || [];
+        acc[String(place.data.label)] = marking && Array.isArray(marking)
+          ? { tokens: marking.map((token: string | number | (string | number)[]) =>
+              Array.isArray(token)
+                ? token.map((t) => (typeof t === "string" ? t : Number(t)))
+                : [typeof token === "string" ? token : Number(token)]
+            ) }
+          : { tokens: [] };
+        return acc;
+      }, {} as Record<string, { tokens: (string | number)[][] }>),
+    evaluationContext: null,
+  };
 
-  return xml
+  return JSON.stringify(json, null, 2);
 }
 
 // Convert Petri Net data to JSON format
@@ -583,7 +568,8 @@ export function parseFileContent(content: string, fileName: string): PetriNetDat
     const extension = fileName.split(".").pop()?.toLowerCase()
 
     if (extension === "json") {
-      return JSON.parse(content)
+      const json = parseCPNPyJSON(content);
+      return json;
     } else if (extension === "xml" || extension === "cpn") {
       // This is a simplified parser - in a real implementation,
       // you would use a proper XML parser to extract the data
@@ -592,9 +578,6 @@ export function parseFileContent(content: string, fileName: string): PetriNetDat
       if (content.includes("<workspaceElements>") || content.includes("<cpnet>")) {
         // Parse CPN Tools XML
         return parseCPNToolsXML(content)
-      } else if (content.includes("<pnml") || content.includes("http://www.pnml.org")) {
-        // Parse cpn-py XML
-        return parseCPNPyXML();
       }
     }
 
@@ -853,21 +836,72 @@ function parseCPNToolsXML(content: string): PetriNetData {
   };
 }
 
-// Parse cpn-py XML (simplified)
-function parseCPNPyXML(): PetriNetData {
-  // This is a placeholder - in a real implementation, you would use a proper XML parser
-  // and extract the data according to the cpn-py XML structure
+// Parse cpn-py JSON
+function parseCPNPyJSON(content: string): PetriNetData {
+  const json = JSON.parse(content);
 
-  // For now, we'll return a dummy Petri Net
+  // Parse places
+  const places = json.places.map((place: { name: string; colorSet: string }) => ({
+    id: uuidv4(),
+    type: "place",
+    position: { x: 0, y: 0 }, // Default position
+    data: {
+      label: place.name,
+      colorSet: place.colorSet,
+      initialMarking: json.initialMarking[place.name]?.tokens.map((token: string | number | (string | number)[]) =>
+        Array.isArray(token) ? token : [token]
+      ) || [],
+    },
+  }));
+
+  // Parse transitions
+  const transitions = json.transitions.map((transition: { name: string; guard: string; variables: string[] }) => ({
+    id: uuidv4(),
+    type: "transition",
+    position: { x: 0, y: 0 }, // Default position
+    data: {
+      label: transition.name,
+      guard: transition.guard,
+      variables: transition.variables,
+    },
+  }));
+
+  // Parse edges
+  const edges = json.transitions.flatMap((transition: { name: string; inArcs: { place: string; expression: string }[]; outArcs: { place: string; expression: string }[] }) => {
+    const transitionNode = transitions.find((t: TransitionNodeProps) => t.data.label === transition.name);
+
+    return [
+      ...transition.inArcs.map((arc: { place: string; expression: string }) => ({
+        id: uuidv4(),
+        source: places.find((place: PlaceNodeProps) => place.data.label === arc.place)?.id || "",
+        target: transitionNode?.id || "",
+        label: arc.expression,
+      })),
+      ...transition.outArcs.map((arc: { place: string; expression: string }) => ({
+        id: uuidv4(),
+        source: transitionNode?.id || "",
+        target: places.find((place: PlaceNodeProps) => place.data.label === arc.place)?.id || "",
+        label: arc.expression,
+      })),
+    ];
+  });
+
+  // Return the parsed Petri Net data
   return {
     id: "imported-net",
     name: "Imported Petri Net",
-    nodes: [],
-    edges: [],
-    colorSets: [],
-    variables: [],
-    priorities: [],
-    functions: [],
-  }
+    nodes: [...places, ...transitions],
+    edges,
+    colorSets: json.colorSets.map((definition: string) => ({
+      id: uuidv4(),
+      name: definition.split(" ")[1], // Extract name from definition
+      type: "basic", // Default type
+      definition,
+      color: generateRandomColor(),
+    })),
+    variables: [], // Variables are not defined in cpn-py JSON
+    priorities: [], // Priorities are not defined in cpn-py JSON
+    functions: [], // Functions are not defined in cpn-py JSON
+  };
 }
 

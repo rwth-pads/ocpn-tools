@@ -40,7 +40,7 @@ import {
 
 import {
   convertToCPNToolsXML,
-  convertToCPNPyXML,
+  convertToCPNPyJSON,
   convertToJSON,
   saveFile,
   parseFileContent,
@@ -129,7 +129,7 @@ const CPNCanvas = () => {
     { key: 'new-transition', label: ['New', 'Transition'], angle: 330 },
   ];
 
-  const onOpenPetriNet = (data: PetriNetData) => {
+  const onOpenPetriNet = (data: PetriNetData, fileName: string) => {
     if (data) {
       // Reset the current state
       reset();
@@ -143,9 +143,6 @@ const CPNCanvas = () => {
         edges: data.edges || [],
       };
 
-      // Add new net and switch to it
-      //setPetriNets((prev) => [...prev, newNet])
-      //setActiveNetId(newId)
       setNodes(newNet.nodes);
       setEdges(newNet.edges);
 
@@ -155,14 +152,30 @@ const CPNCanvas = () => {
       if (data.priorities) setPriorities(data.priorities);
       if (data.functions) setFunctions(data.functions);
 
-      fitView();
+      // if we imported a JSON file, we need to layout the graph (do DAGRE layout)
+      if (fileName.endsWith('.json')) {
+        const layoutOptions: LayoutOptions = {
+          algorithm: 'dagre',
+          direction: 'TB',
+          nodeSeparation: 150,
+          rankSeparation: 50,
+        };
+        applyLayout(layoutOptions, newNet.nodes, newNet.edges);
+      } else {
+        // fitView
+        setTimeout(() => {
+          fitView({
+            maxZoom: 4,
+          });
+        }, 50);
+      }
     }
   };
 
   const handleFileLoaded = (fileContent: string, fileName: string) => {
     const data = parseFileContent(fileContent, fileName)
     if (data) {
-      onOpenPetriNet(data)
+      onOpenPetriNet(data, fileName);
     } else {
       // Show error notification
       alert("Failed to parse the file. Please check the file format.")
@@ -186,18 +199,18 @@ const CPNCanvas = () => {
 
     switch (format) {
       case "cpn-tools":
-        content = convertToCPNToolsXML(petriNetData)
-        filename = `${petriNetData.name.replace(/\s+/g, "_")}.cpn`
-        break
+        content = convertToCPNToolsXML(petriNetData);
+        filename = `${petriNetData.name.replace(/\s+/g, "_")}.cpn`;
+        break;
       case "cpn-py":
-        content = convertToCPNPyXML(petriNetData)
-        filename = `${petriNetData.name.replace(/\s+/g, "_")}.xml`
-        break
+        content = convertToCPNPyJSON(petriNetData);
+        filename = `${petriNetData.name.replace(/\s+/g, "_")}.json`;
+        break;
       case "json":
       default:
-        content = convertToJSON(petriNetData)
-        filename = `${petriNetData.name.replace(/\s+/g, "_")}.json`
-        break
+        content = convertToJSON(petriNetData);
+        filename = `${petriNetData.name.replace(/\s+/g, "_")}.json`;
+        break;
     }
 
     saveFile(content, filename)
@@ -299,9 +312,8 @@ const CPNCanvas = () => {
   }
 
   const applyLayout = useCallback(
-    async (options: LayoutOptions) => {
-      if (!nodes.length) return;
-
+    async (options: LayoutOptions, currentNodes: Node[], currentEdges: Edge[]) => {
+      if (!currentNodes.length) return;
 
       try {
         if (options.algorithm === "dagre") {
@@ -309,7 +321,7 @@ const CPNCanvas = () => {
           const Dagre = await import('@dagrejs/dagre');
 
           // Create a new graph
-          const g = new Dagre.graphlib.Graph()
+          const g = new Dagre.graphlib.Graph();
           g.setGraph({
             rankdir: options.direction,
             nodesep: options.nodeSeparation,
@@ -318,8 +330,8 @@ const CPNCanvas = () => {
           });
           g.setDefaultEdgeLabel(() => ({}));
 
-          edges.forEach((edge) => g.setEdge(edge.source, edge.target));
-          nodes.forEach((node) =>
+          currentEdges.forEach((edge) => g.setEdge(edge.source, edge.target));
+          currentNodes.forEach((node) =>
             g.setNode(node.id, {
               ...node,
               width: node.measured?.width ?? 0,
@@ -328,23 +340,10 @@ const CPNCanvas = () => {
           );
 
           // Apply the layout
-          Dagre.layout(g)
-
-          edges.forEach((edge) => g.setEdge(edge.source, edge.target));
-          nodes.forEach((node) =>
-            g.setNode(node.id, {
-              ...node,
-              width: node.measured?.width ?? 0,
-              height: node.measured?.height ?? 0,
-            }),
-          );
-        
           Dagre.layout(g);
 
-          const layoutedNodes = nodes.map((node) => {
+          const layoutedNodes = currentNodes.map((node) => {
             const position = g.node(node.id);
-            // We are shifting the dagre node position (anchor=center center) to the top left
-            // so it matches the React Flow node anchor point (top left).
             const x = position.x - (node.measured?.width ?? 0) / 2;
             const y = position.y - (node.measured?.height ?? 0) / 2;
 
@@ -352,13 +351,12 @@ const CPNCanvas = () => {
           });
 
           setNodes([...layoutedNodes]);
-          setEdges([...edges]);
-
+          setEdges([...currentEdges]);
         } else if (options.algorithm === "elk") {
           // Dynamically import ELK
-          const { default: ELK } = await import("elkjs/lib/elk.bundled.js")
+          const { default: ELK } = await import("elkjs/lib/elk.bundled.js");
 
-          const elk = new ELK()
+          const elk = new ELK();
 
           // Prepare the graph for ELK
           const graph = {
@@ -369,25 +367,25 @@ const CPNCanvas = () => {
               "elk.spacing.nodeNode": options.nodeSeparation.toString(),
               "elk.layered.spacing.nodeNodeBetweenLayers": options.rankSeparation.toString(),
             },
-            children: nodes.map((node) => ({
+            children: currentNodes.map((node) => ({
               id: node.id,
               width: Number(node.style?.width || 80),
               height: Number(node.style?.height || 80),
             })),
-            edges: edges.map((edge) => ({
+            edges: currentEdges.map((edge) => ({
               id: edge.id,
               sources: [edge.source],
               targets: [edge.target],
             })),
-          }
+          };
 
           // Apply the layout
           const elkGraph = await elk.layout(graph);
 
           // Get the new node positions
           if (elkGraph.children) {
-            const layoutedNodes = nodes.map((node) => {
-              const elkNode = elkGraph.children?.find((n) => n.id === node.id)
+            const layoutedNodes = currentNodes.map((node) => {
+              const elkNode = elkGraph.children?.find((n) => n.id === node.id);
               if (elkNode && elkNode.x !== undefined && elkNode.y !== undefined) {
                 return {
                   ...node,
@@ -395,26 +393,26 @@ const CPNCanvas = () => {
                     x: elkNode.x,
                     y: elkNode.y,
                   },
-                }
+                };
               }
-              return node
-            })
+              return node;
+            });
 
             // Update the nodes
-            setNodes(layoutedNodes)
+            setNodes(layoutedNodes);
           }
         }
 
         // After layout is applied, fit the view
         setTimeout(() => {
-          fitView({ padding: 0.2 })
-        }, 50)
+          fitView({ padding: 0.2 });
+        }, 50);
       } catch (error) {
-        console.error("Error applying layout:", error)
+        console.error("Error applying layout:", error);
       }
     },
-    [nodes, edges, setNodes, setEdges, fitView],
-  )
+    [setNodes, setEdges, fitView],
+  );
 
   return (
     <div className="dndflow">
@@ -498,7 +496,7 @@ const CPNCanvas = () => {
             <MiniMap />
             <Controls />
             <Panel position="top-center">
-              <Toolbar toggleArcMode={toggleArcMode} onApplyLayout={applyLayout}/>
+              <Toolbar toggleArcMode={toggleArcMode} onApplyLayout={(options) => applyLayout(options, nodes, edges)}/>
             </Panel>
             <BoomerDial
               slices={slices}

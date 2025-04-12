@@ -19,7 +19,7 @@ interface SaveDialogProps {
 }
 
 export function SaveDialog({ open, onOpenChange, onSave, petriNetName }: SaveDialogProps) {
-  const [selectedFormat, setSelectedFormat] = useState<string>("cpn-tools")
+  const [selectedFormat, setSelectedFormat] = useState<string>("json");
 
   const handleSave = () => {
     onSave(selectedFormat)
@@ -35,6 +35,17 @@ export function SaveDialog({ open, onOpenChange, onSave, petriNetName }: SaveDia
         </DialogHeader>
         <div className="py-4">
           <RadioGroup value={selectedFormat} onValueChange={setSelectedFormat} className="space-y-3">
+            <div className="flex items-start space-x-3 space-y-0">
+              <RadioGroupItem value="json" id="json"/>
+              <div className="grid gap-1.5">
+                <Label htmlFor="json" className="font-medium">
+                  OCPN JSON
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Simple JSON format. Best for OCPN Tools.
+                </p>
+              </div>
+            </div>
             <div className="flex items-start space-x-3 space-y-0">
               <RadioGroupItem value="cpn-tools" id="cpn-tools" />
               <div className="grid gap-1.5">
@@ -57,17 +68,6 @@ export function SaveDialog({ open, onOpenChange, onSave, petriNetName }: SaveDia
                 </p>
               </div>
             </div>
-            {/* <div className="flex items-start space-x-3 space-y-0">
-              <RadioGroupItem value="json" id="json" disabled/>
-              <div className="grid gap-1.5">
-                <Label htmlFor="json" className="font-medium">
-                  JSON
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  Simple JSON format. Best for web applications and custom processing.
-                </p>
-              </div>
-            </div> */}
           </RadioGroup>
         </div>
         <DialogFooter>

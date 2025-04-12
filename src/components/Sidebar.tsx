@@ -13,7 +13,10 @@ import { DeclarationManager } from '@/components/DeclarationManager';
 
 const Sidebar = () => {
   // Access selectedElement from the store
-  const selectedElement = useStore((state) => state.selectedElement);
+  const selectedElement = useStore((state) => {
+    const activePetriNet = state.activePetriNetId ? state.petriNetsById[state.activePetriNetId] : null;
+    return activePetriNet?.selectedElement;
+  });
 
   const colorSets = useStore((state) => state.colorSets);
   const priorities = useStore((state) => state.priorities);

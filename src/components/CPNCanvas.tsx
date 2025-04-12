@@ -1,5 +1,6 @@
 import React, { useRef, useCallback, useState } from 'react';
 import useStore from '@/stores/store';
+import { usePetriNetHandlers } from '@/hooks/usePetriNetHandlers';
 
 import {
   ReactFlow,
@@ -38,6 +39,11 @@ import {
   TooltipProvider,
 } from '@/components/ui/tooltip';
 
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input'; // Ensure this path is correct
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
 import {
   convertToCPNToolsXML,
   convertToCPNPyJSON,
@@ -50,27 +56,26 @@ import {
 import { nodeTypes } from '../nodes';
 import { edgeTypes } from '../edges';
 
-import { type StoreState } from '@/stores/store'; // Ensure this type is defined in your store
+import { type StoreState } from '@/stores/store'; // Ensure these types are defined in your store
 
 import { LayoutOptions } from '@/components/LayoutPopover';
 
 const selector = (state: StoreState) => ({
-  nodes: state.nodes,
-  edges: state.edges,
+  petriNetOrder: state.petriNetOrder,
+  petriNetsById: state.petriNetsById,
+  activePetriNetId: state.activePetriNetId,
   colorSets: state.colorSets,
   variables: state.variables,
   priorities: state.priorities,
   functions: state.functions,
-  onNodesChange: state.onNodesChange,
-  onEdgesChange: state.onEdgesChange,
+  createPetriNet: state.createPetriNet,
+  setActivePetriNet: state.setActivePetriNet,
   setNodes: state.setNodes,
   setEdges: state.setEdges,
   setColorSets: state.setColorSets,
   setVariables: state.setVariables,
   setPriorities: state.setPriorities,
   setFunctions: state.setFunctions,
-  onConnect: state.onConnect,
-  setSelectedElement: state.setSelectedElement,
   toggleArcMode: state.toggleArcMode,
   reset: state.reset,
 });
@@ -88,6 +93,8 @@ const defaultEdgeOptions = {
 const CPNCanvas = () => {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [openDialogOpen, setOpenDialogOpen] = useState(false);
+  const [newPetriNetDialogOpen, setNewPetriNetDialogOpen] = useState(false);
+  const [newPetriNetName, setNewPetriNetName] = useState('');
 
   const [isDialOpen, setIsDialOpen] = useState(false);
   const [dialPosition, setDialPosition] = useState({ x: 0, y: 0 });
@@ -95,27 +102,31 @@ const CPNCanvas = () => {
   const reactFlowWrapper = useRef(null);
   
   const {
-    nodes,
-    edges,
+    petriNetOrder,
+    petriNetsById,
+    activePetriNetId,
     colorSets,
     variables,
     priorities,
     functions,
-    onNodesChange,
-    onEdgesChange,
+    createPetriNet,
+    setActivePetriNet,
     setNodes,
-    setEdges,
     setColorSets,
     setVariables,
     setPriorities,
     setFunctions,
-    onConnect,
-    setSelectedElement,
     toggleArcMode,
     reset,
   } = useStore(
     useShallow(selector),
   );
+
+  const petriNet = useStore(state => activePetriNetId ? state.petriNetsById[activePetriNetId] : null);
+  const petriNetHandlers = usePetriNetHandlers(activePetriNetId || '');
+  const { onNodesChange, onEdgesChange, onConnect } = activePetriNetId
+    ? petriNetHandlers
+    : { onNodesChange: () => {}, onEdgesChange: () => {}, onConnect: () => {} };
 
   const { fitView, screenToFlowPosition } = useReactFlow();
   const [type] = useDnD();
@@ -134,17 +145,15 @@ const CPNCanvas = () => {
       // Reset the current state
       reset();
 
-      // Create a new Petri Net from the imported data
-      const newId = 'net'; //`net${petriNets.length + 1}`
-      const newNet = {
-        id: newId,
-        name: data.name || `Imported Net`, //${petriNets.length + 1}`,
-        nodes: data.nodes || [],
-        edges: data.edges || [],
-      };
+      // Iterate over the array of Petri nets and add them to the store
+      Object.values(data.petriNetsById).forEach((petriNet) => {
+        useStore.getState().addPetriNet(petriNet);
+      });
 
-      setNodes(newNet.nodes);
-      setEdges(newNet.edges);
+      // Set the active Petri net to the first one in the order
+      if (data.petriNetOrder.length > 0) {
+        useStore.getState().setActivePetriNet(data.petriNetOrder[0]);
+      }
 
       // Update declarations if available
       if (data.colorSets) setColorSets(data.colorSets);
@@ -152,7 +161,7 @@ const CPNCanvas = () => {
       if (data.priorities) setPriorities(data.priorities);
       if (data.functions) setFunctions(data.functions);
 
-      // if we imported a JSON file, we need to layout the graph (do DAGRE layout)
+      // If we imported a JSON file, layout the graph (e.g., DAGRE layout)
       if (fileName.endsWith('.json')) {
         const layoutOptions: LayoutOptions = {
           algorithm: 'dagre',
@@ -160,9 +169,13 @@ const CPNCanvas = () => {
           nodeSeparation: 150,
           rankSeparation: 50,
         };
-        applyLayout(layoutOptions, newNet.nodes, newNet.edges);
+
+        // Apply layout to all Petri nets
+        Object.values(data.petriNetsById).forEach((petriNet) => {
+          applyLayout(layoutOptions, petriNet.nodes, petriNet.edges);
+        });
       } else {
-        // fitView
+        // Fit the view
         setTimeout(() => {
           fitView({
             maxZoom: 4,
@@ -187,10 +200,8 @@ const CPNCanvas = () => {
     let filename: string
 
     const petriNetData: PetriNetData = {
-      id: 'net',
-      name: 'PetriNet',
-      nodes,
-      edges,
+      petriNetsById,
+      petriNetOrder,
       colorSets,
       variables,
       priorities,
@@ -200,20 +211,23 @@ const CPNCanvas = () => {
     switch (format) {
       case "cpn-tools":
         content = convertToCPNToolsXML(petriNetData);
-        filename = `${petriNetData.name.replace(/\s+/g, "_")}.cpn`;
+        //filename = `${petriNetsById.name.replace(/\s+/g, "_")}.cpn`;
+        filename = 'PetriNet.cpn';
         break;
       case "cpn-py":
         content = convertToCPNPyJSON(petriNetData);
-        filename = `${petriNetData.name.replace(/\s+/g, "_")}.json`;
+        //filename = `${petriNetData.name.replace(/\s+/g, "_")}.json`;
+        filename = 'PetriNet.json';
         break;
       case "json":
       default:
         content = convertToJSON(petriNetData);
-        filename = `${petriNetData.name.replace(/\s+/g, "_")}.json`;
+        //filename = `${petriNetData.name.replace(/\s+/g, "_")}.ocpn`;
+        filename = 'PetriNet.ocpn';
         break;
     }
 
-    saveFile(content, filename)
+    saveFile(content, filename);
   }
 
   const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
@@ -245,28 +259,44 @@ const CPNCanvas = () => {
         },
       };
 
-      useStore.getState().addNode(newNode);
+      if (activePetriNetId) {
+        useStore.getState().addNode(activePetriNetId, newNode);
+      } else {
+        console.error("Cannot add node: activePetriNetId is null.");
+      }
     },
-    [screenToFlowPosition, type]
+    [screenToFlowPosition, type, activePetriNetId]
   );
 
   // Handle node selection
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     setIsDialOpen(false);
-    setSelectedElement({ type: "node", element: node })
-  }, [setSelectedElement]);
+    if (activePetriNetId) {
+      useStore.getState().setSelectedElement(activePetriNetId, { type: "node", element: node });
+    } else {
+      console.error("Cannot set selected element: activePetriNetId is null.");
+    }
+  }, [activePetriNetId]);
 
   // Handle edge selection
   const onEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
     setIsDialOpen(false);
-    setSelectedElement({ type: "edge", element: edge })
-  }, [setSelectedElement])
+    if (activePetriNetId) {
+      useStore.getState().setSelectedElement(activePetriNetId, { type: "edge", element: edge });
+    } else {
+      console.error("Cannot set selected element: activePetriNetId is null.");
+    }
+  }, [activePetriNetId])
 
   // Handle background click (deselect)
   const onPaneClick = useCallback(() => {
-    setSelectedElement(null);
+    if (activePetriNetId) {
+      useStore.getState().setSelectedElement(activePetriNetId, null);
+    } else {
+      console.error("Cannot set selected element: activePetriNetId is null.");
+    }
     setIsDialOpen(false);
-  }, [setSelectedElement])
+  }, [activePetriNetId])
 
   const onPaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent) => {
     event.preventDefault();
@@ -297,7 +327,9 @@ const CPNCanvas = () => {
         position,
         data: { label: 'place', isArcMode: false, colorSet: '' },
       };
-      useStore.getState().addNode(newNode);
+      if (activePetriNetId) {
+        useStore.getState().addNode(activePetriNetId, newNode);
+      }
     } else if (slice.key === 'new-transition') {
       const newNode = {
         id: `node_${Date.now()}`,
@@ -306,7 +338,9 @@ const CPNCanvas = () => {
         width: 60,
         data: { label: 'transition', isArcMode: false, guard: '' },
       };
-      useStore.getState().addNode(newNode);
+      if (activePetriNetId) {
+        useStore.getState().addNode(activePetriNetId, newNode);
+      }
     }
     setIsDialOpen(false);
   }
@@ -350,8 +384,10 @@ const CPNCanvas = () => {
             return { ...node, position: { x, y } };
           });
 
-          setNodes([...layoutedNodes]);
-          setEdges([...currentEdges]);
+          if (activePetriNetId) {
+            setNodes(activePetriNetId, [...layoutedNodes]);
+            //setEdges(activePetriNetId, [...currentEdges]);
+          }
         } else if (options.algorithm === "elk") {
           // Dynamically import ELK
           const { default: ELK } = await import("elkjs/lib/elk.bundled.js");
@@ -399,7 +435,9 @@ const CPNCanvas = () => {
             });
 
             // Update the nodes
-            setNodes(layoutedNodes);
+            if (activePetriNetId) {
+              setNodes(activePetriNetId, [...layoutedNodes]);
+            } 
           }
         }
 
@@ -411,8 +449,17 @@ const CPNCanvas = () => {
         console.error("Error applying layout:", error);
       }
     },
-    [setNodes, setEdges, fitView],
+    [setNodes, fitView, activePetriNetId],
   );
+
+  const handleAddPetriNet = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    createPetriNet(newPetriNetName); // Add the new Petri net to the store
+    // close dialog
+    setNewPetriNetDialogOpen(false);
+    setNewPetriNetName(''); // Clear the input field
+  };
 
   return (
     <div className="dndflow">
@@ -463,12 +510,52 @@ const CPNCanvas = () => {
           petriNetName="Petri Net" //{activePetriNetName}
         />
 
+        {/* A Tab bar with the names of the Petri nets */}
+        <div className="flex flex-col w-full mx-auto bg-muted">
+          <Tabs
+            defaultValue={activePetriNetId || petriNetOrder[0]}
+            value={activePetriNetId ?? undefined}
+            onValueChange={(value) => setActivePetriNet(value)}
+            className="flex flex-col gap-2 items-start"
+          >
+            <TabsList className="flex gap-4 items-center">
+              {petriNetOrder.map((id) => (
+                <TabsTrigger key={id} value={id}>
+                  {petriNetsById[id].name}
+                </TabsTrigger>
+              ))}
+              <Button variant="ghost" onClick={() => setNewPetriNetDialogOpen(true)}>New Subnet</Button>
+              <Dialog open={newPetriNetDialogOpen} onOpenChange={setNewPetriNetDialogOpen}>
+                <DialogContent className="p-4">
+                  <DialogHeader>
+                    <DialogTitle>Add New Subnet</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleAddPetriNet} className="space-y-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="petri-net-name">Subnet Name</Label>
+                      <Input
+                        id="petri-net-name"
+                        placeholder="Enter Petri Net name"
+                        value={newPetriNetName}
+                        onChange={(e) => setNewPetriNetName(e.target.value)}
+                      />
+                    </div>
+                    <Button type="submit" className="w-full">
+                      Add Petri Net
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </TabsList>
+          </Tabs>
+        </div>
+
         {/* ReactFlow Component */}
         <div className="flex-1 reactflow-wrapper" ref={reactFlowWrapper}>
           <ReactFlow
-            nodes={nodes}
+            nodes={petriNet?.nodes || []}
             nodeTypes={nodeTypes}
-            edges={edges}
+            edges={petriNet?.edges || []}
             edgeTypes={edgeTypes}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
@@ -496,7 +583,7 @@ const CPNCanvas = () => {
             <MiniMap />
             <Controls />
             <Panel position="top-center">
-              <Toolbar toggleArcMode={toggleArcMode} onApplyLayout={(options) => applyLayout(options, nodes, edges)}/>
+              <Toolbar toggleArcMode={toggleArcMode} onApplyLayout={(options) => petriNet && applyLayout(options, petriNet.nodes, petriNet.edges)}/>
             </Panel>
             <BoomerDial
               slices={slices}

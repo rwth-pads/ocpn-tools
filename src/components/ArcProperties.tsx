@@ -3,11 +3,12 @@ import useStore from '@/stores/store';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
-import { SelectedElement } from '@/types';
-
-
 const ArcProperties = () => {
-  const selectedElement = useStore((state) => state.selectedElement) as SelectedElement | null;
+  const activePetriNetId = useStore((state) => state.activePetriNetId);
+  const selectedElement = useStore((state) => {
+    const activePetriNet = state.activePetriNetId ? state.petriNetsById[state.activePetriNetId] : null;
+    return activePetriNet?.selectedElement;
+  });
   const updateEdgeLabel = useStore((state) => state.updateEdgeLabel);
 
   if (!selectedElement) {
@@ -29,7 +30,9 @@ const ArcProperties = () => {
           id="inscription"
           value={label as string ?? ""}
           onChange={(e) => {
-            updateEdgeLabel(id, e.target.value)
+            if (activePetriNetId) {
+              updateEdgeLabel(activePetriNetId, id, e.target.value)
+            }
           }}
         />
       </div>

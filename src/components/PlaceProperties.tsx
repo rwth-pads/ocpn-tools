@@ -3,11 +3,15 @@ import useStore from '@/stores/store';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SelectedElement } from '@/types';
 import { ColorSet } from '@/declarations';
 
 const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
-  const selectedElement = useStore((state) => state.selectedElement) as SelectedElement | null;
+  // Access selectedElement from the store
+  const activePetriNetId = useStore((state) => state.activePetriNetId);
+  const selectedElement = useStore((state) => {
+    const activePetriNet = state.activePetriNetId ? state.petriNetsById[state.activePetriNetId] : null;
+    return activePetriNet?.selectedElement;
+  });
   const updateNodeData = useStore((state) => state.updateNodeData);
 
   // Ensure selectedElement is a node and has the correct data type
@@ -29,15 +33,18 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
         <Input
           id="label"
           value={data.label || ""}
-          onChange={(e) =>
-            updateNodeData(id, {
-              ...data,
-              label: e.target.value,
-              isArcMode: data.isArcMode || false,
-              type: data.type || "defaultType",
-              colorSet: data.colorSet || "defaultColorSet",
-              initialMarking: data.initialMarking || "defaultMarking",
-            })
+          onChange={(e) => {
+            if (activePetriNetId) {
+              updateNodeData(activePetriNetId, id, {
+                ...data,
+                label: e.target.value,
+                isArcMode: data.isArcMode || false,
+                type: data.type || "defaultType",
+                colorSet: data.colorSet || "defaultColorSet",
+                initialMarking: data.initialMarking || "defaultMarking",
+              });
+            }
+          }
           }
         />
       </div>
@@ -48,14 +55,16 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
           value={data.colorSet || "INT"}
           onValueChange={(value) => {
             // const colorSetObj = colorSets.find((cs) => cs.name === value);
-            updateNodeData(id, {
-              ...data,
-              label: data.label || "",
-              colorSet: value,
-              isArcMode: data.isArcMode || false,
-              type: data.type || "defaultType",
-              initialMarking: data.initialMarking || "defaultMarking",
-            });
+            if (activePetriNetId) {
+              updateNodeData(activePetriNetId, id, {
+                ...data,
+                label: data.label || "",
+                colorSet: value,
+                isArcMode: data.isArcMode || false,
+                type: data.type || "defaultType",
+                initialMarking: data.initialMarking || "defaultMarking",
+              });
+            }
           }}
         >
           <SelectTrigger>
@@ -82,15 +91,18 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
         <Input
           id="initialMarking"
           value={data.initialMarking || ""}
-          onChange={(e) =>
-            updateNodeData(id, {
-              ...data,
-              label: data.label || "",
-              initialMarking: e.target.value,
-              isArcMode: data.isArcMode || false,
-              type: data.type || "defaultType",
-              colorSet: data.colorSet || "defaultColorSet",
-            })
+          onChange={(e) => {
+            if (activePetriNetId) {
+              updateNodeData(activePetriNetId, id, {
+                ...data,
+                label: data.label || "",
+                initialMarking: e.target.value,
+                isArcMode: data.isArcMode || false,
+                type: data.type || "defaultType",
+                colorSet: data.colorSet || "defaultColorSet",
+              });
+            }
+          }
           }
         />
       </div>

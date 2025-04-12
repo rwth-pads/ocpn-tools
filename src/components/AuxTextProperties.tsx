@@ -2,10 +2,13 @@ import useStore from '@/stores/store';
 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { SelectedElement } from '@/types';
 
 const AuxTextProperties = () => {
-  const selectedElement = useStore((state) => state.selectedElement) as SelectedElement | null;
+  const activePetriNetId = useStore((state) => state.activePetriNetId);
+  const selectedElement = useStore((state) => {
+    const activePetriNet = state.activePetriNetId ? state.petriNetsById[state.activePetriNetId] : null;
+    return activePetriNet?.selectedElement;
+  });
   const updateNodeData = useStore((state) => state.updateNodeData);
 
   // Ensure selectedElement is a node and has the correct data type
@@ -25,12 +28,15 @@ const AuxTextProperties = () => {
           className="font-mono h-[100px]"
           value={data.label || ""}
           onChange={
-            (e) =>
-              updateNodeData(id, {
-                ...data,
-                label: e.target.value,
-                type: data.type || "auxText",
-              })
+            (e) => {
+              if (activePetriNetId) {
+                updateNodeData(activePetriNetId, id, {
+                  ...data,
+                  label: e.target.value,
+                  type: data.type || "auxText",
+                });
+              }
+            }
           }
         />
       </div>

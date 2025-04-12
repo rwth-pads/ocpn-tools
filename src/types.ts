@@ -1,9 +1,6 @@
 import {
   type Edge,
   type Node,
-  type OnNodesChange,
-  type OnEdgesChange,
-  type OnConnect,
 } from '@xyflow/react';
 // import { PlaceNodeProps } from '@/nodes/PlaceNode'; // Import PlaceNodeData
 // import { TransitionNodeProps } from '@/nodes/TransitionNode'; // Import TransitionNodeData
@@ -13,7 +10,15 @@ import { PlaceNodeData } from './nodes/PlaceNode';
 import { TransitionNodeData } from './nodes/TransitionNode';
 import { AuxTextNodeData } from './nodes/AuxTextNode';
 
-export type AppNode = Node;
+export type PetriNet = {
+  id: string;
+  name: string;
+  nodes: Node[];
+  edges: Edge[];
+  selectedElement?: SelectedElement | null;
+};
+
+//export type AppNode = Node;
 
 // Define the type for selectedElement
 export type SelectedElement =
@@ -22,26 +27,34 @@ export type SelectedElement =
   | null;
 
 export type AppState = {
-  nodes: AppNode[];
-  edges: Edge[];
+  petriNetsById: Record<string, PetriNet>;
+  petriNetOrder: string[]; // IDs in tab order
+  activePetriNetId: string | null;
   colorSets: ColorSet[];
   variables: Variable[];
   priorities: Priority[];
   functions: Function[];
-  selectedElement: SelectedElement; // Add selectedElement to AppState
 };
 
 export type AppActions = {
-  onNodesChange: OnNodesChange<AppNode>;
-  onEdgesChange: OnEdgesChange;
-  onConnect: OnConnect;
-  setNodes: (nodes: AppNode[]) => void;
-  setEdges: (edges: Edge[]) => void;
+  setNodes: (petriNetId: string, nodes: Node[]) => void;
+  setEdges: (petriNetId: string, edges: Edge[]) => void;
+  
+  createPetriNet: (name: string) => void;
+  addPetriNet: (newPetriNet: PetriNet) => void;
+  setActivePetriNet: (id: string) => void;
+  addNode: (petriNetId: string, newNode: Node) => void;
+  addEdge: (petriNetId: string, edge: Edge) => void;
+  updateNode: (petriNetId: string, node: Node) => void;
+  updateNodeData: (petriNetId: string, id: string, newData: PlaceNodeData | TransitionNodeData | AuxTextNodeData) => void;
+  updateEdgeLabel: (petriNetId: string, id: string, newLabel: string) => void;
+  setSelectedElement: (petriNetId: string, element: SelectedElement) => void;
+  
   setColorSets: (colorSets: ColorSet[]) => void;
   setVariables: (variables: Variable[]) => void;
   setPriorities: (priorities: Priority[]) => void;
   setFunctions: (functions: Function[]) => void;
-  addNode: (newNode: AppNode) => void;
+
   addColorSet: (newColorSet: ColorSet) => void;
   addVariable: (newVariable: Variable) => void;
   addPriority: (newPriority: Priority) => void;
@@ -50,9 +63,7 @@ export type AppActions = {
   deleteVariable: (id: string) => void;
   deletePriority: (id: string) => void;
   deleteFunction: (id: string) => void;
-  updateNodeData: (id: string, newData: PlaceNodeData | TransitionNodeData | AuxTextNodeData) => void;
-  updateEdgeLabel: (id: string, newLabel: string) => void;
-  setSelectedElement: (element: SelectedElement) => void;
+
   toggleArcMode: (state: boolean) => void;
   reset: () => void;
 };

@@ -4,13 +4,16 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { SelectedElement } from '@/types';
 import { CodeSegmentEditor } from "@/components/CodeSegmentEditor";
 
 import type { Priority } from "@/declarations";
 
 const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
-  const selectedElement = useStore((state) => state.selectedElement) as SelectedElement | null;
+  const activePetriNetId = useStore((state) => state.activePetriNetId);
+  const selectedElement = useStore((state) => {
+    const activePetriNet = state.activePetriNetId ? state.petriNetsById[state.activePetriNetId] : null;
+    return activePetriNet?.selectedElement;
+  });
   const updateNodeData = useStore((state) => state.updateNodeData);
 
   // Ensure selectedElement is a node and has the correct data type
@@ -32,7 +35,12 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
         <Input
           id="label"
           value={data.label ?? ""}
-          onChange={(e) => updateNodeData(id, { ...data, label: e.target.value, isArcMode: data.isArcMode || false, type: data.type || 'defaultType', colorSet: data.colorSet || 'defaultColorSet', initialMarking: data.initialMarking || 'defaultMarking' })}
+          onChange={(e) => {
+            if (activePetriNetId) {
+              updateNodeData(activePetriNetId, id, { ...data, label: e.target.value, isArcMode: data.isArcMode || false, type: data.type || 'defaultType', colorSet: data.colorSet || 'defaultColorSet', initialMarking: data.initialMarking || 'defaultMarking' })
+            }
+          }
+          }
         />
       </div>
 
@@ -41,15 +49,19 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
         <Input
           id="guard"
           value={data.guard || ""}
-          onChange={(e) => updateNodeData(id, {
-            ...data,
-            label: data.label || "",
-            guard: e.target.value,
-            isArcMode: data.isArcMode || false,
-            type: data.type || "defaultType",
-            colorSet: data.colorSet || "defaultColorSet",
-            initialMarking: data.initialMarking || "defaultMarking",
-          })}
+          onChange={(e) => {
+            if (activePetriNetId) {
+              updateNodeData(activePetriNetId, id, {
+                ...data,
+                label: data.label || "",
+                guard: e.target.value,
+                isArcMode: data.isArcMode || false,
+                type: data.type || "defaultType",
+                colorSet: data.colorSet || "defaultColorSet",
+                initialMarking: data.initialMarking || "defaultMarking",
+              })}
+            }
+          }
         />
       </div>
 
@@ -58,18 +70,22 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
         <Input
           id="time"
           value={data.time || ""}
-          onChange={(e) => updateNodeData(id, {
-            ...data,
-            label: data.label || "",
-            time: e.target.value,
-            isArcMode: data.isArcMode || false,
-            type: data.type || "defaultType",
-            colorSet: data.colorSet,
-            initialMarking: data.initialMarking,
-            priority: data.priority || "NONE",
-            codeSegment: data.codeSegment || "",
-            guard: data.guard || "",
-          })}
+          onChange={(e) => {
+            if (activePetriNetId) {
+              updateNodeData(activePetriNetId, id, {
+                ...data,
+                label: data.label || "",
+                time: e.target.value,
+                isArcMode: data.isArcMode || false,
+                type: data.type || "defaultType",
+                colorSet: data.colorSet,
+                initialMarking: data.initialMarking,
+                priority: data.priority || "NONE",
+                codeSegment: data.codeSegment || "",
+                guard: data.guard || "",
+              })}
+            }
+          }
         />
       </div>
 
@@ -77,18 +93,22 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
         <Label htmlFor="priority">Priority</Label>
         <Select
           value={data.priority || "NONE"}
-          onValueChange={(value) => updateNodeData(id, {
-            ...data,
-            label: data.label || "",
-            priority: value,
-            isArcMode: data.isArcMode || false,
-            type: data.type || "defaultType",
-            colorSet: data.colorSet,
-            initialMarking: data.initialMarking,
-            guard: data.guard || "",
-            time: data.time || "",
-            codeSegment: data.codeSegment || "",
-          })}
+          onValueChange={(value) => {
+            if (activePetriNetId) {
+              updateNodeData(activePetriNetId, id, {
+                ...data,
+                label: data.label || "",
+                priority: value,
+                isArcMode: data.isArcMode || false,
+                type: data.type || "defaultType",
+                colorSet: data.colorSet,
+                initialMarking: data.initialMarking,
+                guard: data.guard || "",
+                time: data.time || "",
+                codeSegment: data.codeSegment || "",
+              })}
+            }
+          }
         >
           <SelectTrigger id="priority">
             <SelectValue placeholder="Select priority" />
@@ -110,18 +130,22 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
         <Label htmlFor="codeSegment">Code Segment</Label>
         <CodeSegmentEditor
           value={data.codeSegment || ""}
-          onChange={(value) => updateNodeData(id, {
-            ...data,
-            label: data.label || "",
-            codeSegment: value,
-            isArcMode: data.isArcMode || false,
-            type: data.type || "defaultType",
-            colorSet: data.colorSet,
-            initialMarking: data.initialMarking,
-            guard: data.guard || "",
-            time: data.time || "",
-            priority: data.priority || "NONE",
-          })}
+          onChange={(value) => {
+            if (activePetriNetId) {
+              updateNodeData(activePetriNetId, id, {
+                ...data,
+                label: data.label || "",
+                codeSegment: value,
+                isArcMode: data.isArcMode || false,
+                type: data.type || "defaultType",
+                colorSet: data.colorSet,
+                initialMarking: data.initialMarking,
+                guard: data.guard || "",
+                time: data.time || "",
+                priority: data.priority || "NONE",
+              })}
+            }
+          }
         />
       </div>
     </div>

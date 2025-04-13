@@ -17,8 +17,6 @@ import { useShallow } from 'zustand/react/shallow';
 
 //import Dagre from '@dagrejs/dagre';
 
-import '@xyflow/react/dist/style.css';
-
 import { Toolbar } from "@/components/Toolbar";
 import { Button } from "@/components/ui/button"
 

@@ -5,13 +5,14 @@
   visibility: visible !important;
 }
 
-.place-node{
+.place-node {
   border-radius: 50%;
   width: 20px; /* Further reduced size */
   height: 20px; /* Further reduced size */
-  border-color: rgb(30 64 175);
+  /* border-color: rgb(30 64 175); */
   border-width: 1px; /* Reduced border thickness */
 }
+
 .place-node .token {
   width: 20px; /* Adjusted size */
 }
@@ -24,7 +25,7 @@
   --xy-theme-color-focus: #E8E8E8;
 
   /* Built-in Variables see https://reactflow.dev/learn/customization/theming */
-  --xy-node-border-default: 1px solid #000;
+  /* --xy-node-border-default: 1px solid #000; */
 
   --xy-node-boxshadow-default: 
     0px 3.54px 4.55px 0px #00000005, 
@@ -32,10 +33,10 @@
     0px 0.51px 1.01px 0px #0000001A;
 
   --xy-node-border-radius-default: 0;
-
+  
   --xy-handle-background-color-default: #ffffff;
   --xy-handle-border-color-default: #AAAAAA;
-
+  
   --xy-edge-label-color-default: #505050;
 }
 
@@ -61,6 +62,7 @@
   flex-direction: column;
   /* border: var(--xy-node-border-default); */
   color: var(--xy-node-color, var(--xy-node-color-default));
+  --border: #000;
 }
 
 .react-flow__node.selectable:focus {
@@ -162,8 +164,8 @@
   min-height: 30px;
   width: 100%;
   height: 100%;
-  border-radius: calc(100% * (var(--current-width, 30) / var(--current-height, 30)));
-  border: 1px solid;
+  /* border-radius: calc(100% * (var(--current-width, 30) / var(--current-height, 30)));
+  border: 1px solid; */
   cursor: pointer;
 }
 

@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client'; // Use named import for createRoo
 
 import App from './App';
 
+import '@xyflow/react/dist/style.css';
+
 import './index.css';
 import './editor.css';
 

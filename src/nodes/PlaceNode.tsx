@@ -1,4 +1,5 @@
 import { Handle, Position, NodeResizer, useConnection } from '@xyflow/react';
+import useStore from '@/stores/store'; // Import Zustand store
 
 // Export the interface so it can be imported elsewhere
 export interface PlaceNodeData {
@@ -17,11 +18,14 @@ export interface PlaceNodeProps {
 
 export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
   const connection = useConnection();
+  const colorSetColor = useStore((state) =>
+    state.colorSets.find((colorSet) => colorSet.name === data.colorSet)?.color || '#FBBF24'
+  );
 
   const isTarget = connection.inProgress && connection.fromNode.id !== id && connection.fromNode.type === 'transition';
 
   return (
-    <div className="relative cpn-node place-node">
+    <div className="relative cpn-node place-node" style={{ borderColor: colorSetColor }}>
 
       {/* Initial marking - top right corner */}
       {data.initialMarking && (

@@ -125,7 +125,6 @@ export function DeclarationManager() {
   const handleEditUse = (use: Omit<Use, 'id'>) => {
     setSelectedUse(use);
     setUseEditorOpen(true);
-    setSelectedUse(undefined);
   }
 
   const handleSaveUse = (use: Omit<Use, 'id'>) => {
@@ -596,10 +595,7 @@ export function DeclarationManager() {
                 <Button
                   className="w-full"
                   variant="outline"
-                  onClick={() => {
-                    setSelectedFunction(undefined)
-                    setFunctionEditorOpen(true)
-                  }}
+                  onClick={() => setSelectedFunction(undefined)}
                 >
                   Create New Function
                 </Button>
@@ -671,7 +667,7 @@ export function DeclarationManager() {
 
             <Dialog open={useEditorOpen} onOpenChange={setUseEditorOpen}>
               <DialogTrigger asChild>
-                <Button className="w-full" variant="outline">
+                <Button className="w-full" variant="outline" onClick={() => setSelectedUse(undefined)}>
                   Add External Library
                 </Button>
               </DialogTrigger>

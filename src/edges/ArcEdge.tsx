@@ -1,6 +1,7 @@
 import React from 'react';
 import { getStraightPath, useInternalNode, EdgeLabelRenderer } from '@xyflow/react';
 import { getEdgeParams } from '../utils.js';
+import useStore from '@/stores/store'; // Import Zustand store
 
 interface FloatingEdgeProps {
   id: string;
@@ -14,6 +15,11 @@ interface FloatingEdgeProps {
 function ArcEdge({ id, source, target, markerEnd, style, label }: FloatingEdgeProps) {
   const sourceNode = useInternalNode(source);
   const targetNode = useInternalNode(target);
+
+  const colorSetColor = useStore((state) => {
+    const variable = state.variables.find((v) => v.name === label);
+    return state.colorSets.find((cs) => cs.name === variable?.colorSet)?.color || '#000';
+  });
 
   if (!sourceNode || !targetNode) {
     return null;
@@ -30,15 +36,15 @@ function ArcEdge({ id, source, target, markerEnd, style, label }: FloatingEdgePr
 
   return (
     <g>
-      {/* Edge Path */}
-      <path
-        id={id}
-        className="react-flow__edge-path"
-        d={edgePath}
-        markerEnd={markerEnd}
-        style={style}
-      />
-      {/* Label using EdgeLabelRenderer */}
+      /* Edge Path */
+        <path
+          id={id}
+          d={edgePath}
+          className="stroke-[currentColor]"
+          style={{ stroke: colorSetColor, ...style }}
+          markerEnd={markerEnd}
+        />
+        {/* Label using EdgeLabelRenderer */}
       {label && (
         <EdgeLabelRenderer>
           <div style={{

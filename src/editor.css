@@ -127,13 +127,14 @@
 
 .react-flow__edge-path {
   fill: none;
-  stroke: black; /* Ensure edges are visible */
+  /* stroke: black; */
   stroke-width: 1; /* Slightly thicker for better visibility */
   stroke-linecap: round; /* Smooth edge ends */
 }
 .react-flow__edge {
-  marker-start: url(#marker-start); /* Add markers for better visibility */
-  marker-end: url(#marker-end); /* Add markers for better visibility */
+  marker-start: url(#marker-start);
+  marker-end: url(#marker-end);
+  --xy-edge-stroke-default: black;
 }
 
 .cpn-node {

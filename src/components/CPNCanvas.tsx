@@ -214,7 +214,24 @@ const CPNCanvas = () => {
 
     switch (format) {
       case "cpn-tools":
-        content = convertToCPNToolsXML(petriNetData);
+        content = convertToCPNToolsXML({
+          ...petriNetData,
+          petriNetsById: Object.fromEntries(
+            Object.entries(petriNetData.petriNetsById).map(([id, net]) => [
+              id,
+              {
+                ...net,
+                nodes: net.nodes.map((node) => ({
+                  ...node,
+                  position: {
+                    ...node.position,
+                    y: -node.position.y, // Invert y-axis for CPN Tools
+                  },
+                })),
+              },
+            ])
+          ),
+        });
         //filename = `${petriNetsById.name.replace(/\s+/g, "_")}.cpn`;
         filename = 'PetriNet.cpn';
         break;

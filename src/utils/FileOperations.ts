@@ -409,7 +409,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
       type: 'place',
       position: {
         x: parseFloat(place.querySelector('posattr')?.getAttribute('x') || '0'),
-        y: parseFloat(place.querySelector('posattr')?.getAttribute('y') || '0'),
+        y: -parseFloat(place.querySelector('posattr')?.getAttribute('y') || '0'), // Invert y-coordinate
       },
       data: {
         label: place.querySelector('text')?.textContent || '',
@@ -424,7 +424,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
       type: 'transition',
       position: {
         x: parseFloat(transition.querySelector('posattr')?.getAttribute('x') || '0'),
-        y: parseFloat(transition.querySelector('posattr')?.getAttribute('y') || '0'),
+        y: -parseFloat(transition.querySelector('posattr')?.getAttribute('y') || '0'), // Invert y-coordinate
       },
       data: {
         label: transition.querySelector('text')?.textContent || '',

@@ -50,7 +50,7 @@ export const initialColorSets: ColorSet[] = [
 ];
 
 export const initialVariables: Variable[] = [
-  // { id: uuidv4(), name: "n", colorSet: "INT" },
+  { id: uuidv4(), name: "var1", colorSet: "INT" },
   // { id: uuidv4(), name: "b", colorSet: "BOOL" },
 ];
 

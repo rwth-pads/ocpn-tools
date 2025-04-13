@@ -33,6 +33,12 @@ export interface Function {
   returnType?: string
 }
 
+export interface Use {
+  id?: string
+  name: string
+  content: string
+}
+
 export const initialColorSets: ColorSet[] = [
   { id: uuidv4(), name: "UNIT", type: "basic", definition: "colset UNIT = unit;", color: "#3b82f6" },
   { id: uuidv4(), name: "BOOL", type: "basic", definition: "colset BOOL = bool;", color: "#10b981" },

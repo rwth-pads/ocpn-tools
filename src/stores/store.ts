@@ -25,6 +25,7 @@ const emptyState: AppState = {
   variables: [],
   priorities: [],
   functions: [],
+  uses: [],
 }
 
 export type StoreState = AppState & AppActions;
@@ -50,6 +51,7 @@ const useStore = create<StoreState>((set) => ({
   variables: initialVariables,
   priorities: initialPriorities,
   functions: initialFunctions,
+  uses: [],
 
   // Actions
   setNodes: (petriNetId: string, nodes: Node[]) => {
@@ -245,7 +247,9 @@ const useStore = create<StoreState>((set) => ({
   setFunctions: (functions) => {
     set({ functions });
   },
-
+  setUses: (uses) => {
+    set({ uses });
+  },
 
   // Add a new color set
   addColorSet: (newColorSet) =>
@@ -298,6 +302,27 @@ const useStore = create<StoreState>((set) => ({
   deleteFunction: (id) =>
   set((state) => ({
     functions: state.functions.filter((func) => func.id !== id),
+  })),
+
+  // Add a new use
+  addUse: (newUse) =>
+  set((state) => ({
+    uses: [
+      ...state.uses,
+      { ...newUse, id: newUse.id ?? uuidv4() },
+    ],
+  })),
+  // Update a use
+  updateUse: (id, newUse) =>
+  set((state) => ({
+    uses: state.uses.map((use) =>
+      use.id === id ? { name: newUse.name, content: newUse.content } : use
+    ),
+  })),
+  // Remove a use
+  deleteUse: (id) =>
+  set((state) => ({
+    uses: state.uses.filter((use) => use.id !== id),
   })),
 
   toggleArcMode: (state: boolean) =>

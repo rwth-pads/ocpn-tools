@@ -10,19 +10,21 @@ import { AdvancedColorSetEditor } from "@/components/AdvancedColorSetEditor";
 import { VariableEditor } from '@/components/VariableEditor';
 import { PriorityEditor } from "@/components/PriorityEditor";
 import { FunctionEditor } from "@/components/FunctionEditor";
+import { UseEditor } from "@/components/UseEditor";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 
-import { ColorSet, Variable, Priority, Function } from "@/declarations"
+import { ColorSet, Variable, Priority, Function, Use } from "@/declarations"
 
 export function DeclarationManager() {
   const [isPrioritiesOpen, setIsPrioritiesOpen] = useState(false);
   const [isColorSetsOpen, setIsColorSetsOpen] = useState(false);
   const [isVariablesOpen, setIsVariablesOpen] = useState(false);
   const [isFunctionsOpen, setIsFunctionsOpen] = useState(false);
+  const [isUsesOpen, setIsUsesOpen] = useState(false);
 
   const colorSets = useStore((state) => state.colorSets);
   const setColorSets = useStore((state) => state.setColorSets);
@@ -40,6 +42,10 @@ export function DeclarationManager() {
   const setFunctions = useStore((state) => state.setFunctions);
   const onAddFunction = useStore((state) => state.addFunction);
   const onDeleteFunction = useStore((state) => state.deleteFunction);
+  const uses = useStore((state) => state.uses);
+  const setUses = useStore((state) => state.setUses);
+  const onAddUse = useStore((state) => state.addUse);
+  const onDeleteUse = useStore((state) => state.deleteUse);
 
   const [newVariable, setNewVariable] = useState({ name: "", colorSet: "INT" })
   const [newPriority, setNewPriority] = useState({ name: "", level: 250 })
@@ -55,9 +61,12 @@ export function DeclarationManager() {
   const [selectedFunction, setSelectedFunction] = useState<Function | undefined>(undefined);
   const [functionEditorOpen, setFunctionEditorOpen] = useState(false);
 
+  const [selectedUse, setSelectedUse] = useState<Use | undefined>(undefined);
+  const [useEditorOpen, setUseEditorOpen] = useState(false);
+
   // Drag and drop state
-  const [draggedItem, setDraggedItem] = useState<ColorSet | Variable | Priority | Function | null>(null)
-  const [draggedType, setDraggedType] = useState<"colorSet" | "variable" | "priority" | "function" | null>(null)
+  const [draggedItem, setDraggedItem] = useState<ColorSet | Variable | Priority | Function | Use | null>(null)
+  const [draggedType, setDraggedType] = useState<"colorSet" | "variable" | "priority" | "function" | "use" | null>(null)
 
   const handleAddVariable = () => {
     if (newVariable.name && newVariable.colorSet) {
@@ -113,6 +122,26 @@ export function DeclarationManager() {
     setSelectedFunction(undefined);
   };
 
+  const handleEditUse = (use: Omit<Use, 'id'>) => {
+    setSelectedUse(use);
+    setUseEditorOpen(true);
+    setSelectedUse(undefined);
+  }
+
+  const handleSaveUse = (use: Omit<Use, 'id'>) => {
+    if (selectedUse) {
+      // Update existing use
+      const updatedUses = uses.map((u) => (u.id === selectedUse.id ? { ...u, ...use } : u));
+      //onReorderUses(updatedUses)
+      setUses(updatedUses);
+    } else {
+      // Add new use
+      onAddUse(use);
+    }
+    setUseEditorOpen(false);
+    setSelectedUse(undefined);
+  }
+
   const handleSaveAdvancedColorSet = (colorSet: Omit<ColorSet, "id">) => {
     if (selectedColorSet) {
       // Update existing color set
@@ -157,9 +186,9 @@ export function DeclarationManager() {
 
   // Drag handlers
   const handleDragStart = (
-    e: React.DragEvent, 
-    item: ColorSet | Variable | Priority | Function, 
-    type: "colorSet" | "variable" | "priority" | "function"
+    e: React.DragEvent,
+    item: ColorSet | Variable | Priority | Function | Use,
+    type: "colorSet" | "variable" | "priority" | "function" | "use"
   ) => {
     setDraggedItem(item)
     setDraggedType(type)
@@ -168,7 +197,7 @@ export function DeclarationManager() {
     e.dataTransfer.setData("text/plain", item.id ?? '');
   }
 
-  const handleDragOver = (e: React.DragEvent, targetItem: ColorSet | Variable | Function) => {
+  const handleDragOver = (e: React.DragEvent, targetItem: ColorSet | Variable | Function | Use) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = "move"
 
@@ -184,7 +213,7 @@ export function DeclarationManager() {
     target.classList.remove("bg-muted")
   }
 
-  const handleDrop = (e: React.DragEvent, targetItem: ColorSet | Variable | Function) => {
+  const handleDrop = (e: React.DragEvent, targetItem: ColorSet | Variable | Function | Use) => {
     e.preventDefault();
     const target = e.currentTarget as HTMLElement;
     target.classList.remove("bg-muted");
@@ -251,7 +280,7 @@ export function DeclarationManager() {
       {/* Priorities Section */}
       <div className="space-y-3">
         <Collapsible open={isPrioritiesOpen} onOpenChange={setIsPrioritiesOpen}>
-            <CollapsibleTrigger asChild>
+          <CollapsibleTrigger asChild>
             <div className="flex items-center -ml-3 mb-2 cursor-pointer">
               <Button variant="ghost" size="sm">
                 {isPrioritiesOpen ? (
@@ -471,7 +500,7 @@ export function DeclarationManager() {
                 className="flex-1"
                 value={newVariable.name}
                 onChange={(e) => setNewVariable({ ...newVariable, name: e.target.value })}
-              /> : 
+              /> :
               <Select
                 value={newVariable.colorSet}
                 onValueChange={(value) => setNewVariable({ ...newVariable, colorSet: value })}
@@ -585,6 +614,74 @@ export function DeclarationManager() {
                   existingFunction={selectedFunction}
                   onSave={handleSaveFunction}
                 />
+              </DialogContent>
+            </Dialog>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+
+      {/* Use Section */}
+      <div className="space-y-3">
+        <Collapsible open={isUsesOpen} onOpenChange={setIsUsesOpen}>
+          <CollapsibleTrigger asChild>
+            <div className="flex items-center -ml-3 mb-2 cursor-pointer">
+              <Button variant="ghost" size="sm">
+                {isUsesOpen ? (
+                  <ChevronDown className="h-4 w-4" strokeWidth={4} />
+                ) : (
+                  <ChevronRight className="h-4 w-4" strokeWidth={4} />
+                )}
+                <span className="sr-only">Toggle</span>
+              </Button>
+              <h2 className="font-bold flex-1">Libraries</h2>
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3">
+            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              {uses.map((use) => (
+                <div
+                  key={use.id}
+                  className="border rounded-md p-3 bg-muted/20 transition-colors"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, use, "use")}
+                  onDragOver={(e) => handleDragOver(e, use)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, use)}
+                  onDragEnd={handleDragEnd}
+                >
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <div className="cursor-grab active:cursor-grabbing">
+                        <GripVertical className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="font-mono text-sm">use "{use.name}";</div>
+                    </div>
+                    <div className="flex items-center">
+                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditUse(use)}>
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => use.id && onDeleteUse(use.id)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <Dialog open={useEditorOpen} onOpenChange={setUseEditorOpen}>
+              <DialogTrigger asChild>
+                <Button className="w-full" variant="outline">
+                  Add External Library
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>{selectedUse ? "Edit External Library" : "Add External Library"}</DialogTitle>
+                </DialogHeader>
+                <UseEditor
+                  existingUse={selectedUse}
+                  onSave={handleSaveUse} />
               </DialogContent>
             </Dialog>
           </CollapsibleContent>

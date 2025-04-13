@@ -68,6 +68,7 @@ const selector = (state: StoreState) => ({
   variables: state.variables,
   priorities: state.priorities,
   functions: state.functions,
+  uses: state.uses,
   createPetriNet: state.createPetriNet,
   setActivePetriNet: state.setActivePetriNet,
   setNodes: state.setNodes,
@@ -76,6 +77,7 @@ const selector = (state: StoreState) => ({
   setVariables: state.setVariables,
   setPriorities: state.setPriorities,
   setFunctions: state.setFunctions,
+  setUses: state.setUses,
   toggleArcMode: state.toggleArcMode,
   reset: state.reset,
 });
@@ -109,6 +111,7 @@ const CPNCanvas = () => {
     variables,
     priorities,
     functions,
+    uses,
     createPetriNet,
     setActivePetriNet,
     setNodes,
@@ -116,6 +119,7 @@ const CPNCanvas = () => {
     setVariables,
     setPriorities,
     setFunctions,
+    setUses,
     toggleArcMode,
     reset,
   } = useStore(
@@ -160,6 +164,7 @@ const CPNCanvas = () => {
       if (data.variables) setVariables(data.variables);
       if (data.priorities) setPriorities(data.priorities);
       if (data.functions) setFunctions(data.functions);
+      if (data.uses) setUses(data.uses);
 
       // If we imported a JSON file, layout the graph (e.g., DAGRE layout)
       if (fileName.endsWith('.json')) {
@@ -206,6 +211,7 @@ const CPNCanvas = () => {
       variables,
       priorities,
       functions,
+      uses,
     }
 
     switch (format) {

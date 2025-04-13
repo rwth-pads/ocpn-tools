@@ -5,7 +5,7 @@ import {
 // import { PlaceNodeProps } from '@/nodes/PlaceNode'; // Import PlaceNodeData
 // import { TransitionNodeProps } from '@/nodes/TransitionNode'; // Import TransitionNodeData
 
-import type { ColorSet, Variable, Priority, Function } from '@/declarations';
+import type { ColorSet, Variable, Priority, Function, Use } from '@/declarations';
 import { PlaceNodeData } from './nodes/PlaceNode';
 import { TransitionNodeData } from './nodes/TransitionNode';
 import { AuxTextNodeData } from './nodes/AuxTextNode';
@@ -34,6 +34,7 @@ export type AppState = {
   variables: Variable[];
   priorities: Priority[];
   functions: Function[];
+  uses: Use[];
 };
 
 export type AppActions = {
@@ -54,15 +55,19 @@ export type AppActions = {
   setVariables: (variables: Variable[]) => void;
   setPriorities: (priorities: Priority[]) => void;
   setFunctions: (functions: Function[]) => void;
+  setUses: (uses: Use[]) => void;
 
   addColorSet: (newColorSet: ColorSet) => void;
   addVariable: (newVariable: Variable) => void;
   addPriority: (newPriority: Priority) => void;
   addFunction: (newFunction: Function) => void;
+  addUse: (newUse: Use) => void;
   deleteColorSet: (id: string) => void;
   deleteVariable: (id: string) => void;
   deletePriority: (id: string) => void;
   deleteFunction: (id: string) => void;
+  updateUse: (id: string, newUse: Use) => void;
+  deleteUse: (id: string) => void;
 
   toggleArcMode: (state: boolean) => void;
   reset: () => void;

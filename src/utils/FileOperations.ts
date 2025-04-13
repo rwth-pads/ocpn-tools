@@ -1,5 +1,5 @@
 import type { PetriNet } from '@/types';
-import type { ColorSet, Variable, Priority, Function, FunctionPattern } from '@/declarations';
+import type { ColorSet, Variable, Priority, Function, FunctionPattern, Use } from '@/declarations';
 
 import { v4 as uuidv4 } from 'uuid';
 import { PlaceNodeProps } from '@/nodes/PlaceNode';
@@ -12,6 +12,7 @@ export type PetriNetData = {
   variables: Variable[]
   priorities: Priority[]
   functions: Function[]
+  uses: Use[] // Added uses
 }
 
 // Convert Petri Net data to CPN Tools XML format
@@ -100,12 +101,17 @@ export function convertToCPNToolsXML(data: PetriNetData): string {
     })
     .join("\n");
 
+  const usesXML = data.uses
+    .map((use) => `<use file=\"${use.name}\"/>`)
+    .join('\n');
+
   const xml = `<?xml version="1.0" encoding="iso-8859-1"?>
 <!DOCTYPE workspaceElements PUBLIC "-//CPN//DTD CPNXML 1.0//EN" "http://cpntools.org/DTD/6/cpn.dtd">
 <workspaceElements>
   <generator tool="CPN Tools" version="4.0.1" format="6"/>
   <cpnet>
     <globbox>
+      ${usesXML}
       <block id="ID2">
         <id>Standard priorities</id>
         ${data.priorities
@@ -245,6 +251,7 @@ export function convertToJSON(data: PetriNetData): string {
     variables: data.variables,
     priorities: data.priorities,
     functions: data.functions,
+    uses: data.uses, // Include uses in JSON
   };
 
   return JSON.stringify(transformedData, null, 2);
@@ -368,6 +375,19 @@ function parseCPNToolsXML(content: string): PetriNetData {
     return acc;
   }, [] as Function[]);
 
+  // Parse <use> declarations
+  const uses = Array.from(cpnXML.querySelectorAll('globbox use')).map((use) => {
+    const mlContent = use.querySelector('ml')?.textContent || '';
+    const layoutContent = use.querySelector('layout')?.textContent || '';
+    const nameMatch = mlContent.match(/"([^"]+)"/) || layoutContent.match(/"([^"]+)"/);
+    const name = nameMatch ? nameMatch[1] : '';
+    return {
+      id: uuidv4(),
+      name,
+      content: '', // Content is not parsed but can be edited later
+    };
+  });
+
   // Parse pages
   const pages = Array.from(cpnXML.querySelectorAll('page'));
   pages.forEach((page) => {
@@ -433,6 +453,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
     variables,
     priorities,
     functions,
+    uses, // Add uses to the returned data
   };
 }
 
@@ -511,6 +532,7 @@ function parseCPNPyJSON(content: string): PetriNetData {
     variables: [], // Variables are not defined in cpn-py JSON
     priorities: [], // Priorities are not defined in cpn-py JSON
     functions: [], // Functions are not defined in cpn-py JSON
+    uses: [], // Uses are not defined in cpn-py JSON
   };
 }
 

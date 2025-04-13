@@ -336,12 +336,15 @@ function parseCPNToolsXML(content: string): PetriNetData {
 
   // Parse variables
   const variables = Array.from(cpnXML.querySelectorAll('globbox var')).map((variable) => {
-    const id = variable.querySelector('id')?.textContent || '';
-    const type = variable.querySelector('type id')?.textContent || '';
+    const id = variable.getAttribute('id') || ''; // Get the ID from the attribute
+    const colorSet = variable.querySelector('type > id')?.textContent || ''; // Get the colorSet from the nested <id> inside <type>
+    const layout = variable.querySelector('layout')?.textContent || ''; // Get the layout text
+    const nameMatch = layout.match(/var\s+(\w+)\s*:/); // Extract the variable name from the layout
+    const name = nameMatch ? nameMatch[1] : ''; // Use the matched name or fallback to an empty string
     return {
       id,
-      name: id,
-      colorSet: type,
+      name,
+      colorSet,
     };
   });
 

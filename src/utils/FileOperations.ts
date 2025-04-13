@@ -317,12 +317,18 @@ function parseCPNToolsXML(content: string): PetriNetData {
   // Parse color sets
   const colorSets = Array.from(cpnXML.querySelectorAll('globbox color')).map((color) => {
     const id = color.querySelector('id')?.textContent || '';
+    const basicTypeElement = Array.from(color.children).find((child) => {
+      const tagName = child.tagName.toLowerCase();
+      return ['bool', 'int', 'string'].includes(tagName) && child.children.length === 0;
+    });
+    const basicType = basicTypeElement ? basicTypeElement.tagName.toLowerCase() : null;
     const layout = color.querySelector('layout')?.textContent || '';
-    const definition = layout;
+    const definition = basicType ? `colset ${id} = ${basicType};` : layout;
+
     return {
       id,
       name: id,
-      type: 'basic', // Default type
+      type: basicType ? 'basic' : 'complex', // Mark as 'basic' if it's a basic type
       definition,
       color: generateRandomColor(), // Assign random color
     };

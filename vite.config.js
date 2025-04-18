@@ -6,10 +6,17 @@ import react from '@vitejs/plugin-react';
 // https://vitejs.dev/config/
 export default defineConfig({
   base: '/ocpn-tools/',
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+  ],
+  define: { 'process.env': {} },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    exclude: ['@rwth-pads/cpnsim']
+  }
 });

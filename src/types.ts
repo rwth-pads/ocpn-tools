@@ -47,8 +47,10 @@ export type AppActions = {
   addNode: (petriNetId: string, newNode: Node) => void;
   addEdge: (petriNetId: string, edge: Edge) => void;
   updateNode: (petriNetId: string, node: Node) => void;
+  updateNodeMarking: (id: string, newMarking: string) => void;
   updateNodeData: (petriNetId: string, id: string, newData: PlaceNodeData | TransitionNodeData | AuxTextNodeData) => void;
   updateEdgeLabel: (petriNetId: string, id: string, newLabel: string) => void;
+  applyInitialMarkings: () => void;
   setSelectedElement: (petriNetId: string, element: SelectedElement) => void;
   
   setColorSets: (colorSets: ColorSet[]) => void;

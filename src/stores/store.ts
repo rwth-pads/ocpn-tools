@@ -171,6 +171,23 @@ const useStore = create<StoreState>((set) => ({
       };
     });
   },
+  updateNodeMarking: (id: string, newMarking: string) => {
+    set((state) => {
+      const petriNet = state.petriNetsById[state.activePetriNetId!];
+      const updatedNodes = petriNet.nodes.map((node) =>
+        node.id === id ? { ...node, data: { ...node.data, marking: newMarking } } : node
+      );
+      return {
+        petriNetsById: {
+          ...state.petriNetsById,
+          [state.activePetriNetId!]: {
+            ...petriNet,
+            nodes: updatedNodes,
+          },
+        },
+      };
+    });
+  },
   // Update node data
   updateNodeData: (petriNetId, id: string, newData: PlaceNodeData | TransitionNodeData | AuxTextNodeData) => {
     set((state) => {
@@ -218,6 +235,31 @@ const useStore = create<StoreState>((set) => ({
             ...petriNet,
             edges: updatedEdges,
             selectedElement: updatedSelectedElement,
+          },
+        },
+      };
+    });
+  },
+
+  // Set marking = initialMarking for all places in the store
+  applyInitialMarkings: () => {
+    set((state) => {
+      const petriNet = state.petriNetsById[state.activePetriNetId!];
+      const updatedNodes = petriNet.nodes.map((node) => {
+        if (node.type === 'place') {
+          return {
+            ...node,
+            data: { ...node.data, marking: node.data.initialMarking },
+          };
+        }
+        return node;
+      });
+      return {
+        petriNetsById: {
+          ...state.petriNetsById,
+          [state.activePetriNetId!]: {
+            ...petriNet,
+            nodes: updatedNodes,
           },
         },
       };

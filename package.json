@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
-    "prepare": "husky"
+    "prepare": "husky",
+    "clean": "vite --force"
   },
   "dependencies": {
     "@dagrejs/dagre": "^1.1.4",
@@ -30,6 +31,7 @@
     "@radix-ui/react-toggle": "^1.1.2",
     "@radix-ui/react-toggle-group": "^1.1.3",
     "@radix-ui/react-tooltip": "^1.1.8",
+    "@rwth-pads/cpnsim": "^0.1.0",
     "@tailwindcss/vite": "^4.0.17",
     "@xyflow/react": "^12.5.5",
     "class-variance-authority": "^0.7.1",
@@ -50,11 +52,11 @@
   "license": "MIT",
   "devDependencies": {
     "@eslint/compat": "^1.2.8",
-    "@eslint/js": "^9.24.0",
+    "@eslint/js": "9.25.0",
     "@types/react": "19.1.0",
     "@types/react-dom": "19.1.2",
     "@vitejs/plugin-react": "^4.3.4",
-    "eslint": "^9.24.0",
+    "eslint": "9.25.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "gh-pages": "^6.3.0",

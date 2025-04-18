@@ -170,6 +170,10 @@
   cursor: pointer;
 }
 
+.place-node .marking {
+  background-color: #7ED321;
+}
+
 .auxtext-node {
   display: flex;
   justify-content:left;

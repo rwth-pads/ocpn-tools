@@ -18,17 +18,19 @@ import { useShallow } from 'zustand/react/shallow';
 //import Dagre from '@dagrejs/dagre';
 
 import { Toolbar } from "@/components/Toolbar";
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 
 import { BoomerDial, type Slice } from "@/components/BoomerDial";
 
-import { Save, FolderOpen } from "lucide-react"
+import { Save, FolderOpen } from "lucide-react";
 
 import CustomConnectionLine from '../edges/CustomConnectionLine';
 import { useDnD } from '../utils/DnDContext';
 
 import { OpenDialog } from '@/components/dialogs/OpenDialog';
 import { SaveDialog } from '@/components/dialogs/SaveDialog';
+
+import { SimulationToolbar } from '@/components/SimulationToolbar';
 
 import {
   Tooltip,
@@ -519,6 +521,9 @@ const CPNCanvas = () => {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+          </div>
+          <SimulationToolbar/>
+          <div className="flex items-center gap-1">
           </div>
         </div>
 

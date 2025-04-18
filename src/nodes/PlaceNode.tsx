@@ -8,6 +8,7 @@ export interface PlaceNodeData {
   type: string;
   colorSet: string;
   initialMarking: string;
+  marking: string;
 }
 
 export interface PlaceNodeProps {
@@ -29,17 +30,26 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
 
       {/* Initial marking - top right corner */}
       {data.initialMarking && (
-        <div className="absolute text-[8px] font-mono bg-background/80 px-1 top-0 left-full transform -translate-y-4 rounded-md">
+        <div className="absolute text-[8px] font-mono bg-background/80 px-1 top-0 left-full transform -translate-y-2 rounded-md whitespace-nowrap">
           {data.initialMarking}
         </div>
       )}
 
       {/* Color set - bottom right corner */}
       {data.colorSet && (
-        <div className="absolute text-[8px] font-mono bg-background/80 px-1 bottom-0 left-full transform translate-y-4 rounded-md">
+        <div className="absolute text-[8px] font-mono bg-background/80 px-1 bottom-0 left-full transform translate-y-2 rounded-md">
           {data.colorSet}
         </div>
       )}
+
+      {/* Marking - middle right */}
+      {data.marking && (
+        <div className="marking absolute text-[8px] font-mono bg-background/80 px-1 top-1/2 left-full transform -translate-y-1/2 rounded-md whitespace-nowrap">
+          {data.marking}
+        </div>
+      )}
+
+      {/* Label */}
 
       <NodeResizer
         isVisible={selected}

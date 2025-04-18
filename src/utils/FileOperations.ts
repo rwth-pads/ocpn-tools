@@ -225,6 +225,7 @@ export function convertToJSON(data: PetriNetData): string {
             name: place.data.label, // Use "name" instead of "label"
             colorSet: place.data.colorSet,
             initialMarking: place.data.initialMarking || "",
+            marking: place.data.marking || "",
             position: place.position,
             size: place.measured || { width: 50, height: 30 }, // Replace "measured" with "size"
           })),

@@ -31,6 +31,7 @@ import { OpenDialog } from '@/components/dialogs/OpenDialog';
 import { SaveDialog } from '@/components/dialogs/SaveDialog';
 
 import { SimulationToolbar } from '@/components/SimulationToolbar';
+import { AIToolbar } from '@/components/AIToolbar';
 
 import {
   Tooltip,
@@ -92,7 +93,7 @@ const defaultEdgeOptions = {
   },
 };
 
-const CPNCanvas = () => {
+const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void }) => {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [openDialogOpen, setOpenDialogOpen] = useState(false);
   const [newPetriNetDialogOpen, setNewPetriNetDialogOpen] = useState(false);
@@ -523,8 +524,7 @@ const CPNCanvas = () => {
             </TooltipProvider>
           </div>
           <SimulationToolbar/>
-          <div className="flex items-center gap-1">
-          </div>
+          <AIToolbar onToggleAIAssistant={onToggleAIAssistant} />
         </div>
 
         <OpenDialog open={openDialogOpen} onOpenChange={setOpenDialogOpen} onFileLoaded={handleFileLoaded} />

@@ -87,7 +87,7 @@ export function OpenDialog({ open, onOpenChange, onFileLoaded }: OpenDialogProps
             <input
               ref={fileInputRef}
               type="file"
-              accept=".xml,.json,.cpn"
+              accept=".xml,.json,.cpn,.ocpn"
               className="hidden"
               onChange={handleFileInputChange}
             />

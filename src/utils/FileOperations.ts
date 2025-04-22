@@ -258,6 +258,110 @@ export function convertToJSON(data: PetriNetData): string {
   return JSON.stringify(transformedData, null, 2);
 }
 
+// Parse JSON data back into PetriNetData format
+export function parseJSON(content: string): PetriNetData {
+  const parsedData = JSON.parse(content);
+
+  // Basic validation (can be expanded)
+  if (!parsedData || !Array.isArray(parsedData.petriNets)) {
+    throw new Error("Invalid JSON format: Missing 'petriNets' array.");
+  }
+
+  const petriNetsById: Record<string, PetriNet> = {};
+  const petriNetOrder: string[] = [];
+
+  parsedData.petriNets.forEach((petriNet: {
+    id: string;
+    name: string;
+    places: {
+      id: string;
+      name: string;
+      colorSet: string;
+      initialMarking?: string;
+      marking?: string;
+      position?: { x: number; y: number };
+      size?: { width: number; height: number };
+    }[];
+    transitions: {
+      id: string;
+      name: string;
+      guard?: string;
+      time?: string;
+      priority?: string;
+      position?: { x: number; y: number };
+      size?: { width: number; height: number };
+    }[];
+    arcs: {
+      id: string;
+      source: string;
+      target: string;
+      inscription?: string;
+    }[];
+  }) => {
+    const places = petriNet.places.map((place) => ({
+      id: place.id,
+      type: 'place',
+      position: place.position || { x: 0, y: 0 }, // Provide default position if missing
+      data: {
+        label: place.name, // Map 'name' back to 'label'
+        colorSet: place.colorSet,
+        initialMarking: place.initialMarking || "",
+        marking: place.marking || "",
+      },
+      width: place.size?.width || 50,
+      height: place.size?.height || 30,
+    }));
+
+    const transitions = petriNet.transitions.map((transition) => ({
+      id: transition.id,
+      type: 'transition',
+      position: transition.position || { x: 0, y: 0 }, // Provide default position if missing
+      data: {
+        label: transition.name, // Map 'name' back to 'label'
+        guard: transition.guard || "",
+        time: transition.time || "",
+        priority: transition.priority || "",
+      },
+      width: transition.size?.width || 50,
+      height: transition.size?.height || 30,
+    }));
+
+    const arcs = petriNet.arcs.map((arc) => ({
+      id: arc.id,
+      source: arc.source,
+      target: arc.target,
+      label: arc.inscription || "", // Map 'inscription' back to 'label'
+    }));
+
+    const net: PetriNet = {
+      id: petriNet.id,
+      name: petriNet.name,
+      nodes: [...places, ...transitions],
+      edges: arcs,
+      selectedElement: null, // Default selectedElement
+    };
+
+    petriNetsById[petriNet.id] = net;
+    petriNetOrder.push(petriNet.id);
+  });
+
+  const colorSets: ColorSet[] = parsedData.colorSets || [];
+  const variables: Variable[] = parsedData.variables || [];
+  const priorities: Priority[] = parsedData.priorities || [];
+  const functions: Function[] = parsedData.functions || [];
+  const uses: Use[] = parsedData.uses || []; // Parse uses
+
+  return {
+    petriNetsById,
+    petriNetOrder,
+    colorSets,
+    variables,
+    priorities,
+    functions,
+    uses, // Include uses in the returned data
+  };
+}
+
 // Save file to disk
 export function saveFile(content: string, filename: string) {
   const blob = new Blob([content], { type: "text/plain;charset=utf-8" })
@@ -276,7 +380,10 @@ export function parseFileContent(content: string, fileName: string): PetriNetDat
   try {
     const extension = fileName.split(".").pop()?.toLowerCase()
 
-    if (extension === "json") {
+    if (extension === 'ocpn') {
+      // Handle OCPN Tools JSON format
+      return parseJSON(content);
+    } else if (extension === "json") {
       const json = parseCPNPyJSON(content);
       return json;
     } else if (extension === "xml" || extension === "cpn") {

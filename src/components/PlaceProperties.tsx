@@ -39,9 +39,9 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
                 ...data,
                 label: e.target.value,
                 isArcMode: data.isArcMode || false,
-                type: data.type || "defaultType",
-                colorSet: data.colorSet || "defaultColorSet",
-                initialMarking: data.initialMarking || "defaultMarking",
+                type: data.type || "node",
+                colorSet: data.colorSet || "INT",
+                initialMarking: data.initialMarking || "",
               });
             }
           }
@@ -61,8 +61,8 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
                 label: data.label || "",
                 colorSet: value,
                 isArcMode: data.isArcMode || false,
-                type: data.type || "defaultType",
-                initialMarking: data.initialMarking || "defaultMarking",
+                type: data.type || "node",
+                initialMarking: data.initialMarking || "",
               });
             }
           }}

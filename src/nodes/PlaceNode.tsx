@@ -20,7 +20,7 @@ export interface PlaceNodeProps {
 export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
   const connection = useConnection();
   const colorSetColor = useStore((state) =>
-    state.colorSets.find((colorSet) => colorSet.name === data.colorSet)?.color || '#FBBF24'
+    state.colorSets.find((colorSet) => colorSet.name === data.colorSet)?.color || '#000000'
   );
 
   const isTarget = connection.inProgress && connection.fromNode.id !== id && connection.fromNode.type === 'transition';

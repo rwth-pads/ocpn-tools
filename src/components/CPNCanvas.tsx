@@ -31,7 +31,7 @@ import { OpenDialog } from '@/components/dialogs/OpenDialog';
 import { SaveDialog } from '@/components/dialogs/SaveDialog';
 
 import { SimulationToolbar } from '@/components/SimulationToolbar';
-import { AIToolbar } from '@/components/AIToolbar';
+import { AssistanceToolbar } from '@/components/AssistanceToolbar';
 
 import {
   Tooltip,
@@ -524,7 +524,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
             </TooltipProvider>
           </div>
           <SimulationToolbar/>
-          <AIToolbar onToggleAIAssistant={onToggleAIAssistant} />
+          <AssistanceToolbar onToggleAIAssistant={onToggleAIAssistant} />
         </div>
 
         <OpenDialog open={openDialogOpen} onOpenChange={setOpenDialogOpen} onFileLoaded={handleFileLoaded} />

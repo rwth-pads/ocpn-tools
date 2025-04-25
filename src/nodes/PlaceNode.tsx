@@ -22,8 +22,21 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
   const colorSetColor = useStore((state) =>
     state.colorSets.find((colorSet) => colorSet.name === data.colorSet)?.color || '#000000'
   );
+  let displayedMarking = undefined;
 
   const isTarget = connection.inProgress && connection.fromNode.id !== id && connection.fromNode.type === 'transition';
+
+  if (data.marking && data.marking.length > 0) {
+    try {
+      if (data.marking.length > 5) {
+        displayedMarking = `[#${data.marking.length}]`;
+      } else {
+        displayedMarking = JSON.stringify(data.marking);
+      }
+    } catch {
+      console.error('Invalid JSON in marking:', data.marking);
+    }
+  }
 
   return (
     <div className="relative cpn-node place-node" style={{ borderColor: colorSetColor }}>
@@ -43,9 +56,9 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
       )}
 
       {/* Marking - middle right */}
-      {data.marking && (
+      {displayedMarking && (
         <div className="marking absolute text-[8px] font-mono bg-background/80 px-1 top-1/2 left-full transform -translate-y-1/2 rounded-md whitespace-nowrap">
-          {data.marking}
+          {displayedMarking}
         </div>
       )}
 

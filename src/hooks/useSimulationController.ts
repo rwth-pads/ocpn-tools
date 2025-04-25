@@ -54,7 +54,7 @@ export function useSimulationController() {
               console.warn(`Token not found for removal in node ${nodeId}:`, token, updatedMarking);
             }
           });
-          const updatedMarkingJSON = JSON.stringify(updatedMarking);
+          const updatedMarkingJSON = updatedMarking;
           updateNodeMarking(nodeId, updatedMarkingJSON);
         } else {
            console.warn(`Node not found for consumed event: ${nodeId}`);
@@ -87,8 +87,8 @@ export function useSimulationController() {
           tokens.forEach((token: number) => {
             updatedMarking.push(token);
           });
-          const updatedMarkingJSON = JSON.stringify(updatedMarking);
-          updateNodeMarking(nodeId, updatedMarkingJSON);
+          //const updatedMarkingJSON = JSON.stringify(updatedMarking);
+          updateNodeMarking(nodeId, updatedMarking);
         } else {
            console.warn(`Node not found for produced event: ${nodeId}`);
         }
@@ -107,7 +107,7 @@ export function useSimulationController() {
       applyInitialMarkings();
 
       const petriNetData: PetriNetData = {
-        petriNetsById: useStore.getState().petriNetsById,
+        petriNetsById: structuredClone(useStore.getState().petriNetsById),
         petriNetOrder,
         colorSets,
         variables,
@@ -115,6 +115,18 @@ export function useSimulationController() {
         functions,
         uses,
       }
+
+      Object.values(petriNetData.petriNetsById).forEach((petriNet) => {
+        petriNet.nodes.forEach((node) => {
+          if (node.type === 'place' && typeof node.data.initialMarking === 'string' && node.data.initialMarking.endsWith('.all()')) {
+            node.data.initialMarking = JSON.stringify(node.data.marking);
+            node.data.marking = JSON.stringify(node.data.marking);
+          } else if (node.type === 'place') {
+            node.data.marking = JSON.stringify(node.data.marking);
+          }
+        });
+      });
+
       const petriNetJSON = convertToJSON(petriNetData);
 
       wasmSimulatorRef.current = new WasmSimulator(petriNetJSON);
@@ -135,7 +147,7 @@ export function useSimulationController() {
       applyInitialMarkings();
 
       const petriNetData: PetriNetData = {
-        petriNetsById: useStore.getState().petriNetsById,
+        petriNetsById: structuredClone(useStore.getState().petriNetsById),
         petriNetOrder,
         colorSets,
         variables,
@@ -143,6 +155,18 @@ export function useSimulationController() {
         functions,
         uses,
       }
+
+      Object.values(petriNetData.petriNetsById).forEach((petriNet) => {
+        petriNet.nodes.forEach((node) => {
+          if (node.type === 'place' && typeof node.data.initialMarking === 'string' && node.data.initialMarking.endsWith('.all()')) {
+            node.data.initialMarking = JSON.stringify(node.data.marking);
+            node.data.marking = JSON.stringify(node.data.marking);
+          } else if (node.type === 'place') {
+            node.data.marking = JSON.stringify(node.data.marking);
+          }
+        });
+      });
+      
       const petriNetJSON = convertToJSON(petriNetData);
 
       wasmSimulatorRef.current = new WasmSimulator(petriNetJSON);

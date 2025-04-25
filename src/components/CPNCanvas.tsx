@@ -602,7 +602,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
                 instance.fitView({
                   maxZoom: 4,
                 });
-              }, 0);
+              }, 50);
             }}
           >
             <Background />

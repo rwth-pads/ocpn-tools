@@ -171,7 +171,7 @@ const useStore = create<StoreState>((set) => ({
       };
     });
   },
-  updateNodeMarking: (id: string, newMarking: string) => {
+  updateNodeMarking: (id: string, newMarking: (string | number)[]) => {
     set((state) => {
       const petriNet = state.petriNetsById[state.activePetriNetId!];
       const updatedNodes = petriNet.nodes.map((node) =>
@@ -247,9 +247,48 @@ const useStore = create<StoreState>((set) => ({
       const petriNet = state.petriNetsById[state.activePetriNetId!];
       const updatedNodes = petriNet.nodes.map((node) => {
         if (node.type === 'place') {
+          let marking: (string | number)[] = []; // Ensure marking is typed correctly
+          if (node.data.initialMarking) {
+            try {
+              if (typeof node.data.initialMarking === 'string' && node.data.initialMarking.trim() !== '') {
+                let parsedMarking: (string | number)[] = []; // Ensure parsedMarking is typed correctly
+                if (node.data.initialMarking.endsWith('.all()')) {
+                  const colorSetName = node.data.initialMarking.substring(0, node.data.initialMarking.length - '.all()'.length).trim();
+                  const colorSet = state.colorSets.find(cs => cs.name === colorSetName);
+
+                  if (colorSet && colorSet.definition.includes('int')) {
+                    const rangeMatch = colorSet.definition.match(/with\s+(\d+)\.\.(\d+);/);
+                    if (rangeMatch) {
+                      const start = parseInt(rangeMatch[1], 10);
+                      const end = parseInt(rangeMatch[2], 10);
+                      if (!isNaN(start) && !isNaN(end)) {
+                        // Generate array from start to end (inclusive)
+                        parsedMarking = Array.from({ length: end - start + 1 }, (_, i) => start + i);
+                      } else {
+                        console.warn(`Invalid range values in color set definition: "${colorSet.definition}"`);
+                      }
+                    } else {
+                      console.warn(`No valid range found in color set definition: "${colorSet.definition}"`);
+                    }
+                  } else {
+                    console.warn(`Cannot apply '.all()' to color set "${colorSetName}". It's either not found, not a 'basic' type, or doesn't contain 'int' in its definition.`);
+                    parsedMarking = []; // Default to empty if conditions aren't met
+                  }
+                } else {
+                  // Attempt to parse as JSON for other cases
+                  parsedMarking = JSON.parse(node.data.initialMarking);
+                }
+                marking = parsedMarking;
+              }
+            } catch (error) {
+              console.error(`Error parsing initial marking for node ${node.id}:`, node.data.initialMarking, error);
+              marking = []; // Default to empty on error
+            }
+          }
+          // Ensure data retains other properties and update marking
           return {
             ...node,
-            data: { ...node.data, marking: node.data.initialMarking },
+            data: { ...node.data, marking },
           };
         }
         return node;

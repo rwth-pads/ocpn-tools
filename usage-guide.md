@@ -15,7 +15,7 @@ Welcome to OCPN Tools! This tool allows you to create, edit, and simulate Object
 - Configure properties in the sidebar:
   - Label: Name of the place
   - Color Set: Type of tokens the place can hold
-  - Initial Marking: Initial tokens in the place
+  - Initial Marking: Initial tokens in the place. This can contain code expressions like "5+2".
 
 ### Transitions
 - Click the square icon in the toolbar and drag it onto the canvas
@@ -43,9 +43,11 @@ Define variables that can be used in arc inscriptions and guards.
 ### Functions
 Define ML functions that can be used in your Petri Net.
 
-## Code Segments
+## Code Expressions
 
-Here are some examples of valid arc inscriptions:
+Code expressions can be used for arc inscriptions, guards, and initial markings.
+
+Here are some examples of valid code expressions for arc inscriptions:
 
 ```
 ✅ 1

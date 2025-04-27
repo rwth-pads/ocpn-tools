@@ -1,5 +1,5 @@
 import type { PetriNet } from '@/types';
-import type { ColorSet, Variable, Priority, Function, FunctionPattern, Use } from '@/declarations';
+import type { ColorSet, Variable, Priority, Function, Use } from '@/declarations';
 
 import { v4 as uuidv4 } from 'uuid';
 import { PlaceNodeProps } from '@/nodes/PlaceNode';
@@ -105,6 +105,15 @@ export function convertToCPNToolsXML(data: PetriNetData): string {
     .map((use) => `<use file=\"${use.name}\"/>`)
     .join('\n');
 
+  const functionsXML = data.functions
+    .map(
+      (f) => `<ml id="${f.id}">
+        ${f.code}
+        <layout>${f.code}</layout>
+      </ml>`
+    )
+    .join("\n        ");
+
   const xml = `<?xml version="1.0" encoding="iso-8859-1"?>
 <!DOCTYPE workspaceElements PUBLIC "-//CPN//DTD CPNXML 1.0//EN" "http://cpntools.org/DTD/6/cpn.dtd">
 <workspaceElements>
@@ -148,6 +157,7 @@ export function convertToCPNToolsXML(data: PetriNetData): string {
         </var>`
           )
           .join("\n        ")}
+        ${functionsXML}
       </block>
     </globbox>
     ${pagesXML}
@@ -471,22 +481,20 @@ function parseCPNToolsXML(content: string): PetriNetData {
   }, [] as { id: string; name: string; level: number }[]);
 
   // Parse functions
-  const functions = Array.from(cpnXML.querySelectorAll('globbox ml')).reduce((acc, ml) => {
+  const functions = Array.from(cpnXML.querySelectorAll('globbox block ml')).reduce((acc, ml) => {
     const layout = ml.querySelector('layout')?.textContent || '';
-    const match = layout.match(/^fun\s+([a-zA-Z0-9_]+)\s*(.+?)\s*=\s*(.+)$/); // Match function name, patterns, and expressions
-    if (match) {
-      const functionName = match[1];
-      const patterns: FunctionPattern[] = [
-        {
-          id: uuidv4(),
-          pattern: match[2],
-          expression: match[3],
-        },
-      ];
+    // const mlContent = ml.textContent?.trim() || ''; // Get the full ML content
+    const id = ml.getAttribute('id') || uuidv4();
+
+    // Check if it looks like a function definition (starts with 'fun')
+    if (layout.trim().startsWith('fun ')) {
+      const nameMatch = layout.match(/^fun\s+([a-zA-Z0-9_]+)/);
+      const functionName = nameMatch ? nameMatch[1] : `func_${id}`; // Generate a fallback name if needed
+
       acc.push({
-        id: uuidv4(),
+        id: id,
         name: functionName,
-        patterns,
+        code: layout, // Store the entire layout content as the code
       });
     }
     return acc;

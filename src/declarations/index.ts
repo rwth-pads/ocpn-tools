@@ -29,7 +29,7 @@ export interface FunctionPattern {
 export interface Function {
   id?: string
   name: string
-  patterns: FunctionPattern[]
+  code: string
   returnType?: string
 }
 

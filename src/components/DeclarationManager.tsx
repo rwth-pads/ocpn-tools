@@ -574,7 +574,7 @@ export function DeclarationManager() {
                         <GripVertical className="h-4 w-4 text-muted-foreground" />
                       </div>
                       <div className="font-mono text-sm">
-                        fun {f.name}
+                        fn {f.name}
                       </div>
                     </div>
                     <div className="flex items-center">

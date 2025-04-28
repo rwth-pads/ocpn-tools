@@ -167,7 +167,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       if (data.functions) setFunctions(data.functions);
       if (data.uses) setUses(data.uses);
 
-      // If we imported a JSON file, layout the graph (e.g., DAGRE layout)
+      // If we imported a JSON file, layout the graph
       if (fileName.endsWith('.json')) {
         const layoutOptions: LayoutOptions = {
           algorithm: 'dagre',
@@ -176,17 +176,15 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
           rankSeparation: 50,
         };
 
-        // Apply layout to all Petri nets
+        // Apply layout to all Petri nets (applyLayout will call fitView after completion)
         Object.values(data.petriNetsById).forEach((petriNet) => {
           applyLayout(layoutOptions, petriNet.nodes, petriNet.edges);
         });
       } else {
-        // Fit the view
-        setTimeout(() => {
-          fitView({
-            maxZoom: 4,
-          });
-        }, 50);
+        // For other formats (OCPN, CPN), fit the view immediately after loading
+        window.requestAnimationFrame(() => {
+          fitView({ padding: 0.2, maxZoom: 4 });
+        });
       }
     }
   };
@@ -465,15 +463,15 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
           }
         }
 
-        // After layout is applied, fit the view
-        setTimeout(() => {
-          fitView({ padding: 0.2 });
-        }, 50);
+        // After layout is applied, fit the view using requestAnimationFrame
+        window.requestAnimationFrame(() => {
+          fitView({ padding: 0.2 }); // Keep fitView here for layout adjustments
+        });
       } catch (error) {
         console.error("Error applying layout:", error);
       }
     },
-    [setNodes, fitView, activePetriNetId],
+    [setNodes, fitView, activePetriNetId], // Keep fitView dependency if layout calls it
   );
 
   const handleAddPetriNet = (e: React.FormEvent) => {
@@ -602,7 +600,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
                 instance.fitView({
                   maxZoom: 4,
                 });
-              }, 50);
+              }, 100);
             }}
           >
             <Background />

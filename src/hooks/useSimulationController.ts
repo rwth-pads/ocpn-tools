@@ -8,7 +8,7 @@ import { PetriNetData, convertToJSON } from '@/utils/FileOperations';
 export function useSimulationController() {
   const wasmRef = useRef<InitOutput>(null);
   const wasmSimulatorRef = useRef<WasmSimulator | null>(null);
-  
+
   const petriNetOrder = useStore((state) => state.petriNetOrder);
   const colorSets = useStore((state) => state.colorSets);
   const variables = useStore((state) => state.variables);
@@ -40,9 +40,9 @@ export function useSimulationController() {
               currentMarking = node.data.marking;
             }
           } catch (error) {
-             console.error(`Error parsing marking for node ${nodeId}:`, node.data.marking, error);
-             // Default to empty array on parsing error
-             currentMarking = [];
+            console.error(`Error parsing marking for node ${nodeId}:`, node.data.marking, error);
+            // Default to empty array on parsing error
+            currentMarking = [];
           }
 
           const updatedMarking = currentMarking.slice();
@@ -57,7 +57,7 @@ export function useSimulationController() {
           const updatedMarkingJSON = updatedMarking;
           updateNodeMarking(nodeId, updatedMarkingJSON);
         } else {
-           console.warn(`Node not found for consumed event: ${nodeId}`);
+          console.warn(`Node not found for consumed event: ${nodeId}`);
         }
       });
     } else if (eventData.consumed) {
@@ -70,18 +70,18 @@ export function useSimulationController() {
       eventData.produced.forEach((tokens: number[], nodeId: string) => {
         const node = Object.values(currentPetriNetsById).flatMap((pn) => pn.nodes).find((n) => n.id === nodeId);
         if (node) {
-           let currentMarking: number[] = [];
-           try {
-             if (typeof node.data.marking === 'string' && node.data.marking.trim() !== '') {
-               const parsedMarking = JSON.parse(node.data.marking);
-               currentMarking = Array.isArray(parsedMarking) ? parsedMarking : [];
-             } else if (Array.isArray(node.data.marking)) {
-               currentMarking = node.data.marking;
-             }
-           } catch (error) {
-             console.error(`Error parsing marking for node ${nodeId}:`, node.data.marking, error);
-             currentMarking = [];
-           }
+          let currentMarking: number[] = [];
+          try {
+            if (typeof node.data.marking === 'string' && node.data.marking.trim() !== '') {
+              const parsedMarking = JSON.parse(node.data.marking);
+              currentMarking = Array.isArray(parsedMarking) ? parsedMarking : [];
+            } else if (Array.isArray(node.data.marking)) {
+              currentMarking = node.data.marking;
+            }
+          } catch (error) {
+            console.error(`Error parsing marking for node ${nodeId}:`, node.data.marking, error);
+            currentMarking = [];
+          }
 
           const updatedMarking = currentMarking.slice();
           tokens.forEach((token: number) => {
@@ -90,48 +90,66 @@ export function useSimulationController() {
           //const updatedMarkingJSON = JSON.stringify(updatedMarking);
           updateNodeMarking(nodeId, updatedMarking);
         } else {
-           console.warn(`Node not found for produced event: ${nodeId}`);
+          console.warn(`Node not found for produced event: ${nodeId}`);
         }
       });
     } else if (eventData.produced) {
-       // Fallback or error handling if it's not a Map but exists
-       console.warn('eventData.produced is not a Map:', eventData.produced);
+      // Fallback or error handling if it's not a Map but exists
+      console.warn('eventData.produced is not a Map:', eventData.produced);
     }
     //setLastEvent(eventData); // Update state with the received event
   }, [updateNodeMarking]); // Remove petriNetsById from dependencies
 
-  const ensureInitialized = async () => {
-    if (!wasmRef.current) {
-      wasmRef.current = await init();
+  async function _initializeWasm() {
+    wasmRef.current = await init();
 
-      applyInitialMarkings();
+    applyInitialMarkings();
 
-      const petriNetData: PetriNetData = {
-        petriNetsById: structuredClone(useStore.getState().petriNetsById),
-        petriNetOrder,
-        colorSets,
-        variables,
-        priorities,
-        functions,
-        uses,
-      }
+    const petriNetData: PetriNetData = {
+      petriNetsById: structuredClone(useStore.getState().petriNetsById),
+      petriNetOrder,
+      colorSets,
+      variables,
+      priorities,
+      functions,
+      uses,
+    }
 
-      Object.values(petriNetData.petriNetsById).forEach((petriNet) => {
-        petriNet.nodes.forEach((node) => {
-          if (node.type === 'place' && typeof node.data.initialMarking === 'string' && node.data.initialMarking.endsWith('.all()')) {
-            node.data.initialMarking = JSON.stringify(node.data.marking);
-            node.data.marking = JSON.stringify(node.data.marking);
-          } else if (node.type === 'place') {
-            node.data.marking = JSON.stringify(node.data.marking);
-          }
-        });
+    Object.values(petriNetData.petriNetsById).forEach((petriNet) => {
+      petriNet.nodes.forEach((node) => {
+        if (node.type === 'place' && typeof node.data.initialMarking === 'string' && node.data.initialMarking.endsWith('.all()')) {
+          node.data.initialMarking = JSON.stringify(node.data.marking);
+          node.data.marking = JSON.stringify(node.data.marking);
+        } else if (node.type === 'place') {
+          node.data.marking = JSON.stringify(node.data.marking);
+        }
       });
 
-      const petriNetJSON = convertToJSON(petriNetData);
+      // ensure if there is an arc inscription like "2`var1" it is converted to "[var1,var1]"
+      petriNet.edges.forEach((arc) => {
+        if (arc.label && typeof arc.label === 'string') {
+          const match = arc.label.match(/(\d+)`(\w+)/);
+          if (match) {
+            const count = parseInt(match[1], 10);
+            const variableName = match[2];
+            // Manually construct the string
+            const newInscription = `[${Array(count).fill(variableName).join(',')}]`;
+            arc.label = newInscription;
+          }
+        }
+      });
+    });
 
-      wasmSimulatorRef.current = new WasmSimulator(petriNetJSON);
+    const petriNetJSON = convertToJSON(petriNetData);
 
-      wasmSimulatorRef.current.setEventListener(handleWasmEvent);
+    wasmSimulatorRef.current = new WasmSimulator(petriNetJSON);
+
+    wasmSimulatorRef.current.setEventListener(handleWasmEvent);
+  }
+
+  const ensureInitialized = async () => {
+    if (!wasmRef.current) {
+      await _initializeWasm();
     }
   };
 
@@ -142,36 +160,7 @@ export function useSimulationController() {
 
   const reset = async () => {
     //Re-init the WASM module
-    wasmRef.current = await init();
-
-      applyInitialMarkings();
-
-      const petriNetData: PetriNetData = {
-        petriNetsById: structuredClone(useStore.getState().petriNetsById),
-        petriNetOrder,
-        colorSets,
-        variables,
-        priorities,
-        functions,
-        uses,
-      }
-
-      Object.values(petriNetData.petriNetsById).forEach((petriNet) => {
-        petriNet.nodes.forEach((node) => {
-          if (node.type === 'place' && typeof node.data.initialMarking === 'string' && node.data.initialMarking.endsWith('.all()')) {
-            node.data.initialMarking = JSON.stringify(node.data.marking);
-            node.data.marking = JSON.stringify(node.data.marking);
-          } else if (node.type === 'place') {
-            node.data.marking = JSON.stringify(node.data.marking);
-          }
-        });
-      });
-      
-      const petriNetJSON = convertToJSON(petriNetData);
-
-      wasmSimulatorRef.current = new WasmSimulator(petriNetJSON);
-
-      wasmSimulatorRef.current.setEventListener(handleWasmEvent);
+    await _initializeWasm();
   };
 
   return { runStep, reset };

@@ -30,6 +30,13 @@ Welcome to OCPN Tools! This tool allows you to create, edit, and simulate Object
 - Click on a source node, then click on a target node to create an arc
 - Configure the arc inscription in the sidebar
 
+We do not support multiset notation like ``2`x`` in CPN Tools. However, you can use the following notation:
+```
+✅ [x,x] --> consume the same token twice
+❌ [x,y] --> not supported to bind two tokens
+✅ [x,x,x,x,x] --> consume five tokens with the same value
+```
+
 ## Declarations
 
 ### Color Sets

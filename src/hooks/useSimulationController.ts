@@ -1,4 +1,3 @@
-// hooks/usePetriNetController.ts
 import { useRef, useCallback } from 'react';
 import useStore from '@/stores/store';
 import init, { WasmSimulator, type InitOutput } from '@rwth-pads/cpnsim';

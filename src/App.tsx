@@ -5,6 +5,7 @@ import CPNCanvas from './components/CPNCanvas';
 import { ReactFlowProvider } from '@xyflow/react';
 import { DnDProvider } from './utils/DnDContext';
 import { AISidebar } from './components/AISidebar';
+import { SimulationProvider } from '@/context/SimulationContext';
 
 export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -15,29 +16,30 @@ export default function App() {
   }
 
   return (
-    <div className="h-screen">
-      <ResizablePanelGroup direction="horizontal">
-        {/* Left Panel */}
-        <Sidebar />
-        <ResizableHandle />
+    <SimulationProvider>
+      <div className="h-screen">
+        <ResizablePanelGroup direction="horizontal">
+          {/* Left Panel */}
+          <Sidebar />
+          <ResizableHandle />
 
-        {/* Center Panel */}
-        <ResizablePanel>
-          <ReactFlowProvider>
-            <DnDProvider>
-              <CPNCanvas onToggleAIAssistant={onToggleAIAssistant}/>
-            </DnDProvider>
-          </ReactFlowProvider>
-        </ResizablePanel>
+          {/* Center Panel */}
+          <ResizablePanel>
+            <ReactFlowProvider>
+              <DnDProvider>
+                <CPNCanvas onToggleAIAssistant={onToggleAIAssistant}/>
+              </DnDProvider>
+            </ReactFlowProvider>
+          </ResizablePanel>
 
-        {isSidebarOpen && (
-          <>
-            {/* <ResizableHandle /> */}
-            <AISidebar />
-          </>
-        )}
-      </ResizablePanelGroup>
-
-    </div>
+          {isSidebarOpen && (
+            <>
+              {/* <ResizableHandle /> */}
+              <AISidebar />
+            </>
+          )}
+        </ResizablePanelGroup>
+      </div>
+    </SimulationProvider>
   );
 }

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Rewind, Play, FastForward } from "lucide-react";
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 
 import {
   Tooltip,
@@ -9,10 +9,15 @@ import {
   TooltipProvider,
 } from '@/components/ui/tooltip';
 
-import { useSimulationController } from '@/hooks/useSimulationController';
+import { SimulationContext } from '@/context/useSimulationContextHook';
 
 export function SimulationToolbar() {
-  const { reset, runStep } = useSimulationController();
+  const context = useContext(SimulationContext);
+  if (!context) {
+    throw new Error('SimulationToolbar must be used within a SimulationProvider');
+  }
+  const { reset, runStep, ensureInitialized, _executeWasmStep } = context;
+
   const [isRunningMultipleSteps, setIsRunningMultipleSteps] = useState(false);
 
   const handleReset = () => {
@@ -26,10 +31,10 @@ export function SimulationToolbar() {
   const handleRunMultipleSteps = async (steps: number) => {
     setIsRunningMultipleSteps(true);
     try {
+      await ensureInitialized();
       for (let i = 0; i < steps; i++) {
-        runStep();
-        // Add a small delay to simulate step execution
-        await new Promise(resolve => setTimeout(resolve, 100));
+        _executeWasmStep();
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
     } finally {
       setIsRunningMultipleSteps(false);
@@ -76,20 +81,20 @@ export function SimulationToolbar() {
                 variant="ghost"
                 size="icon"
                 title="Run 50 Steps"
-                onClick={() => handleRunMultipleSteps(100)}
+                onClick={() => handleRunMultipleSteps(50)}
                 disabled={isRunningMultipleSteps}
                 className="relative"
               >
                 <FastForward className="h-5 w-5" />
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground font-medium">
-                  100
+                  50
                 </span>
-                <span className="sr-only">Run 100 Steps</span>
+                <span className="sr-only">Run 50 Steps</span>
               </Button>
             </span>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Run 100 Steps</p>
+            <p>Run 50 Steps</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

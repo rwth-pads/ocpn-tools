@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback, useState, useContext } from 'react'; // Added useContext
 import useStore from '@/stores/store';
 import { usePetriNetHandlers } from '@/hooks/usePetriNetHandlers';
 
@@ -61,6 +61,9 @@ import { type StoreState } from '@/stores/store'; // Ensure these types are defi
 
 import { LayoutOptions } from '@/components/LayoutPopover';
 
+// Correct the import path for SimulationContext
+import { SimulationContext } from '@/context/useSimulationContextHook';
+
 const selector = (state: StoreState) => ({
   petriNetOrder: state.petriNetOrder,
   petriNetsById: state.petriNetsById,
@@ -101,6 +104,8 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
 
   const [isDialOpen, setIsDialOpen] = useState(false);
   const [dialPosition, setDialPosition] = useState({ x: 0, y: 0 });
+
+  const simulationContext = useContext(SimulationContext); // Get simulation context
 
   const reactFlowWrapper = useRef(null);
   
@@ -190,6 +195,14 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
   };
 
   const handleFileLoaded = (fileContent: string, fileName: string) => {
+    // Reset simulation state before loading new file
+    if (simulationContext) {
+      simulationContext.reset(); // Call simulation reset
+    } else {
+      console.error("Simulation context not found, cannot reset simulation state.");
+      // Optionally, handle the case where context is not available, though it should be if setup correctly.
+    }
+
     const data = parseFileContent(fileContent, fileName)
     if (data) {
       onOpenPetriNet(data, fileName);

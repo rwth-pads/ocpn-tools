@@ -551,12 +551,37 @@ function parseCPNToolsXML(content: string): PetriNetData {
     }));
 
     // Parse arcs
-    const arcs = Array.from(page.querySelectorAll('arc')).map((arc) => ({
-      id: arc.getAttribute('id') || uuidv4(),
-      source: arc.querySelector('placeend')?.getAttribute('idref') || '',
-      target: arc.querySelector('transend')?.getAttribute('idref') || '',
-      label: arc.querySelector('annot text')?.textContent || '',
-    }));
+    const arcs = Array.from(page.querySelectorAll('arc')).map((arc) => {
+      const id = arc.getAttribute('id') || uuidv4();
+      const orientation = arc.getAttribute('orientation');
+      const placeEndRef = arc.querySelector('placeend')?.getAttribute('idref') || '';
+      const transEndRef = arc.querySelector('transend')?.getAttribute('idref') || '';
+      const label = arc.querySelector('annot text')?.textContent || '';
+
+      let source = '';
+      let target = '';
+
+      if (orientation === 'PtoT') {
+        source = placeEndRef;
+        target = transEndRef;
+      } else if (orientation === 'TtoP') {
+        source = transEndRef;
+        target = placeEndRef;
+      } else {
+        // Handle other orientations or default case if needed
+        // For now, assume PtoT if orientation is missing or different
+        source = placeEndRef;
+        target = transEndRef;
+        console.warn(`Unhandled arc orientation: ${orientation} for arc ${id}. Assuming PtoT.`);
+      }
+
+      return {
+        id,
+        source,
+        target,
+        label,
+      };
+    });
 
     // Create Petri net for the page
     const petriNet: PetriNet = {

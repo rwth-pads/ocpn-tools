@@ -80,3 +80,10 @@ You can even use a ternary expression like this:
 - Use the layout tools to automatically arrange your Petri Net
 - Save your work frequently using the save button
 - Use the AI Assistant for help with specific modeling questions
+
+## Migration Guide
+
+After importing a CPN in the .cpn format of CPN Tools, some manual adjustments are necessary. Here are the most common ones:
+
+- Guards like `[items = doSomething(order)]` need to be changed to `items = doSomething(order)` (remove the square brackets)
+- Functions need to be translated from Standard ML to Rhai (a scripting language embeddable to Rust). We recommend either doing that manually or with the help of an LLM like ChatGPT. The recommended prompt is `Please turn this Standard ML into Rhai script (Rust embedded): fun doo(x: INT): INT = x+1;`. The outcome can be pasted into the function editor of OCPN Tools.

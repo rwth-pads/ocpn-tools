@@ -40,7 +40,7 @@ export function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
           <DialogDescription>Learn how to use OCPN Tools with this guide.</DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-1 pr-4 h-[60vh]">
-          <div className="markdown-content">
+          <div className="prose">
             <ReactMarkdown>{markdownContent}</ReactMarkdown>
           </div>
         </ScrollArea>

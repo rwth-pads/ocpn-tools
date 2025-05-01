@@ -202,24 +202,3 @@
   background-color: white;
   font-size: 9px;
 }
-
-.markdown-content h1 {
-  font-size: 2em; /* Or your desired size */
-  font-weight: bold;
-  /* margin-top: 1em; */
-  margin-bottom: 0.5em;
-}
-
-.markdown-content h2 {
-  font-size: 1.5em; /* Or your desired size */
-  font-weight: bold;
-  margin-top: 0.6em;
-  margin-bottom: 0.4em;
-}
-
-.markdown-content h3 {
-  font-size: 1.2em; /* Or your desired size */
-  font-weight: bold;
-  margin-top: 0.4em;
-  margin-bottom: 0.3em;
-}

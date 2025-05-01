@@ -453,17 +453,26 @@ function parseCPNToolsXML(content: string): PetriNetData {
   });
 
   // Parse variables
-  const variables = Array.from(cpnXML.querySelectorAll('globbox var')).map((variable) => {
-    const id = variable.getAttribute('id') || ''; // Get the ID from the attribute
-    const colorSet = variable.querySelector('type > id')?.textContent || ''; // Get the colorSet from the nested <id> inside <type>
-    const layout = variable.querySelector('layout')?.textContent || ''; // Get the layout text
-    const nameMatch = layout.match(/var\s+(\w+)\s*:/); // Extract the variable name from the layout
-    const name = nameMatch ? nameMatch[1] : ''; // Use the matched name or fallback to an empty string
-    return {
-      id,
+  const variables = Array.from(cpnXML.querySelectorAll('globbox var')).flatMap((variable) => {
+    const idBase = variable.getAttribute('id') || uuidv4(); // Use base ID for potential multiple vars
+    const colorSet = variable.querySelector('type > id')?.textContent || '';
+    const layout = variable.querySelector('layout')?.textContent || '';
+
+    // Match 'var' followed by names (comma-separated) and then ':' and the type
+    const namesMatch = layout.match(/var\s+([^:]+):/);
+    if (!namesMatch || !namesMatch[1]) {
+      console.warn(`Could not parse variable names from layout: ${layout}`);
+      return []; // Skip if layout doesn't match expected format
+    }
+
+    const names = namesMatch[1].split(',').map(name => name.trim()).filter(name => name);
+
+    // Create a variable object for each name found
+    return names.map((name, index) => ({
+      id: `${idBase}_${index}`, // Generate unique ID for each variable derived from the same tag
       name,
       colorSet,
-    };
+    }));
   });
 
   // Parse priorities

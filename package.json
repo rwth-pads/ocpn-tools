@@ -34,7 +34,7 @@
     "@rwth-pads/cpnsim": "^0.1.8",
     "@tailwindcss/vite": "^4.0.17",
     "@types/uuid": "^10.0.0",
-    "@xyflow/react": "^12.5.5",
+    "@xyflow/react": "^12.8.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "elkjs": "^0.10.0",

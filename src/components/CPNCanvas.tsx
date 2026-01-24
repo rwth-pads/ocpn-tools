@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useState, useContext } from 'react'; // Added useContext
+import React, { useCallback, useState, useContext } from 'react'; // Added useContext
 import useStore from '@/stores/store';
 import { usePetriNetHandlers } from '@/hooks/usePetriNetHandlers';
 
@@ -6,7 +6,6 @@ import {
   ReactFlow,
   Background,
   Controls,
-  MiniMap,
   Panel,
   MarkerType,
   useReactFlow,
@@ -106,8 +105,6 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
   const [dialPosition, setDialPosition] = useState({ x: 0, y: 0 });
 
   const simulationContext = useContext(SimulationContext); // Get simulation context
-
-  const reactFlowWrapper = useRef(null);
   
   const {
     petriNetOrder,
@@ -497,8 +494,8 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
   };
 
   return (
-    <div className="dndflow">
-      <div className="flex flex-col h-screen">
+    <div className="dndflow flex flex-col grow"> {/* Ensure this container allows growth */}
+      <div className="flex flex-col grow" style={{ height: 100 }}> {/* Ensure this container allows growth */}
         {/* Toolbar Panel */}
         <div className="flex items-center justify-between p-2 border-b">
           <div className="flex items-center gap-1">
@@ -587,8 +584,9 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
           </Tabs>
         </div>
 
-        {/* ReactFlow Component */}
-        <div className="flex-1 reactflow-wrapper" ref={reactFlowWrapper}>
+        {/* ReactFlow Component Wrapper */}
+        {/* Add w-full and h-full to ensure the wrapper takes available space */}
+        {/* <div className="reactflow-wrapper w-full h-full" ref={reactFlowWrapper}> */}
           <ReactFlow
             nodes={petriNet?.nodes || []}
             nodeTypes={nodeTypes}
@@ -609,15 +607,14 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
             connectionLineComponent={CustomConnectionLine}
             maxZoom={4}
             onInit={(instance) => {
-              setTimeout(() => {
-                instance.fitView({
-                  maxZoom: 4,
-                });
-              }, 100);
+              // Using requestAnimationFrame to ensure layout is stable
+              requestAnimationFrame(() => {
+                instance.fitView({ maxZoom: 4, padding: 0.1 });
+              });
             }}
           >
             <Background />
-            <MiniMap />
+            {/* <MiniMap /> */}
             <Controls />
             <Panel position="top-center">
               <Toolbar toggleArcMode={toggleArcMode} onApplyLayout={(options) => petriNet && applyLayout(options, petriNet.nodes, petriNet.edges)}/>
@@ -629,9 +626,9 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
               onClose={() => setIsDialOpen(false)}
               onSliceClick={handleSliceClick}
               size={200}
-            ></BoomerDial>
+            />
           </ReactFlow>
-        </div>
+        {/* </div> */}
       </div>
     </div>
   );

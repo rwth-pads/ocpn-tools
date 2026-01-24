@@ -6,9 +6,11 @@ import { ReactFlowProvider } from '@xyflow/react';
 import { DnDProvider } from './utils/DnDContext';
 import { AISidebar } from './components/AISidebar';
 import { SimulationProvider } from '@/context/SimulationContext';
+import { ObjectEvolutionPanel } from './components/ObjectEvolutionPanel';
 
 export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const simulationTimeRange: [number, number] = [0, 100];
 
   const onToggleAIAssistant = () => {
     // toggle the sidebar open state
@@ -25,11 +27,19 @@ export default function App() {
 
           {/* Center Panel */}
           <ResizablePanel>
-            <ReactFlowProvider>
-              <DnDProvider>
-                <CPNCanvas onToggleAIAssistant={onToggleAIAssistant}/>
-              </DnDProvider>
-            </ReactFlowProvider>
+            <ResizablePanelGroup direction="vertical">
+              <ResizablePanel className="flex flex-col">
+                <ReactFlowProvider>
+                  <DnDProvider>
+                    <CPNCanvas onToggleAIAssistant={onToggleAIAssistant} />
+                  </DnDProvider>
+                </ReactFlowProvider>
+              </ResizablePanel>
+              <ResizableHandle />
+              <ResizablePanel defaultSize={30}>
+                <ObjectEvolutionPanel simulationTimeRange={simulationTimeRange}/>
+              </ResizablePanel>
+            </ResizablePanelGroup>
           </ResizablePanel>
 
           {isSidebarOpen && (

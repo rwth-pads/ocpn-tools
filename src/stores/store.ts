@@ -192,25 +192,63 @@ const useStore = create<StoreState>((set) => ({
   updateNodeData: (petriNetId, id: string, newData: PlaceNodeData | TransitionNodeData | AuxTextNodeData) => {
     set((state) => {
       const petriNet = state.petriNetsById[petriNetId];
-      const updatedNodes = petriNet.nodes.map((node) =>
-      node.id === id ? { ...node, data: { ...node.data, ...newData } } : node
+      
+      // Mapping from parent node properties to inscription types
+      const propertyToInscriptionType: Record<string, string> = {
+        initialMarking: 'initialMarking',
+        colorSet: 'colorSet',
+        guard: 'guard',
+        time: 'time',
+        priority: 'priority',
+        codeSegment: 'codeSegment',
+      };
+      
+      // First pass: update the target node
+      let updatedNodes = petriNet.nodes.map((node) =>
+        node.id === id ? { ...node, data: { ...node.data, ...newData } } : node
       );
+      
+      // Second pass: update any child inscription nodes whose labels should reflect parent data
+      updatedNodes = updatedNodes.map((node) => {
+        // Check if this is an inscription node that is a child of the updated node
+        if (node.type === 'inscription' && node.parentId === id) {
+          const inscriptionType = node.data?.inscriptionType as string;
+          // Find which parent property this inscription type maps to
+          const parentProperty = Object.entries(propertyToInscriptionType).find(
+            ([, insType]) => insType === inscriptionType
+          )?.[0];
+          
+          if (parentProperty && parentProperty in newData) {
+            // Update the inscription label to match the new parent property value
+            // Cast through unknown to satisfy TypeScript
+            const newLabel = (newData as unknown as Record<string, string>)[parentProperty];
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                label: newLabel || '',
+              },
+            };
+          }
+        }
+        return node;
+      });
 
       // Update selectedElement if it matches the updated node
       const updatedSelectedElement =
-      petriNet.selectedElement?.type === 'node' && petriNet.selectedElement.element.id === id
-        ? { ...petriNet.selectedElement, element: { ...petriNet.selectedElement.element, data: { ...newData } } }
-        : petriNet.selectedElement;
+        petriNet.selectedElement?.type === 'node' && petriNet.selectedElement.element.id === id
+          ? { ...petriNet.selectedElement, element: { ...petriNet.selectedElement.element, data: { ...newData } } }
+          : petriNet.selectedElement;
 
       return {
-      petriNetsById: {
-        ...state.petriNetsById,
-        [petriNetId]: {
-        ...petriNet,
-        nodes: updatedNodes,
-        selectedElement: updatedSelectedElement,
+        petriNetsById: {
+          ...state.petriNetsById,
+          [petriNetId]: {
+            ...petriNet,
+            nodes: updatedNodes,
+            selectedElement: updatedSelectedElement,
+          },
         },
-      },
       };
     });
   },
@@ -276,7 +314,14 @@ const useStore = create<StoreState>((set) => ({
                   }
                 } else {
                   // Attempt to parse as JSON for other cases
-                  parsedMarking = JSON.parse(node.data.initialMarking);
+                  const parsed = JSON.parse(node.data.initialMarking);
+                  // Ensure result is an array
+                  if (Array.isArray(parsed)) {
+                    parsedMarking = parsed;
+                  } else {
+                    // Single value - wrap in array
+                    parsedMarking = [parsed];
+                  }
                 }
                 marking = parsedMarking;
               }

@@ -1,6 +1,7 @@
 import { PlaceNode } from './PlaceNode';
 import TransitionNode from './TransitionNode';
 import AuxTextNode from './AuxTextNode';
+import InscriptionNode from './InscriptionNode';
 
 export const initialNodes = [
   { id: 'a',
@@ -30,4 +31,5 @@ export const nodeTypes = {
   'place': PlaceNode,
   'transition': TransitionNode,
   'auxText': AuxTextNode,
+  'inscription': InscriptionNode,
 };

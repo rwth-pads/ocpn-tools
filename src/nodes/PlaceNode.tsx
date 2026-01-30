@@ -41,27 +41,6 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
   return (
     <div className="relative cpn-node place-node" style={{ borderColor: colorSetColor }}>
 
-      {/* Initial marking - top right corner */}
-      {data.initialMarking && (
-        <div className="absolute text-[8px] font-mono bg-background/80 px-1 top-0 left-full transform -translate-y-2 rounded-md whitespace-nowrap">
-          {data.initialMarking}
-        </div>
-      )}
-
-      {/* Color set - bottom right corner */}
-      {data.colorSet && (
-        <div className="absolute text-[8px] font-mono bg-background/80 px-1 bottom-0 left-full transform translate-y-2 rounded-md">
-          {data.colorSet}
-        </div>
-      )}
-
-      {/* Marking - middle right */}
-      {displayedMarking && (
-        <div className="marking absolute text-[8px] font-mono bg-background/80 px-1 top-1/2 left-full transform -translate-y-1/2 rounded-md whitespace-nowrap">
-          {displayedMarking}
-        </div>
-      )}
-
       {/* Label */}
 
       <NodeResizer
@@ -70,7 +49,14 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
         minHeight={30}
       />
 
-      <label htmlFor="text">{data.label}</label>
+      <label htmlFor="text" className="whitespace-pre-wrap">{data.label}</label>
+
+      {/* Marking badge - shown during simulation when tokens are present */}
+      {displayedMarking && (
+        <div className="marking absolute text-[8px] font-mono bg-background/80 px-1 top-1/2 left-full transform -translate-y-1/2 rounded-md whitespace-nowrap">
+          {displayedMarking}
+        </div>
+      )}
 
       <Handle
         className="custom-handle"

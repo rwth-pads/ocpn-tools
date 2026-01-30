@@ -90,8 +90,8 @@ const defaultEdgeOptions = {
   markerEnd: {
     type: MarkerType.ArrowClosed,
     color: '#000',
-    width: 15,
-    height: 15,
+    width: 10,
+    height: 10,
   },
 };
 

@@ -58,10 +58,13 @@ export function useSimulationController() {
             // Marking in store should ideally be an array already
             if (Array.isArray(markingSource)) {
               currentMarking = markingSource;
+            } else if (typeof markingSource === 'number') {
+              // Handle single number marking
+              currentMarking = [markingSource];
             } else if (typeof markingSource === 'string' && markingSource.trim() !== '') {
               // Fallback: try parsing if it's a string
               const parsedMarking = JSON.parse(markingSource);
-              currentMarking = Array.isArray(parsedMarking) ? parsedMarking : [];
+              currentMarking = Array.isArray(parsedMarking) ? parsedMarking : [parsedMarking];
             }
           } catch (error) {
             console.error(`Error reading/parsing marking for node ${nodeId}:`, node.data.marking, error);
@@ -102,9 +105,12 @@ export function useSimulationController() {
             const markingSource = latestNodeState?.data?.marking;
              if (Array.isArray(markingSource)) {
               currentMarking = markingSource;
+            } else if (typeof markingSource === 'number') {
+              // Handle single number marking
+              currentMarking = [markingSource];
             } else if (typeof markingSource === 'string' && markingSource.trim() !== '') {
               const parsedMarking = JSON.parse(markingSource);
-              currentMarking = Array.isArray(parsedMarking) ? parsedMarking : [];
+              currentMarking = Array.isArray(parsedMarking) ? parsedMarking : [parsedMarking];
             }
           } catch (error) {
             console.error(`Error reading/parsing marking for node ${nodeId}:`, node.data.marking, error);
@@ -231,28 +237,26 @@ export function useSimulationController() {
                     }
                     node.data.marking = JSON.stringify(markingArray); // Stringify for WASM
 
-                    // Ensure node.data.initialMarking is also stringified if it exists
-                    // Note: WASM might primarily care about the current 'marking' after initialization
+                    // Keep initialMarking as-is for WASM to evaluate as Rhai expression
+                    // Only convert to array format if it's already a JSON array or a simple value
                     if (node.data.initialMarking) {
-                        let initialMarkingArray: number[] = [];
-                         if (Array.isArray(node.data.initialMarking)) {
-                             initialMarkingArray = node.data.initialMarking;
-                         } else if (typeof node.data.initialMarking === 'string') {
-                             // Handle '.all()' or parse JSON string
-                             if (node.data.initialMarking.endsWith('.all()')) {
-                                 // If initialMarking was '.all()', use the resolved markingArray from above
-                                 initialMarkingArray = markingArray;
-                             } else {
-                                 try {
-                                     const parsed = JSON.parse(node.data.initialMarking);
-                                     if (Array.isArray(parsed)) initialMarkingArray = parsed;
-                                 } catch { console.warn(`Could not parse initialMarking string for node ${node.id}: ${node.data.initialMarking}`); }
-                             }
-                         }
-                         node.data.initialMarking = JSON.stringify(initialMarkingArray); // Stringify for WASM
+                        const im = node.data.initialMarking;
+                        if (typeof im === 'string') {
+                            // Check if it looks like a JSON array already
+                            if (im.startsWith('[') && im.endsWith(']')) {
+                                // Keep as-is - it's already an array expression
+                            } else if (im.endsWith('.all()')) {
+                                // Keep as-is - it's a colorset.all() expression
+                            } else if (im.trim() === '') {
+                                node.data.initialMarking = '[]';
+                            }
+                            // Otherwise keep the original expression (e.g., "1", "8")
+                            // which Rhai can evaluate directly
+                        } else if (Array.isArray(im)) {
+                            node.data.initialMarking = JSON.stringify(im);
+                        }
                     } else {
-                         // Ensure initialMarking exists and is stringified empty array if not present
-                         node.data.initialMarking = '[]';
+                        node.data.initialMarking = '[]';
                     }
                 }
             });
@@ -280,12 +284,14 @@ export function useSimulationController() {
         // console.log("Initializing WASM with JSON:", petriNetJSON); // Debug log (can be large)
 
         // Create the WASM simulator instance
+        console.log("Creating WASM Simulator with JSON:", petriNetJSON);
         wasmSimulatorRef.current = new WasmSimulator(petriNetJSON);
+        console.log("WASM Simulator created successfully");
         // Set the event listener callback
         wasmSimulatorRef.current.setEventListener(handleWasmEvent);
         // Mark initialization as complete
         setIsInitialized(true);
-        //console.log("WASM Simulator initialized successfully.");
+        console.log("WASM Simulator initialized successfully.");
 
     } catch (error) {
         // Log errors during initialization
@@ -312,9 +318,10 @@ export function useSimulationController() {
     if (wasmSimulatorRef.current) { // Check the ref directly
         try {
             // Step counter is now incremented reactively in handleWasmEvent
-            //console.log(`Requesting simulation step...`);
+            console.log(`Requesting simulation step...`);
             // Execute the step in WASM
-            wasmSimulatorRef.current.run_step();
+            const result = wasmSimulatorRef.current.run_step();
+            console.log(`Simulation step result:`, result);
             // Event handling (including state updates and step increment) happens in handleWasmEvent callback
         } catch (error) {
             console.error("Error running simulation step:", error);

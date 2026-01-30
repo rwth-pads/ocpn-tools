@@ -255,6 +255,7 @@ export function convertToJSON(data: PetriNetData): string {
           source: arc.source,
           target: arc.target,
           inscription: arc.label || "", // Use "inscription" instead of "label"
+          isBidirectional: arc.data?.isBidirectional || false, // Include bidirectional flag
         })),
       };
     }),
@@ -341,6 +342,9 @@ export function parseJSON(content: string): PetriNetData {
       source: arc.source,
       target: arc.target,
       label: arc.inscription || "", // Map 'inscription' back to 'label'
+      data: {
+        isBidirectional: arc.isBidirectional || false,
+      },
     }));
 
     const net: PetriNet = {
@@ -435,20 +439,65 @@ function parseCPNToolsXML(content: string): PetriNetData {
   // Parse color sets
   const colorSets = Array.from(cpnXML.querySelectorAll('globbox color')).map((color) => {
     const id = color.querySelector('id')?.textContent || '';
+    
+    // Check for product type
+    const productElement = color.querySelector('product');
+    if (productElement) {
+      const productIds = Array.from(productElement.querySelectorAll(':scope > id')).map(el => el.textContent || '');
+      const definition = `colset ${id} = product ${productIds.join(' * ')};`;
+      return {
+        id,
+        name: id,
+        type: 'product',
+        definition,
+        color: generateRandomColor(),
+      };
+    }
+    
+    // Check for int with range (e.g., <int><with><ml>0</ml><ml>10</ml></with></int>)
+    const intElement = color.querySelector('int');
+    if (intElement) {
+      const withElement = intElement.querySelector('with');
+      if (withElement) {
+        const mlElements = withElement.querySelectorAll('ml');
+        if (mlElements.length >= 2) {
+          const rangeStart = mlElements[0].textContent || '0';
+          const rangeEnd = mlElements[1].textContent || '0';
+          const definition = `colset ${id} = int with ${rangeStart}..${rangeEnd};`;
+          return {
+            id,
+            name: id,
+            type: 'basic',
+            definition,
+            color: generateRandomColor(),
+          };
+        }
+      }
+      // Plain int without range
+      return {
+        id,
+        name: id,
+        type: 'basic',
+        definition: `colset ${id} = int;`,
+        color: generateRandomColor(),
+      };
+    }
+    
+    // Check for other basic types without children
     const basicTypeElement = Array.from(color.children).find((child) => {
       const tagName = child.tagName.toLowerCase();
-      return ['bool', 'int', 'string'].includes(tagName) && child.children.length === 0;
+      return ['bool', 'string', 'real', 'unit', 'time', 'intinf'].includes(tagName);
     });
     const basicType = basicTypeElement ? basicTypeElement.tagName.toLowerCase() : null;
     const layout = color.querySelector('layout')?.textContent || '';
-    const definition = basicType ? `colset ${id} = ${basicType};` : layout;
+    const definition = basicType ? `colset ${id} = ${basicType};` : (layout || `colset ${id} = complex;`);
 
     return {
       id,
       name: id,
-      type: basicType ? 'basic' : 'complex', // Mark as 'basic' if it's a basic type
+      type: basicType ? 'basic' : 'complex',
       definition,
-      color: generateRandomColor(), // Assign random color
+      color: generateRandomColor(),
     };
   });
 
@@ -458,7 +507,18 @@ function parseCPNToolsXML(content: string): PetriNetData {
     const colorSet = variable.querySelector('type > id')?.textContent || '';
     const layout = variable.querySelector('layout')?.textContent || '';
 
-    // Match 'var' followed by names (comma-separated) and then ':' and the type
+    // First try to get variable names from <id> elements (CPN Tools format can have multiple <id> after <type>)
+    // The structure is: <var><type><id>ColorSet</id></type><id>var1</id><id>var2</id>...</var>
+    const idElements = Array.from(variable.querySelectorAll(':scope > id'));
+    if (idElements.length > 0) {
+      return idElements.map((idEl, index) => ({
+        id: `${idBase}_${index}`,
+        name: idEl.textContent || '',
+        colorSet,
+      }));
+    }
+
+    // Fallback: Match 'var' followed by names (comma-separated) and then ':' and the type from layout
     const namesMatch = layout.match(/var\s+([^:]+):/);
     if (!namesMatch || !namesMatch[1]) {
       console.warn(`Could not parse variable names from layout: ${layout}`);
@@ -489,25 +549,44 @@ function parseCPNToolsXML(content: string): PetriNetData {
     return acc;
   }, [] as { id: string; name: string; level: number }[]);
 
-  // Parse functions
-  const functions = Array.from(cpnXML.querySelectorAll('globbox block ml')).reduce((acc, ml) => {
+  // Parse functions - from both block ml elements and top-level ml elements
+  const functions: Function[] = [];
+  
+  // Parse from block ml elements
+  Array.from(cpnXML.querySelectorAll('globbox block ml')).forEach((ml) => {
     const layout = ml.querySelector('layout')?.textContent || '';
-    // const mlContent = ml.textContent?.trim() || ''; // Get the full ML content
     const id = ml.getAttribute('id') || uuidv4();
 
     // Check if it looks like a function definition (starts with 'fun')
     if (layout.trim().startsWith('fun ')) {
       const nameMatch = layout.match(/^fun\s+([a-zA-Z0-9_]+)/);
-      const functionName = nameMatch ? nameMatch[1] : `func_${id}`; // Generate a fallback name if needed
+      const functionName = nameMatch ? nameMatch[1] : `func_${id}`;
 
-      acc.push({
+      functions.push({
         id: id,
         name: functionName,
-        code: layout, // Store the entire layout content as the code
+        code: layout,
       });
     }
-    return acc;
-  }, [] as Function[]);
+  });
+  
+  // Also parse top-level ml elements in globbox (not inside blocks)
+  Array.from(cpnXML.querySelectorAll('globbox > ml')).forEach((ml) => {
+    const mlContent = ml.textContent?.trim() || '';
+    const id = ml.getAttribute('id') || uuidv4();
+
+    // Check if it looks like a function definition (starts with 'fun')
+    if (mlContent.startsWith('fun ')) {
+      const nameMatch = mlContent.match(/^fun\s+([a-zA-Z0-9_]+)/);
+      const functionName = nameMatch ? nameMatch[1] : `func_${id}`;
+
+      functions.push({
+        id: id,
+        name: functionName,
+        code: mlContent,
+      });
+    }
+  });
 
   // Parse <use> declarations
   const uses = Array.from(cpnXML.querySelectorAll('globbox use')).map((use) => {
@@ -528,44 +607,157 @@ function parseCPNToolsXML(content: string): PetriNetData {
     const pageId = page.getAttribute('id') || uuidv4();
     const pageName = page.querySelector('pageattr')?.getAttribute('name') || `Page ${pageId}`;
 
-    // Parse places
-    const places = Array.from(page.querySelectorAll('place')).map((place) => ({
-      id: place.getAttribute('id') || uuidv4(),
-      type: 'place',
-      position: {
-        x: parseFloat(place.querySelector('posattr')?.getAttribute('x') || '0'),
-        y: -parseFloat(place.querySelector('posattr')?.getAttribute('y') || '0'), // Invert y-coordinate
-      },
-      data: {
-        label: place.querySelector('text')?.textContent || '',
-        colorSet: place.querySelector('type text')?.textContent || '',
-        initialMarking: place.querySelector('initmark text')?.textContent || '',
-      },
-    }));
+    // Helper to create inscription nodes as children
+    // Note: React Flow child node positions are relative to parent's TOP-LEFT corner
+    const createInscriptionNode = (
+      parentId: string,
+      parentCenterX: number,
+      parentCenterY: number,
+      parentWidth: number,
+      parentHeight: number,
+      element: Element | null,
+      inscriptionType: string,
+      textSelector: string = 'text'
+    ) => {
+      if (!element) return null;
+      const text = element.querySelector(textSelector)?.textContent || '';
+      if (!text.trim()) return null;
+      
+      const posattr = element.querySelector('posattr');
+      if (!posattr) return null;
+      
+      const absX = parseFloat(posattr.getAttribute('x') || '0');
+      const absY = -parseFloat(posattr.getAttribute('y') || '0'); // Invert y
+      
+      // Parent's top-left corner in absolute coordinates
+      const parentTopLeftX = parentCenterX - parentWidth / 2;
+      const parentTopLeftY = parentCenterY - parentHeight / 2;
+      
+      // Convert absolute position to relative offset from parent's top-left
+      const relX = absX - parentTopLeftX;
+      const relY = absY - parentTopLeftY;
+      
+      // Get color from textattr if available
+      const textattr = element.querySelector('textattr');
+      const color = textattr?.getAttribute('colour') || undefined;
+      
+      return {
+        id: element.getAttribute('id') || uuidv4(),
+        type: 'inscription',
+        position: { x: relX, y: relY },
+        parentId: parentId,
+        draggable: true,
+        data: {
+          label: text,
+          inscriptionType,
+          color,
+        },
+      };
+    };
 
-    // Parse transitions
-    const transitions = Array.from(page.querySelectorAll('trans')).map((transition) => ({
-      id: transition.getAttribute('id') || uuidv4(),
-      type: 'transition',
-      position: {
-        x: parseFloat(transition.querySelector('posattr')?.getAttribute('x') || '0'),
-        y: -parseFloat(transition.querySelector('posattr')?.getAttribute('y') || '0'), // Invert y-coordinate
-      },
-      data: {
-        label: transition.querySelector('text')?.textContent || '',
-        guard: transition.querySelector('cond text')?.textContent || '',
-        time: transition.querySelector('time text')?.textContent || '',
-        priority: transition.querySelector('priority text')?.textContent || '',
-      },
-    }));
+    // Parse places with their inscriptions
+    const placesWithInscriptions = Array.from(page.querySelectorAll('place')).flatMap((place) => {
+      const ellipse = place.querySelector('ellipse');
+      const width = ellipse ? parseFloat(ellipse.getAttribute('w') || '60') : 60;
+      const height = ellipse ? parseFloat(ellipse.getAttribute('h') || '40') : 40;
+      
+      const rawInitialMarking = place.querySelector('initmark text')?.textContent || '';
+      
+      const centerX = parseFloat(place.querySelector('posattr')?.getAttribute('x') || '0');
+      const centerY = -parseFloat(place.querySelector('posattr')?.getAttribute('y') || '0');
+      
+      const placeId = place.getAttribute('id') || uuidv4();
+      
+      const placeNode = {
+        id: placeId,
+        type: 'place',
+        position: {
+          x: centerX - width / 2,
+          y: centerY - height / 2,
+        },
+        width,
+        height,
+        data: {
+          label: place.querySelector('text')?.textContent || '',
+          colorSet: place.querySelector('type text')?.textContent || '',
+          initialMarking: rawInitialMarking,
+        },
+      };
+      
+      // Create inscription child nodes
+      const inscriptions = [
+        createInscriptionNode(placeId, centerX, centerY, width, height, place.querySelector('type'), 'colorSet'),
+        createInscriptionNode(placeId, centerX, centerY, width, height, place.querySelector('initmark'), 'initialMarking'),
+      ].filter((n): n is NonNullable<typeof n> => n !== null);
+      
+      return [placeNode, ...inscriptions];
+    });
 
-    // Parse arcs
-    const arcs = Array.from(page.querySelectorAll('arc')).map((arc) => {
+    // Parse transitions with their inscriptions
+    const transitionsWithInscriptions = Array.from(page.querySelectorAll('trans')).flatMap((transition) => {
+      const box = transition.querySelector('box');
+      const width = box ? parseFloat(box.getAttribute('w') || '60') : 60;
+      const height = box ? parseFloat(box.getAttribute('h') || '40') : 40;
+      
+      const centerX = parseFloat(transition.querySelector('posattr')?.getAttribute('x') || '0');
+      const centerY = -parseFloat(transition.querySelector('posattr')?.getAttribute('y') || '0');
+      
+      const transId = transition.getAttribute('id') || uuidv4();
+      
+      const transNode = {
+        id: transId,
+        type: 'transition',
+        position: {
+          x: centerX - width / 2,
+          y: centerY - height / 2,
+        },
+        width,
+        height,
+        data: {
+          label: transition.querySelector('text')?.textContent || '',
+          guard: transition.querySelector('cond text')?.textContent || '',
+          time: transition.querySelector('time text')?.textContent || '',
+          priority: transition.querySelector('priority text')?.textContent || '',
+        },
+      };
+      
+      // Create inscription child nodes
+      const inscriptions = [
+        createInscriptionNode(transId, centerX, centerY, width, height, transition.querySelector('cond'), 'guard'),
+        createInscriptionNode(transId, centerX, centerY, width, height, transition.querySelector('time'), 'time'),
+        createInscriptionNode(transId, centerX, centerY, width, height, transition.querySelector('priority'), 'priority'),
+        createInscriptionNode(transId, centerX, centerY, width, height, transition.querySelector('code'), 'codeSegment'),
+      ].filter((n): n is NonNullable<typeof n> => n !== null);
+      
+      return [transNode, ...inscriptions];
+    });
+
+    // Parse arcs - handle BOTHDIR (bidirectional) by creating two separate arcs
+    const arcs = Array.from(page.querySelectorAll('arc')).flatMap((arc) => {
       const id = arc.getAttribute('id') || uuidv4();
       const orientation = arc.getAttribute('orientation');
+      const order = parseInt(arc.getAttribute('order') || '0', 10); // Parse order for parallel arc offset
       const placeEndRef = arc.querySelector('placeend')?.getAttribute('idref') || '';
       const transEndRef = arc.querySelector('transend')?.getAttribute('idref') || '';
       const label = arc.querySelector('annot text')?.textContent || '';
+      
+      // Parse bendpoints for curved/bent arcs
+      const bendpoints = Array.from(arc.querySelectorAll('bendpoint')).map((bp) => ({
+        x: parseFloat(bp.querySelector('posattr')?.getAttribute('x') || '0'),
+        y: -parseFloat(bp.querySelector('posattr')?.getAttribute('y') || '0'), // Invert y-coordinate
+      }));
+
+      if (orientation === 'BOTHDIR') {
+        // Create a single double-headed arc (arrows on both ends)
+        return [{
+          id,
+          type: 'floating',
+          source: placeEndRef,
+          target: transEndRef,
+          label,
+          data: { bendpoints, isBidirectional: true, order },
+        }];
+      }
 
       let source = '';
       let target = '';
@@ -578,17 +770,47 @@ function parseCPNToolsXML(content: string): PetriNetData {
         target = placeEndRef;
       } else {
         // Handle other orientations or default case if needed
-        // For now, assume PtoT if orientation is missing or different
         source = placeEndRef;
         target = transEndRef;
         console.warn(`Unhandled arc orientation: ${orientation} for arc ${id}. Assuming PtoT.`);
       }
 
-      return {
+      return [{
         id,
+        type: 'floating',
         source,
         target,
         label,
+        data: { bendpoints, order },
+      }];
+    });
+
+    // Parse Aux (auxiliary text) elements
+    // CPN Tools positions are center-based, CSS transform handles centering
+    const auxNodes = Array.from(page.querySelectorAll('Aux')).map((aux) => {
+      const id = aux.getAttribute('id') || uuidv4();
+      const text = aux.querySelector('text')?.textContent || '';
+      const centerX = parseFloat(aux.querySelector('posattr')?.getAttribute('x') || '0');
+      const centerY = -parseFloat(aux.querySelector('posattr')?.getAttribute('y') || '0'); // Invert y-coordinate
+      
+      // Get color and bold from textattr
+      const textattr = aux.querySelector('textattr');
+      const color = textattr?.getAttribute('colour') || undefined;
+      const bold = textattr?.getAttribute('bold') === 'true';
+      
+      // Position at center - CSS transform: translate(-50%, -50%) handles centering
+      return {
+        id,
+        type: 'auxText',
+        position: { 
+          x: centerX, 
+          y: centerY,
+        },
+        data: {
+          label: text,
+          color,
+          bold,
+        },
       };
     });
 
@@ -596,7 +818,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
     const petriNet: PetriNet = {
       id: pageId,
       name: pageName,
-      nodes: [...places, ...transitions],
+      nodes: [...placesWithInscriptions, ...transitionsWithInscriptions, ...auxNodes],
       edges: arcs,
       selectedElement: null,
     };

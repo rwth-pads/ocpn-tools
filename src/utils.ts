@@ -7,6 +7,19 @@ interface Point {
   y: number;
 }
 
+interface NodePosition {
+  x: number;
+  y: number;
+}
+
+interface NodeInternals {
+  positionAbsolute: NodePosition;
+}
+
+interface NodeWithInternals extends Node {
+  internals: NodeInternals;
+}
+
 // this helper function returns the intersection point
 // of the line between the center of the intersectionNode and the target node
 function getNodeIntersection(intersectionNode: Node, targetNode: Node): Point {
@@ -47,18 +60,69 @@ function getNodeIntersection(intersectionNode: Node, targetNode: Node): Point {
   return { x, y };
 }
 
-// returns the position (top, right, bottom, or left) of the node compared to the intersection point
-interface NodePosition {
-  x: number;
-  y: number;
-}
+/**
+ * Get the intersection point of the node boundary towards a specific point (e.g., a bendpoint)
+ * This is used when we have bendpoints and need to calculate where the edge exits/enters the node
+ */
+export function getNodeIntersectionToPoint(node: Node, targetPoint: Point): Point {
+  const { width: nodeWidth = 0, height: nodeHeight = 0 } = node.measured || {};
+  const nodePosition = (node as NodeWithInternals).internals.positionAbsolute;
 
-interface NodeInternals {
-  positionAbsolute: NodePosition;
-}
+  const w = nodeWidth / 2;
+  const h = nodeHeight / 2;
 
-interface NodeWithInternals extends Node {
-  internals: NodeInternals;
+  // Node center
+  const cx = nodePosition.x + w;
+  const cy = nodePosition.y + h;
+  
+  // Target point
+  const x1 = targetPoint.x;
+  const y1 = targetPoint.y;
+
+  if (node.type === 'place') {
+    // Elliptical nodes - calculate intersection with ellipse
+    const dx = x1 - cx;
+    const dy = y1 - cy;
+    const angle = Math.atan2(dy, dx);
+    const rx = w;
+    const ry = h;
+    const x = cx + rx * Math.cos(angle);
+    const y = cy + ry * Math.sin(angle);
+    return { x, y };
+  }
+
+  // Rectangular nodes - find intersection with rectangle edge
+  const dx = x1 - cx;
+  const dy = y1 - cy;
+  
+  if (dx === 0 && dy === 0) {
+    // Target is at center, return center
+    return { x: cx, y: cy };
+  }
+  
+  // Calculate intersection with rectangle
+  // Using parametric line: P = center + t * direction
+  // Find t where line intersects rectangle boundary
+  let t = Infinity;
+  
+  if (dx !== 0) {
+    // Intersection with left or right edge
+    const tRight = w / Math.abs(dx);
+    const tLeft = w / Math.abs(dx);
+    t = Math.min(t, dx > 0 ? tRight : tLeft);
+  }
+  
+  if (dy !== 0) {
+    // Intersection with top or bottom edge
+    const tBottom = h / Math.abs(dy);
+    const tTop = h / Math.abs(dy);
+    t = Math.min(t, dy > 0 ? tBottom : tTop);
+  }
+  
+  const x = cx + t * dx;
+  const y = cy + t * dy;
+  
+  return { x, y };
 }
 
 function getEdgePosition(

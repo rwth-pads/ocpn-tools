@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-OCPN Tools is a React/TypeScript web app for designing Object-centric Colored Petri Nets (OCPNs). It uses React Flow for the visual canvas, Zustand for state management, and integrates with `@rwth-pads/cpnsim` (a WASM-based CPN simulator).
+OCPN Tools is a React/TypeScript web app for designing Object-centric Colored Petri Nets (OCPNs), aiming to replicate CPN Tools functionality in a modern web interface. It uses React Flow for the visual canvas, Zustand for state management, and integrates with `@rwth-pads/cpnsim` (a WASM-based CPN simulator).
 
 ## Architecture
 
@@ -18,8 +18,8 @@ Zustand Store (store.ts) ←→ React Components ←→ React Flow Canvas
 - **Simulation**: `SimulationContext` wraps the WASM simulator; see [src/hooks/useSimulationController.ts](src/hooks/useSimulationController.ts)
 
 ### Key Domain Types
-- **Nodes**: `PlaceNode` (ellipse, has colorSet/marking) and `TransitionNode` (rectangle, has guard/time/priority)
-- **Edges**: `ArcEdge` - connects places to transitions or vice versa, labeled with variables
+- **Nodes**: `PlaceNode` (ellipse, has colorSet/marking), `TransitionNode` (rectangle, has guard/time/priority), `AuxTextNode` (label text)
+- **Edges**: `ArcEdge` - connects places to transitions or vice versa, labeled with variables; supports bidirectional arcs
 - **Declarations**: ColorSet, Variable, Priority, Function, Use - defined in [src/declarations/index.ts](src/declarations/index.ts)
 
 ## Project Conventions
@@ -68,8 +68,16 @@ pnpm lint         # ESLint with zero-warning policy
 pnpm deploy       # Build and deploy to GitHub Pages
 ```
 
+## CPN Tools XML Parsing
+[src/utils/FileOperations.ts](src/utils/FileOperations.ts) parses CPN Tools XML (`.cpn` files):
+- **ColorSets**: Supports basic types (`int`, `bool`, `string`), `product` types, `int with range`
+- **Variables**: Parsed from `<var>` elements; multiple variable names can exist in one tag
+- **Places/Transitions**: Include width/height from `<ellipse w="..." h="..."/>` and `<box w="..." h="..."/>`
+- **Arcs**: Handle `BOTHDIR` orientation by creating two separate edges; parse `<bendpoint>` elements
+- **Aux elements**: Parse `<Aux>` as `auxText` nodes for labels like "Sender", "Network", etc.
+- **Y-coordinate inversion**: CPN Tools uses inverted Y-axis; apply `-parseFloat(y)` when parsing
+
 ## File Format Support
-[src/utils/FileOperations.ts](src/utils/FileOperations.ts) handles:
 - `.ocpn` - Native JSON format (full fidelity)
 - `.cpn` - CPN Tools XML export
 - `.json` - CPNPy JSON format

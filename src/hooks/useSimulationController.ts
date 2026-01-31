@@ -12,6 +12,46 @@ export interface TokenMovement {
     tokens: string; // Keep as string for display consistency
 }
 
+/**
+ * Normalizes a token value, converting JavaScript Map objects to plain objects.
+ * This is needed because Rhai object maps are serialized as JS Maps via serde-wasm-bindgen.
+ * Keys are sorted alphabetically to ensure consistent comparison regardless of original order.
+ */
+function normalizeToken(token: unknown): unknown {
+  if (token instanceof Map) {
+    // Convert Map to plain object with sorted keys
+    const obj: Record<string, unknown> = {};
+    const sortedKeys = Array.from(token.keys()).map(String).sort();
+    for (const key of sortedKeys) {
+      obj[key] = normalizeToken(token.get(key));
+    }
+    return obj;
+  } else if (Array.isArray(token)) {
+    // Recursively normalize array elements
+    return token.map(normalizeToken);
+  } else if (token !== null && typeof token === 'object') {
+    // Recursively normalize object properties with sorted keys
+    const obj: Record<string, unknown> = {};
+    const sortedKeys = Object.keys(token).sort();
+    for (const key of sortedKeys) {
+      obj[key] = normalizeToken((token as Record<string, unknown>)[key]);
+    }
+    return obj;
+  }
+  // Return primitives as-is
+  return token;
+}
+
+/**
+ * Converts a token to a stable string representation for comparison.
+ * Handles Map objects, plain objects, arrays, and primitives.
+ * Keys are sorted to ensure consistent comparison regardless of original key order.
+ */
+function tokenToString(token: unknown): string {
+  const normalized = normalizeToken(token);
+  return JSON.stringify(normalized);
+}
+
 export function useSimulationController() {
   const wasmRef = useRef<InitOutput | null>(null); // Initialize as null
   const wasmSimulatorRef = useRef<WasmSimulator | null>(null);
@@ -73,8 +113,8 @@ export function useSimulationController() {
 
           const updatedMarking = [...currentMarking]; // Clone to modify
           tokens.forEach((token: number) => {
-            const tokenString = JSON.stringify(token); // Compare by string representation
-            const index = updatedMarking.findIndex(mToken => JSON.stringify(mToken) === tokenString);
+            const tokenString = tokenToString(token); // Compare by normalized string representation
+            const index = updatedMarking.findIndex(mToken => tokenToString(mToken) === tokenString);
             if (index !== -1) {
               updatedMarking.splice(index, 1); // Remove one instance
             } else {
@@ -117,8 +157,9 @@ export function useSimulationController() {
             currentMarking = [];
           }
 
-          // Add produced tokens to the cloned marking
-          const updatedMarking = [...currentMarking, ...tokens];
+          // Add produced tokens to the cloned marking (normalize Map objects to plain objects)
+          const normalizedTokens = tokens.map(t => normalizeToken(t));
+          const updatedMarking = [...currentMarking, ...normalizedTokens];
           // Update the store
           updateNodeMarking(nodeId, updatedMarking);
         } else {
@@ -142,10 +183,12 @@ export function useSimulationController() {
             const placeNode = findNodeById(placeId); // Use helper
             // Ensure placeName is a string (using label), fallback to placeId
             const placeName = (placeNode?.data?.label && typeof placeNode.data.label === 'string') ? placeNode.data.label : placeId;
+            // Normalize tokens (convert Maps to plain objects) before stringifying
+            const normalizedTokens = tokens.map(t => normalizeToken(t));
             movements.push({
                 placeId: placeId,
                 placeName: placeName, // Use validated name
-                tokens: JSON.stringify(tokens), // Stringify tokens for display in EventLog
+                tokens: JSON.stringify(normalizedTokens), // Stringify normalized tokens for display
             });
         });
         return movements;

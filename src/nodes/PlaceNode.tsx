@@ -9,7 +9,7 @@ export interface PlaceNodeData {
   type: string;
   colorSet: string;
   initialMarking: string;
-  marking: string;
+  marking: unknown[]; // Array of tokens (can be primitives, arrays for products, or objects for records)
   // Offset positions for draggable inscriptions
   colorSetOffset?: { x: number; y: number };
   tokenCountOffset?: { x: number; y: number };
@@ -103,17 +103,34 @@ function DraggableInscription({
   );
 }
 
+// Format a single token for display (handles objects/records, arrays, strings, numbers)
+function formatToken(token: unknown): string {
+  if (token === null || token === undefined) {
+    return '()';
+  } else if (token instanceof Map) {
+    // Convert Map to object notation
+    const entries: string[] = [];
+    token.forEach((value, key) => {
+      entries.push(`${key}=${formatToken(value)}`);
+    });
+    return `{${entries.join(', ')}}`; 
+  } else if (Array.isArray(token)) {
+    // Product/tuple type
+    return `(${token.map(t => formatToken(t)).join(',')})`; 
+  } else if (typeof token === 'object') {
+    // Plain object (record type)
+    const entries = Object.entries(token).map(([k, v]) => `${k}=${formatToken(v)}`);
+    return `{${entries.join(', ')}}`; 
+  } else if (typeof token === 'string') {
+    return `"${token}"`;
+  } else {
+    return String(token);
+  }
+}
+
 // Format marking for display (CPN Tools style: 1`value ++ 1`value2)
-function formatMarkingDisplay(marking: (string | number | (string | number)[])[]): string {
-  return marking.map(token => {
-    if (Array.isArray(token)) {
-      return `1\`(${token.map(t => typeof t === 'string' ? `"${t}"` : t).join(',')})`;
-    } else if (typeof token === 'string') {
-      return `1\`"${token}"`;
-    } else {
-      return `1\`${token}`;
-    }
-  }).join('++\n');
+function formatMarkingDisplay(marking: unknown[]): string {
+  return marking.map(token => `1\`${formatToken(token)}`).join('++\n');
 }
 
 export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
@@ -128,7 +145,7 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
 
   const hasMarking = data.marking && Array.isArray(data.marking) && data.marking.length > 0;
   const tokenCount = hasMarking ? data.marking.length : 0;
-  const markingDisplay = hasMarking ? formatMarkingDisplay(data.marking as (string | number | (string | number)[])[]) : '';
+  const markingDisplay = hasMarking ? formatMarkingDisplay(data.marking as unknown[]) : '';
 
   // Default offsets for inscriptions
   const colorSetOffset = data.colorSetOffset ?? { x: 0, y: 35 }; // Below the place

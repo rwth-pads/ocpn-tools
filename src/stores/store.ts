@@ -171,7 +171,7 @@ const useStore = create<StoreState>((set) => ({
       };
     });
   },
-  updateNodeMarking: (id: string, newMarking: (string | number)[]) => {
+  updateNodeMarking: (id: string, newMarking: unknown[]) => {
     set((state) => {
       const petriNet = state.petriNetsById[state.activePetriNetId!];
       const updatedNodes = petriNet.nodes.map((node) =>

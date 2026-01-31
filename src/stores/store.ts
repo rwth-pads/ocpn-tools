@@ -311,12 +311,20 @@ const useStore = create<StoreState>((set) => ({
       const petriNet = state.petriNetsById[state.activePetriNetId!];
       const updatedNodes = petriNet.nodes.map((node) => {
         if (node.type === 'place') {
-          let marking: (string | number)[] = []; // Ensure marking is typed correctly
+          let marking: (string | number | null)[] = []; // Include null for unit tokens
           if (node.data.initialMarking) {
             try {
               if (typeof node.data.initialMarking === 'string' && node.data.initialMarking.trim() !== '') {
-                let parsedMarking: (string | number)[] = []; // Ensure parsedMarking is typed correctly
-                if (node.data.initialMarking.endsWith('.all()')) {
+                let parsedMarking: (string | number | null)[] = []; // Include null for unit tokens
+                
+                // Check for UNIT type marking: [(), (), ...]
+                const unitMatch = node.data.initialMarking.match(/^\s*\[\s*((?:\(\)\s*,?\s*)*)\s*\]\s*$/);
+                if (unitMatch) {
+                  // Count the number of () in the array
+                  const unitCount = (node.data.initialMarking.match(/\(\)/g) || []).length;
+                  // Create array of null values to represent unit tokens
+                  parsedMarking = Array(unitCount).fill(null);
+                } else if (node.data.initialMarking.endsWith('.all()')) {
                   const colorSetName = node.data.initialMarking.substring(0, node.data.initialMarking.length - '.all()'.length).trim();
                   const colorSet = state.colorSets.find(cs => cs.name === colorSetName);
 

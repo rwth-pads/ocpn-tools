@@ -145,7 +145,7 @@ export function DeclarationManager() {
   const handleSaveAdvancedColorSet = (colorSet: Omit<ColorSet, "id">) => {
     if (selectedColorSet) {
       // Check if name changed - if so, use renameColorSet to update all references
-      if (selectedColorSet.name !== colorSet.name) {
+      if (selectedColorSet.name !== colorSet.name && selectedColorSet.id) {
         renameColorSet(selectedColorSet.id, colorSet.name);
       }
       // Update the color set with all other changes

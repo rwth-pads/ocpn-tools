@@ -104,9 +104,9 @@ function DraggableInscription({
 }
 
 // Format a single token for display (handles objects/records, arrays, strings, numbers)
-function formatToken(token: unknown): string {
+function formatToken(token: unknown, isUnitType: boolean = false): string {
   if (token === null || token === undefined) {
-    return '()';
+    return isUnitType ? '•' : '()';
   } else if (token instanceof Map) {
     // Convert Map to object notation
     const entries: string[] = [];
@@ -129,15 +129,23 @@ function formatToken(token: unknown): string {
 }
 
 // Format marking for display (CPN Tools style: 1`value ++ 1`value2)
-function formatMarkingDisplay(marking: unknown[]): string {
-  return marking.map(token => `1\`${formatToken(token)}`).join('++\n');
+// For UNIT type, displays as N`• (e.g., "3`•" for 3 unit tokens)
+function formatMarkingDisplay(marking: unknown[], isUnitType: boolean = false): string {
+  if (isUnitType) {
+    // For UNIT type, show count with bullet: "3`•"
+    return `${marking.length}\`•`;
+  }
+  return marking.map(token => `1\`${formatToken(token, isUnitType)}`).join('++\n');
 }
 
 export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
   const connection = useConnection();
-  const colorSetColor = useStore((state) =>
-    state.colorSets.find((colorSet) => colorSet.name === data.colorSet)?.color || '#000000'
+  const colorSet = useStore((state) =>
+    state.colorSets.find((cs) => cs.name === data.colorSet)
   );
+  const colorSetColor = colorSet?.color || '#000000';
+  // Check if this is a UNIT type colorset
+  const isUnitType = colorSet?.type === 'basic' && colorSet?.definition?.includes('= unit;');
   const activePetriNetId = useStore((state) => state.activePetriNetId);
   const updateNodeData = useStore((state) => state.updateNodeData);
 
@@ -145,7 +153,7 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
 
   const hasMarking = data.marking && Array.isArray(data.marking) && data.marking.length > 0;
   const tokenCount = hasMarking ? data.marking.length : 0;
-  const markingDisplay = hasMarking ? formatMarkingDisplay(data.marking as unknown[]) : '';
+  const markingDisplay = hasMarking ? formatMarkingDisplay(data.marking as unknown[], isUnitType) : '';
 
   // Default offsets for inscriptions
   const colorSetOffset = data.colorSetOffset ?? { x: 0, y: 35 }; // Below the place

@@ -16,8 +16,13 @@ export interface TokenMovement {
  * Normalizes a token value, converting JavaScript Map objects to plain objects.
  * This is needed because Rhai object maps are serialized as JS Maps via serde-wasm-bindgen.
  * Keys are sorted alphabetically to ensure consistent comparison regardless of original order.
+ * Unit tokens (Rhai's `()`) are serialized as `null`/`undefined` and normalized to `null`.
  */
 function normalizeToken(token: unknown): unknown {
+  // Handle unit tokens: Rhai's () serializes as null/undefined
+  if (token === null || token === undefined) {
+    return null; // Use null as canonical representation of unit
+  }
   if (token instanceof Map) {
     // Convert Map to plain object with sorted keys
     const obj: Record<string, unknown> = {};
@@ -29,7 +34,7 @@ function normalizeToken(token: unknown): unknown {
   } else if (Array.isArray(token)) {
     // Recursively normalize array elements
     return token.map(normalizeToken);
-  } else if (token !== null && typeof token === 'object') {
+  } else if (typeof token === 'object') {
     // Recursively normalize object properties with sorted keys
     const obj: Record<string, unknown> = {};
     const sortedKeys = Object.keys(token).sort();

@@ -55,6 +55,39 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
     return <div>Invalid node type</div>;
   }
 
+  // Check if the selected colorSet is a UNIT type
+  const selectedColorSet = colorSets.find((cs) => cs.name === data.colorSet);
+  const isUnitType = selectedColorSet?.type === 'basic' && selectedColorSet?.definition?.includes('= unit;');
+
+  // Helper to parse UNIT marking to count (handles both array format and number)
+  const parseUnitMarkingCount = (marking: string): number => {
+    if (!marking) return 0;
+    const trimmed = marking.trim();
+    // If it's a number, return it directly
+    if (/^\d+$/.test(trimmed)) {
+      return parseInt(trimmed, 10);
+    }
+    // If it's an array of unit values like "[(), (), ()]", count them
+    if (trimmed.startsWith('[')) {
+      try {
+        // Count occurrences of "()" in the array
+        const matches = trimmed.match(/\(\)/g);
+        return matches ? matches.length : 0;
+      } catch {
+        return 0;
+      }
+    }
+    return 0;
+  };
+
+  // Helper to convert count to UNIT marking format
+  const countToUnitMarking = (count: number): string => {
+    if (count <= 0) return '';
+    // Create an array of N unit values: [(), (), ...]
+    const units = Array(count).fill('()').join(', ');
+    return `[${units}]`;
+  };
+
   // Helper function to get record attributes
   const getRecordAttributes = (colorSetName: string) => {
     const colorSet = colorSets.find((cs) => cs.name === colorSetName)
@@ -238,35 +271,58 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
 
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="initialMarking">Initial Marking</Label>
-        <div className="flex gap-2">
+        {isUnitType ? (
+          /* UNIT type: show simple number input */
           <Input
             id="initialMarking"
-            value={data.initialMarking || ""}
+            type="number"
+            min="0"
+            value={parseUnitMarkingCount(data.initialMarking || "")}
             onChange={(e) => {
               if (activePetriNetId) {
+                const count = parseInt(e.target.value, 10) || 0;
                 updateNodeData(activePetriNetId, id, {
                   ...data,
                   label: data.label || "",
-                  initialMarking: e.target.value,
+                  initialMarking: countToUnitMarking(count),
                   isArcMode: data.isArcMode || false,
                   type: data.type || "defaultType",
                   colorSet: data.colorSet || "defaultColorSet",
                 });
               }
-            }
-            }
-          />
-          <Button
-            variant="outline"
-            onClick={() => {
-              // Ensure data conforms to SelectedPlaceData when setting state
-              setSelectedPlace({ id, data: { ...data } });
-              setIsRecordMarkingDialogOpen(true);
             }}
-          >
-            Edit
-          </Button>
-        </div>
+          />
+        ) : (
+          /* Non-UNIT type: show text input with Edit button */
+          <div className="flex gap-2">
+            <Input
+              id="initialMarking"
+              value={data.initialMarking || ""}
+              onChange={(e) => {
+                if (activePetriNetId) {
+                  updateNodeData(activePetriNetId, id, {
+                    ...data,
+                    label: data.label || "",
+                    initialMarking: e.target.value,
+                    isArcMode: data.isArcMode || false,
+                    type: data.type || "defaultType",
+                    colorSet: data.colorSet || "defaultColorSet",
+                  });
+                }
+              }}
+            />
+            <Button
+              variant="outline"
+              onClick={() => {
+                // Ensure data conforms to SelectedPlaceData when setting state
+                setSelectedPlace({ id, data: { ...data } });
+                setIsRecordMarkingDialogOpen(true);
+              }}
+            >
+              Edit
+            </Button>
+          </div>
+        )}
       </div>
 
       {

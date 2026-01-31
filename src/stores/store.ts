@@ -435,6 +435,50 @@ const useStore = create<StoreState>((set) => ({
       { ...newFunction, id: newFunction.id ?? uuidv4() },
     ],
   })),
+  // Rename a color set and update all references (places, variables)
+  renameColorSet: (id: string, newName: string) =>
+  set((state) => {
+    // Find the old name
+    const colorSet = state.colorSets.find((cs) => cs.id === id);
+    if (!colorSet) return state;
+    
+    const oldName = colorSet.name;
+    if (oldName === newName) return state; // No change needed
+    
+    // Update the color set name
+    const updatedColorSets = state.colorSets.map((cs) =>
+      cs.id === id ? { ...cs, name: newName } : cs
+    );
+    
+    // Update all variables that reference this color set
+    const updatedVariables = state.variables.map((v) =>
+      v.colorSet === oldName ? { ...v, colorSet: newName } : v
+    );
+    
+    // Update all places in all Petri nets that reference this color set
+    const updatedPetriNetsById: typeof state.petriNetsById = {};
+    for (const [netId, petriNet] of Object.entries(state.petriNetsById)) {
+      const updatedNodes = petriNet.nodes.map((node) => {
+        if (node.type === 'place' && node.data?.colorSet === oldName) {
+          return {
+            ...node,
+            data: { ...node.data, colorSet: newName },
+          };
+        }
+        return node;
+      });
+      updatedPetriNetsById[netId] = {
+        ...petriNet,
+        nodes: updatedNodes,
+      };
+    }
+    
+    return {
+      colorSets: updatedColorSets,
+      variables: updatedVariables,
+      petriNetsById: updatedPetriNetsById,
+    };
+  }),
   // Remove a color set
   deleteColorSet: (id) =>
   set((state) => ({

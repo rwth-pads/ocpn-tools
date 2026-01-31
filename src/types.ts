@@ -65,6 +65,7 @@ export type AppActions = {
   addPriority: (newPriority: Priority) => void;
   addFunction: (newFunction: Function) => void;
   addUse: (newUse: Use) => void;
+  renameColorSet: (id: string, newName: string) => void;
   deleteColorSet: (id: string) => void;
   deleteVariable: (id: string) => void;
   deletePriority: (id: string) => void;

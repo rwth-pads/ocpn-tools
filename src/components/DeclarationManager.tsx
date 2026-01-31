@@ -30,6 +30,7 @@ export function DeclarationManager() {
   const setColorSets = useStore((state) => state.setColorSets);
   const onAddColorSet = useStore((state) => state.addColorSet);
   const onDeleteColorSet = useStore((state) => state.deleteColorSet);
+  const renameColorSet = useStore((state) => state.renameColorSet);
   const variables = useStore((state) => state.variables);
   const setVariables = useStore((state) => state.setVariables);
   const onAddVariable = useStore((state) => state.addVariable);
@@ -143,9 +144,12 @@ export function DeclarationManager() {
 
   const handleSaveAdvancedColorSet = (colorSet: Omit<ColorSet, "id">) => {
     if (selectedColorSet) {
-      // Update existing color set
+      // Check if name changed - if so, use renameColorSet to update all references
+      if (selectedColorSet.name !== colorSet.name) {
+        renameColorSet(selectedColorSet.id, colorSet.name);
+      }
+      // Update the color set with all other changes
       const updatedColorSets = colorSets.map((cs) => (cs.id === selectedColorSet.id ? { ...cs, ...colorSet } : cs))
-      //onReorderColorSets(updatedColorSets)
       setColorSets(updatedColorSets);
     } else {
       // Add new color set

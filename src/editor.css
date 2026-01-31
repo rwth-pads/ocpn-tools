@@ -143,6 +143,7 @@
   align-items: center;
   justify-content: center;
   background-color: var(--xy-node-background-color-default);
+  line-height: 1.2;
 }
 
 .cpn-node label{
@@ -210,4 +211,6 @@
   position: absolute;
   background-color: transparent;
   font-size: 9px;
+  pointer-events: auto;
+  z-index: 1000;
 }

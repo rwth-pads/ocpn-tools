@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import React, { memo } from 'react';
 import { Handle, Position, NodeResizer, useConnection } from '@xyflow/react';
 
 // Export the interface so it can be imported elsewhere
@@ -31,7 +31,12 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
         minWidth={15}
         minHeight={30}
       />
-      <label htmlFor="text" className="whitespace-pre-wrap">{data.label}</label>
+      
+      {/* Static Label */}
+      <div className="whitespace-pre-wrap leading-tight">
+        {data.label}
+      </div>
+      
       <Handle
         className="custom-handle"
         type="source"

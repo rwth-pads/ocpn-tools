@@ -253,6 +253,32 @@ const useStore = create<StoreState>((set) => ({
     });
   },
   // Update edge data
+  updateEdgeData: (petriNetId: string, id: string, newData: Record<string, unknown>) => {
+    set((state) => {
+      const petriNet = state.petriNetsById[petriNetId];
+      const updatedEdges = petriNet.edges.map((edge) =>
+        edge.id === id ? { ...edge, data: { ...edge.data, ...newData } } : edge
+      );
+
+      // Update selectedElement if it matches the updated edge
+      const updatedSelectedElement =
+        petriNet.selectedElement?.type === 'edge' && petriNet.selectedElement.element.id === id
+          ? { ...petriNet.selectedElement, element: { ...petriNet.selectedElement.element, data: { ...petriNet.selectedElement.element.data, ...newData } } }
+          : petriNet.selectedElement;
+
+      return {
+        petriNetsById: {
+          ...state.petriNetsById,
+          [petriNetId]: {
+            ...petriNet,
+            edges: updatedEdges,
+            selectedElement: updatedSelectedElement,
+          },
+        },
+      };
+    });
+  },
+  // Update edge label
   updateEdgeLabel: (petriNetId: string, id: string, newLabel: string) => {
     set((state) => {
       const petriNet = state.petriNetsById[petriNetId];

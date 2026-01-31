@@ -238,6 +238,9 @@ export function convertToJSON(data: PetriNetData): string {
             marking: place.data.marking || "",
             position: place.position,
             size: place.measured || { width: 50, height: 30 }, // Replace "measured" with "size"
+            colorSetOffset: place.data.colorSetOffset || undefined,
+            tokenCountOffset: place.data.tokenCountOffset || undefined,
+            markingOffset: place.data.markingOffset || undefined,
           })),
         transitions: petriNet.nodes
           .filter((node) => node.type === "transition")
@@ -256,6 +259,7 @@ export function convertToJSON(data: PetriNetData): string {
           target: arc.target,
           inscription: arc.label || "", // Use "inscription" instead of "label"
           isBidirectional: arc.data?.isBidirectional || false, // Include bidirectional flag
+          labelOffset: arc.data?.labelOffset || undefined, // Include label offset if set
         })),
       };
     }),
@@ -292,6 +296,9 @@ export function parseJSON(content: string): PetriNetData {
       marking?: string;
       position?: { x: number; y: number };
       size?: { width: number; height: number };
+      colorSetOffset?: { x: number; y: number };
+      tokenCountOffset?: { x: number; y: number };
+      markingOffset?: { x: number; y: number };
     }[];
     transitions: {
       id: string;
@@ -307,6 +314,8 @@ export function parseJSON(content: string): PetriNetData {
       source: string;
       target: string;
       inscription?: string;
+      isBidirectional?: boolean;
+      labelOffset?: { x: number; y: number };
     }[];
   }) => {
     const places = petriNet.places.map((place) => ({
@@ -318,6 +327,9 @@ export function parseJSON(content: string): PetriNetData {
         colorSet: place.colorSet,
         initialMarking: place.initialMarking || "",
         marking: place.marking || "",
+        colorSetOffset: place.colorSetOffset || undefined,
+        tokenCountOffset: place.tokenCountOffset || undefined,
+        markingOffset: place.markingOffset || undefined,
       },
       width: place.size?.width || 50,
       height: place.size?.height || 30,
@@ -344,6 +356,7 @@ export function parseJSON(content: string): PetriNetData {
       label: arc.inscription || "", // Map 'inscription' back to 'label'
       data: {
         isBidirectional: arc.isBidirectional || false,
+        labelOffset: arc.labelOffset || undefined,
       },
     }));
 

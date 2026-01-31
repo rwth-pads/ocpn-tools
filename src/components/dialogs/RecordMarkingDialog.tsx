@@ -10,10 +10,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PlusCircle, Trash2, Upload, Download } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
-// Define the type for values within a record
-type RecordValue = string | number | boolean
+// Define the type for values within a record (can be anything JSON-serializable)
+type RecordValue = string | number | boolean | unknown[] | Record<string, unknown>
 // Define the type for a single record object
 type RecordData = Record<string, RecordValue>
+// For multiset mode, entries can be any JSON value
+type MultisetEntry = string | number | boolean | unknown[] | Record<string, unknown>
 
 interface RecordAttribute {
   name: string
@@ -25,8 +27,8 @@ interface RecordMarkingDialogProps {
   onOpenChange: (open: boolean) => void
   colorSetName: string
   attributes: RecordAttribute[]
-  initialData: RecordData[]
-  onSave: (data: RecordData[]) => void
+  initialData: RecordData[] | MultisetEntry[]
+  onSave: (data: RecordData[] | MultisetEntry[]) => void
 }
 
 export function RecordMarkingDialog({
@@ -39,26 +41,88 @@ export function RecordMarkingDialog({
 }: RecordMarkingDialogProps) {
   const [activeTab, setActiveTab] = useState("visual")
   const [records, setRecords] = useState<RecordData[]>([])
+  const [multisetEntries, setMultisetEntries] = useState<MultisetEntry[]>([])
   const [jsonText, setJsonText] = useState("")
   const [error, setError] = useState<string | null>(null)
 
-  // Initialize records from initialData
+  // Determine if we're in record mode (named attributes) or multiset mode (generic entries)
+  const isRecordMode = attributes.length > 0
+
+  // Initialize data from initialData
   useEffect(() => {
     if (initialData && Array.isArray(initialData)) {
-      setRecords(initialData)
+      if (isRecordMode) {
+        setRecords(initialData as RecordData[])
+      } else {
+        setMultisetEntries(initialData as MultisetEntry[])
+      }
       setJsonText(JSON.stringify(initialData, null, 2))
     } else {
       setRecords([])
+      setMultisetEntries([])
       setJsonText("[]")
     }
-  }, [initialData])
+  }, [initialData, isRecordMode])
 
-  // Update JSON text when records change
+  // Update JSON text when data changes
   useEffect(() => {
     if (activeTab === "visual") {
-      setJsonText(JSON.stringify(records, null, 2))
+      const data = isRecordMode ? records : multisetEntries
+      setJsonText(JSON.stringify(data, null, 2))
     }
-  }, [records, activeTab])
+  }, [records, multisetEntries, activeTab, isRecordMode])
+
+  // === Multiset mode functions ===
+  
+  // Add a new multiset entry (default to empty string, user will edit)
+  const addMultisetEntry = () => {
+    setMultisetEntries([...multisetEntries, ""])
+  }
+
+  // Delete a multiset entry
+  const deleteMultisetEntry = (index: number) => {
+    const newEntries = [...multisetEntries]
+    newEntries.splice(index, 1)
+    setMultisetEntries(newEntries)
+  }
+
+  // Update a multiset entry - try to parse as JSON if it looks like an array/object
+  const updateMultisetEntry = (index: number, value: string) => {
+    const newEntries = [...multisetEntries]
+    
+    // Try to parse as JSON (for product types like [1, "Modellin"])
+    try {
+      if ((value.startsWith('[') && value.endsWith(']')) || 
+          (value.startsWith('{') && value.endsWith('}'))) {
+        newEntries[index] = JSON.parse(value)
+      } else if (!isNaN(Number(value)) && value.trim() !== '') {
+        // It's a number
+        newEntries[index] = Number(value)
+      } else if (value.toLowerCase() === 'true') {
+        newEntries[index] = true
+      } else if (value.toLowerCase() === 'false') {
+        newEntries[index] = false
+      } else {
+        // Keep as string
+        newEntries[index] = value
+      }
+    } catch {
+      // Keep as string if JSON parse fails
+      newEntries[index] = value
+    }
+    
+    setMultisetEntries(newEntries)
+  }
+
+  // Format a multiset entry for display in the input
+  const formatMultisetEntry = (entry: MultisetEntry): string => {
+    if (typeof entry === 'object') {
+      return JSON.stringify(entry)
+    }
+    return String(entry)
+  }
+
+  // === Record mode functions ===
 
   // Add a new empty record
   const addRecord = () => {
@@ -120,7 +184,7 @@ export function RecordMarkingDialog({
     try {
       const parsed = JSON.parse(text)
       if (!Array.isArray(parsed)) {
-        setError("JSON must be an array of records")
+        setError("JSON must be an array")
       }
     } catch {
       setError("Invalid JSON format")
@@ -130,15 +194,20 @@ export function RecordMarkingDialog({
   // Handle tab change
   const handleTabChange = (value: string) => {
     if (value === "json" && activeTab === "visual") {
-      setJsonText(JSON.stringify(records, null, 2))
+      const data = isRecordMode ? records : multisetEntries
+      setJsonText(JSON.stringify(data, null, 2))
     } else if (value === "visual" && activeTab === "json") {
       try {
         const parsed = JSON.parse(jsonText)
         if (Array.isArray(parsed)) {
-          setRecords(parsed as RecordData[])
+          if (isRecordMode) {
+            setRecords(parsed as RecordData[])
+          } else {
+            setMultisetEntries(parsed as MultisetEntry[])
+          }
           setError(null)
         } else {
-          setError("JSON must be an array of records")
+          setError("JSON must be an array")
         }
       } catch {
         setError("Invalid JSON format")
@@ -153,16 +222,17 @@ export function RecordMarkingDialog({
       try {
         const parsed = JSON.parse(jsonText)
         if (Array.isArray(parsed)) {
-          onSave(parsed as RecordData[])
+          onSave(parsed)
           onOpenChange(false)
         } else {
-          setError("JSON must be an array of records")
+          setError("JSON must be an array")
         }
       } catch {
         setError("Invalid JSON format")
       }
     } else {
-      onSave(records)
+      const data = isRecordMode ? records : multisetEntries
+      onSave(data)
       onOpenChange(false)
     }
   }
@@ -178,12 +248,16 @@ export function RecordMarkingDialog({
       try {
         const parsed = JSON.parse(content)
         if (Array.isArray(parsed)) {
-          setRecords(parsed as RecordData[])
+          if (isRecordMode) {
+            setRecords(parsed as RecordData[])
+          } else {
+            setMultisetEntries(parsed as MultisetEntry[])
+          }
           setJsonText(JSON.stringify(parsed, null, 2))
           setActiveTab("visual")
           setError(null)
         } else {
-          setError("Uploaded file must contain an array of records")
+          setError("Uploaded file must contain an array")
         }
       } catch {
         try {
@@ -242,14 +316,16 @@ export function RecordMarkingDialog({
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <div className="space-x-2">
-              <Button variant="outline" size="sm" onClick={addRecord}>
+              <Button variant="outline" size="sm" onClick={isRecordMode ? addRecord : addMultisetEntry}>
                 <PlusCircle className="h-4 w-4 mr-2" />
-                Add Record
+                {isRecordMode ? "Add Record" : "Add Entry"}
               </Button>
-              <Button variant="outline" size="sm" onClick={generateCsvTemplate}>
-                <Download className="h-4 w-4 mr-2" />
-                CSV Template
-              </Button>
+              {isRecordMode && (
+                <Button variant="outline" size="sm" onClick={generateCsvTemplate}>
+                  <Download className="h-4 w-4 mr-2" />
+                  CSV Template
+                </Button>
+              )}
             </div>
             <div className="flex items-center space-x-2">
               <Input type="file" id="file-upload" className="hidden" accept=".json,.csv" onChange={handleFileUpload} />
@@ -276,43 +352,70 @@ export function RecordMarkingDialog({
               <TabsTrigger value="json">JSON Editor</TabsTrigger>
             </TabsList>
             <TabsContent value="visual" className="space-y-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {attributes.map((attr) => (
-                      <TableHead key={attr.name}>{attr.name}</TableHead>
-                    ))}
-                    <TableHead className="w-[80px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {records.length === 0 ? (
+              {isRecordMode ? (
+                // Record mode: table with named columns
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={attributes.length + 1} className="text-center">
-                        No records. Click "Add Record" to create one.
-                      </TableCell>
+                      {attributes.map((attr) => (
+                        <TableHead key={attr.name}>{attr.name}</TableHead>
+                      ))}
+                      <TableHead className="w-[80px]">Actions</TableHead>
                     </TableRow>
-                  ) : (
-                    records.map((record, index) => (
-                      <TableRow key={index}>
-                        {attributes.map((attr) => (
-                          <TableCell key={`${index}-${attr.name}`}>
-                            <Input
-                              value={record[attr.name]?.toString() ?? ""}
-                              onChange={(e) => updateRecord(index, attr.name, parseValue(e.target.value, attr.type))}
-                            />
-                          </TableCell>
-                        ))}
-                        <TableCell>
-                          <Button variant="ghost" size="icon" onClick={() => deleteRecord(index)} className="h-8 w-8">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                  </TableHeader>
+                  <TableBody>
+                    {records.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={attributes.length + 1} className="text-center">
+                          No records. Click "Add Record" to create one.
                         </TableCell>
                       </TableRow>
+                    ) : (
+                      records.map((record, index) => (
+                        <TableRow key={index}>
+                          {attributes.map((attr) => (
+                            <TableCell key={`${index}-${attr.name}`}>
+                              <Input
+                                value={record[attr.name]?.toString() ?? ""}
+                                onChange={(e) => updateRecord(index, attr.name, parseValue(e.target.value, attr.type))}
+                              />
+                            </TableCell>
+                          ))}
+                          <TableCell>
+                            <Button variant="ghost" size="icon" onClick={() => deleteRecord(index)} className="h-8 w-8">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              ) : (
+                // Multiset mode: simple list of entries
+                <div className="space-y-2">
+                  {multisetEntries.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-4">
+                      No entries. Click "Add Entry" to create one.
+                    </div>
+                  ) : (
+                    multisetEntries.map((entry, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground w-8 text-right">{index + 1}.</span>
+                        <Input
+                          className="flex-1 font-mono"
+                          value={formatMultisetEntry(entry)}
+                          onChange={(e) => updateMultisetEntry(index, e.target.value)}
+                          placeholder="e.g., [1, &quot;Modellin&quot;] or 42 or &quot;text&quot;"
+                        />
+                        <Button variant="ghost" size="icon" onClick={() => deleteMultisetEntry(index)} className="h-8 w-8">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     ))
                   )}
-                </TableBody>
-              </Table>
+                </div>
+              )}
             </TabsContent>
             <TabsContent value="json">
               <div className="space-y-2">

@@ -36,7 +36,7 @@ export default function App() {
                 </ReactFlowProvider>
               </ResizablePanel>
               <ResizableHandle />
-              <ResizablePanel defaultSize={30}>
+              <ResizablePanel defaultSize={0} collapsedSize={0} collapsible minSize={10}>
                 <ObjectEvolutionPanel simulationTimeRange={simulationTimeRange}/>
               </ResizablePanel>
             </ResizablePanelGroup>

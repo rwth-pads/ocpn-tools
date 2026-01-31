@@ -1,7 +1,7 @@
 import useStore from '@/stores/store';
 
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 const ArcProperties = () => {
   const activePetriNetId = useStore((state) => state.activePetriNetId);
@@ -26,9 +26,11 @@ const ArcProperties = () => {
     <div className="space-y-4">
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="inscription">Inscription</Label>
-        <Input
+        <Textarea
           id="inscription"
           value={label as string ?? ""}
+          rows={3}
+          className="font-mono text-sm"
           onChange={(e) => {
             if (activePetriNetId) {
               updateEdgeLabel(activePetriNetId, id, e.target.value)

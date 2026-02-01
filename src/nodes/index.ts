@@ -12,10 +12,10 @@ export const initialNodes = [
   {
     id: 'b',
     type: 'transition',
-    position: { x: -100, y: 100 },
-    width: 50,
+    position: { x: -110, y: 100 },
+    width: 70,
     height: 30,
-    data: { label: 'transition', guard: '', time: '', priority: '', codeSegment: '' },
+    data: { label: 'transition', guard: 'var1>4', time: '', priority: '', codeSegment: '' },
   },
   {
     id: 'c',

@@ -46,14 +46,102 @@ For legacy reasons, we also support the Standard ML notation used in CPN Tools:
 
 ### Color Sets
 Define the types of tokens that can be used in your Petri Net:
-- Basic types: INT, BOOL, STRING
-- Compound types: lists, records, products
+- **Basic types**: `UNIT`, `INT`, `BOOL`, `STRING`
+- **Record types**: Structured objects with named fields
+- **Product types**: Tuples of values
+
+#### UNIT Color Set
+The `UNIT` color set represents anonymous tokens (like classical Petri Nets). These are displayed as bullets (•) in places. Use UNIT for resources that don't need individual identity, like generic capacity tokens.
+
+#### Record Color Sets for Object Types
+For object-centric process mining, define record types with an `id` field:
+
+```
+colset Aircraft = record id: INT * typeCode: STRING * airline: STRING * carrierType: STRING;
+colset Gate = record id: INT;
+colset FuelTruck = record id: INT;
+```
+
+**Important**: The `id` field is used to uniquely identify objects in OCEL 2.0 exports. Without an `id` field, objects cannot be properly tracked across events.
 
 ### Variables
 Define variables that can be used in arc inscriptions and guards.
 
+```
+ac : Aircraft
+gate : Gate
+ft : FuelTruck
+```
+
 ### Functions
-Define ML functions that can be used in your Petri Net.
+Define Rhai functions that can be used in your Petri Net.
+
+## Rhai Scripting Language
+
+OCPN Tools uses [Rhai](https://rhai.rs/) as its scripting language for guards, arc inscriptions, and functions.
+
+### Basic Syntax
+
+```rhai
+// Variables and arithmetic
+let x = 5;
+let y = x + 10;
+
+// Conditionals
+if x > 3 { "big" } else { "small" }
+
+// Functions
+fn double(n) { n * 2 }
+```
+
+### Record Access (Dot Syntax)
+
+Access record fields using dot notation:
+
+```rhai
+// Given: ac is an Aircraft with fields id, typeCode, airline, carrierType
+
+ac.id           // Access the id field
+ac.airline      // Access the airline field
+ac.carrierType  // Access the carrierType field
+
+// Use in guards:
+ac.carrierType == "full"    // Check if carrier is full-service
+ac.airline == "LH"          // Check if airline is Lufthansa
+```
+
+### Guards
+
+Guards are boolean expressions that control when a transition can fire:
+
+```rhai
+// Simple comparison
+ac.carrierType == "full"
+
+// Multiple conditions with AND
+ac.carrierType == "full" && ac.airline == "LH"
+
+// Multiple conditions with OR
+ac.carrierType == "low" || ac.airline == "FR"
+
+// Numeric comparisons
+order.quantity > 10
+```
+
+### Arc Inscriptions
+
+Arc inscriptions define which tokens are consumed or produced:
+
+```rhai
+// Simple variable (consume/produce a token bound to ac)
+ac
+
+// UNIT token literal
+()
+
+// Conditional expression
+if order.priority == "high" { fastTrack } else { normalQueue }
+```
 
 ## Code Expressions
 
@@ -75,11 +163,88 @@ You can even use a ternary expression like this:
 ✅ if y < 2 { 5 } else { 10 }
 ```
 
+## Simulation
+
+### Running Simulations
+
+1. Switch to the **Simulation** tab
+2. Click **Step** to execute one transition at a time
+3. Click **Run** to execute multiple steps automatically
+4. Use **Reset** to return to the initial marking
+
+### Event Log
+
+The simulation records all transition firings in the Event Log:
+- Each event shows consumed and produced tokens
+- UNIT tokens are displayed as bullets (•)
+- Expand an event to see full token details
+
+## OCEL 2.0 Export
+
+Export your simulation as an Object-Centric Event Log (OCEL 2.0) for process mining analysis.
+
+### How It Works
+
+1. Run a simulation to generate events
+2. Click **Export as OCEL 2.0**
+3. Choose JSON format
+
+### Object Types and IDs
+
+**Critical**: For proper OCEL 2.0 export, your record color sets should have an `id` field:
+
+```
+colset Order = record id: INT * customer: STRING * amount: INT;
+```
+
+- The `id` field becomes the unique object identifier
+- Other fields become object attributes
+- Objects are tracked across events automatically
+
+### Object Type Prefixes
+
+To avoid ID collisions between different object types, exported object IDs are prefixed with the type name:
+
+| Color Set | Token | OCEL Object ID |
+|-----------|-------|----------------|
+| Aircraft  | `{id: 1, ...}` | `aircraft_1` |
+| Gate      | `{id: 2}` | `gate_2` |
+| FuelTruck | `{id: 1}` | `fueltruck_1` |
+
+### Event Relationships with Qualifiers
+
+Each event records which objects were involved, with qualifiers indicating the object type:
+
+```json
+{
+  "id": "e5",
+  "type": "Fueling Start",
+  "relationships": [
+    { "objectId": "aircraft_3", "qualifier": "aircraft" },
+    { "objectId": "fueltruck_1", "qualifier": "fueltruck" }
+  ]
+}
+```
+
+### What Gets Exported
+
+| OCPN Element | OCEL 2.0 Element |
+|--------------|------------------|
+| Record Color Sets | Object Types |
+| Record tokens with `id` | Objects |
+| Transitions | Event Types |
+| Transition firings | Events |
+| Record fields (except id) | Object Attributes |
+
+**Note**: UNIT color sets and basic types (INT, STRING, BOOL) are not exported as object types since they don't represent trackable objects.
+
 ## Tips and Tricks
 
 - Use the layout tools to automatically arrange your Petri Net
 - Save your work frequently using the save button
 - Use the AI Assistant for help with specific modeling questions
+- For object-centric modeling, always include an `id` field in your record types
+- Use meaningful names for transitions—they become event types in OCEL exports
 
 ## Migration Guide
 
@@ -87,3 +252,14 @@ After importing a CPN in the .cpn format of CPN Tools, some manual adjustments a
 
 - Guards like `[items = doSomething(order)]` need to be changed to `items = doSomething(order)` (remove the square brackets)
 - Functions need to be translated from Standard ML to Rhai (a scripting language embeddable to Rust). We recommend either doing that manually or with the help of an LLM like ChatGPT. The recommended prompt is `Please turn this Standard ML into Rhai script (Rust embedded): fun doo(x: INT): INT = x+1;`. The outcome can be pasted into the function editor of OCPN Tools.
+
+### Standard ML to Rhai Conversion Examples
+
+| Standard ML | Rhai |
+|-------------|------|
+| `fun f(x) = x + 1` | `fn f(x) { x + 1 }` |
+| `if x > 0 then a else b` | `if x > 0 { a } else { b }` |
+| `#field record` | `record.field` |
+| `hd list` | `list[0]` |
+| `tl list` | `list.split(1).1` |
+| `length list` | `list.len()` |

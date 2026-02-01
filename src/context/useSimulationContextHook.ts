@@ -5,10 +5,16 @@ import type { SimulationEvent } from '@/components/EventLog';
 // Ensure this matches exactly what useSimulationController returns
 export type SimulationContextType = {
   runStep: () => Promise<void>;
+  runMultipleStepsAnimated: (steps: number, delayMs?: number) => Promise<void>;
+  runMultipleStepsFast: (steps: number) => Promise<void>;
+  stop: () => void;
+  fireTransition: (transitionId: string) => Promise<void>;
+  getEnabledTransitions: () => Promise<Array<{ transitionId: string; transitionName: string }>>;
   reset: () => Promise<void>;
   events: SimulationEvent[];
   clearEvents: () => void;
   isInitialized: boolean;
+  isRunning: boolean;
   simulationTime: number;
   stepCounter: number;
   ensureInitialized: () => Promise<void>;

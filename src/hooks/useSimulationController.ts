@@ -80,6 +80,8 @@ export function useSimulationController() {
   const wasmRef = useRef<InitOutput | null>(null); // Initialize as null
   const wasmSimulatorRef = useRef<WasmSimulator | null>(null);
   const [isInitialized, setIsInitialized] = useState(false); // Track initialization
+  const [isRunning, setIsRunning] = useState(false); // Track if simulation is running
+  const stopRequestedRef = useRef(false); // Flag to request stop
   const [events, setEvents] = useState<SimulationEvent[]>([]); // State for simulation events
   const [stepCounter, setStepCounter] = useState(0); // State for step counter
   const [simulationTime, setSimulationTime] = useState(0.0); // State for simulation time
@@ -414,9 +416,126 @@ export function useSimulationController() {
     _executeWasmStep(); // Execute the core step logic
   };
 
+  // Function to run multiple steps with intermediate markings (animated)
+  const runMultipleStepsAnimated = async (steps: number, delayMs: number = 50) => {
+    if (isRunning) return; // Prevent concurrent runs
+    
+    setIsRunning(true);
+    stopRequestedRef.current = false;
+    
+    try {
+      await ensureInitialized();
+      for (let i = 0; i < steps; i++) {
+        if (stopRequestedRef.current) {
+          console.log("Simulation stopped by user");
+          break;
+        }
+        _executeWasmStep();
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  // Function to run multiple steps without intermediate markings (fast)
+  const runMultipleStepsFast = async (steps: number) => {
+    if (isRunning) return; // Prevent concurrent runs
+    
+    setIsRunning(true);
+    stopRequestedRef.current = false;
+    
+    try {
+      await ensureInitialized();
+      if (wasmSimulatorRef.current) {
+        // Check if the WASM simulator has the runMultipleSteps method
+        const simulator = wasmSimulatorRef.current as unknown as {
+          runMultipleSteps?: (steps: number) => unknown[];
+        };
+        
+        if (typeof simulator.runMultipleSteps === 'function') {
+          // Use batch execution - events are returned as an array
+          const results = simulator.runMultipleSteps(steps);
+          
+          // Process all results to update the UI state
+          if (Array.isArray(results)) {
+            for (const eventData of results) {
+              if (eventData && typeof eventData === 'object') {
+                // Process each event through the event handler
+                handleWasmEvent(eventData as {
+                  transitionId: string;
+                  time: number;
+                  consumed?: Map<string, number[]>;
+                  produced?: Map<string, number[]>;
+                });
+              }
+            }
+          }
+        } else {
+          // Fallback: run steps one by one without delay
+          for (let i = 0; i < steps; i++) {
+            if (stopRequestedRef.current) break;
+            _executeWasmStep();
+          }
+        }
+      }
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  // Function to stop an ongoing simulation
+  const stop = () => {
+    console.log("Stop requested");
+    stopRequestedRef.current = true;
+  };
+
+  // Function to fire a specific transition by ID
+  const fireTransition = async (transitionId: string) => {
+    await ensureInitialized();
+    if (wasmSimulatorRef.current) {
+      const simulator = wasmSimulatorRef.current as unknown as {
+        fireTransition?: (transitionId: string) => unknown;
+      };
+      
+      if (typeof simulator.fireTransition === 'function') {
+        try {
+          const result = simulator.fireTransition(transitionId);
+          console.log(`Fire transition ${transitionId} result:`, result);
+          // Event handling happens via the event listener callback
+        } catch (error) {
+          console.error(`Error firing transition ${transitionId}:`, error);
+        }
+      } else {
+        console.warn("fireTransition method not available in WASM simulator");
+      }
+    }
+  };
+
+  // Function to get enabled transitions
+  const getEnabledTransitions = async (): Promise<Array<{ transitionId: string; transitionName: string }>> => {
+    await ensureInitialized();
+    if (wasmSimulatorRef.current) {
+      const simulator = wasmSimulatorRef.current as unknown as {
+        getEnabledTransitions?: () => Array<{ transitionId: string; transitionName: string }>;
+      };
+      
+      if (typeof simulator.getEnabledTransitions === 'function') {
+        try {
+          return simulator.getEnabledTransitions();
+        } catch (error) {
+          console.error("Error getting enabled transitions:", error);
+        }
+      }
+    }
+    return [];
+  };
+
   // Function to reset the simulation
   const reset = async () => {
     //console.log("Resetting simulation...");
+    stopRequestedRef.current = true; // Stop any ongoing simulation
+    setIsRunning(false);
     setStepCounter(0); // Reset step counter state
     setSimulationTime(0.0); // Reset simulation time state
     setEvents([]); // Reset events state
@@ -431,5 +550,21 @@ export function useSimulationController() {
   }
 
   // Return the state and functions needed by UI components
-  return { runStep, reset, events, clearEvents, isInitialized, simulationTime, stepCounter, ensureInitialized, _executeWasmStep };
+  return { 
+    runStep, 
+    runMultipleStepsAnimated,
+    runMultipleStepsFast,
+    stop,
+    fireTransition,
+    getEnabledTransitions,
+    reset, 
+    events, 
+    clearEvents, 
+    isInitialized, 
+    isRunning,
+    simulationTime, 
+    stepCounter, 
+    ensureInitialized, 
+    _executeWasmStep 
+  };
 }

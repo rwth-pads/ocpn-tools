@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Trash2, GripVertical, Edit, ChevronRight, ChevronDown } from "lucide-react"
+import { Trash2, GripVertical, Edit, ChevronRight, ChevronDown, Clock } from "lucide-react"
 import { AdvancedColorSetEditor } from "@/components/AdvancedColorSetEditor";
 import { VariableEditor } from '@/components/VariableEditor';
 import { PriorityEditor } from "@/components/PriorityEditor";
@@ -315,8 +315,13 @@ export function DeclarationManager() {
                         <GripVertical className="h-4 w-4 text-muted-foreground" />
                       </div>
                       <div className="font-mono text-sm">
-                        {cs.definition}
+                        {cs.definition.replace(/^colset\s+/i, '').replace(/;$/, '')}
                       </div>
+                      {cs.timed && (
+                        <span title="Timed color set">
+                          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center">
                       <div

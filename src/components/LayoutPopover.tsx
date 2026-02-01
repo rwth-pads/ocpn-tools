@@ -7,6 +7,7 @@ import { Slider } from "@/components/ui/slider"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Network, ArrowDown, ArrowRight } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 export interface LayoutOptions {
   algorithm: "dagre" | "elk"
@@ -36,11 +37,23 @@ export function LayoutPopover({ onApplyLayout }: LayoutPopoverProps) {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" title="Layout">
-          <Network className="h-5 w-5" />
-        </Button>
-      </PopoverTrigger>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Network className="h-5 w-5" />
+                  <span className="sr-only">Layout</span>
+                </Button>
+              </PopoverTrigger>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Layout Options</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <PopoverContent className="w-80">
         <div className="space-y-4">
           <h4 className="font-medium">Layout Options</h4>

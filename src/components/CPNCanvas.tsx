@@ -73,6 +73,8 @@ const selector = (state: StoreState) => ({
   priorities: state.priorities,
   functions: state.functions,
   uses: state.uses,
+  simulationEpoch: state.simulationEpoch,
+  setSimulationEpoch: state.setSimulationEpoch,
   createPetriNet: state.createPetriNet,
   setActivePetriNet: state.setActivePetriNet,
   setNodes: state.setNodes,
@@ -116,6 +118,8 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     priorities,
     functions,
     uses,
+    simulationEpoch,
+    setSimulationEpoch,
     createPetriNet,
     setActivePetriNet,
     setNodes,
@@ -169,6 +173,23 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       if (data.priorities) setPriorities(data.priorities);
       if (data.functions) setFunctions(data.functions);
       if (data.uses) setUses(data.uses);
+      
+      // Restore simulation settings if available
+      if (data.simulationSettings) {
+        // Restore simulation epoch
+        if (data.simulationSettings.simulationEpoch !== undefined) {
+          setSimulationEpoch(data.simulationSettings.simulationEpoch);
+        }
+        // Restore simulation config (stepsPerRun, animationDelayMs)
+        if (simulationContext?.setSimulationConfig) {
+          const currentConfig = simulationContext.simulationConfig;
+          simulationContext.setSimulationConfig({
+            ...currentConfig,
+            stepsPerRun: data.simulationSettings.stepsPerRun ?? currentConfig.stepsPerRun,
+            animationDelayMs: data.simulationSettings.animationDelayMs ?? currentConfig.animationDelayMs,
+          });
+        }
+      }
 
       // If we imported a JSON file, layout the graph
       if (fileName.endsWith('.json')) {
@@ -222,6 +243,12 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       priorities,
       functions,
       uses,
+      // Include simulation settings for JSON/OCPN format
+      simulationSettings: {
+        stepsPerRun: simulationContext?.simulationConfig?.stepsPerRun,
+        animationDelayMs: simulationContext?.simulationConfig?.animationDelayMs,
+        simulationEpoch: simulationEpoch,
+      },
     }
 
     switch (format) {

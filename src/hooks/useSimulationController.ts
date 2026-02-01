@@ -108,7 +108,9 @@ export function useSimulationController() {
   // Stable callback: Dependencies are stable functions/setters
   const handleWasmEvent = useCallback((eventData: {
     transitionId: string;
-    time: number; // Assuming WASM provides time
+    transitionName?: string;
+    simulationTime?: bigint | number; // New field from WASM (i64 = bigint)
+    time?: number; // Legacy field - may be removed
     consumed?: Map<string, number[]>; // Use any[] for tokens from WASM
     produced?: Map<string, number[]> // Use any[] for tokens from WASM
   }) => {
@@ -236,11 +238,16 @@ export function useSimulationController() {
         return eventStepNumber;     // Update state to the new step number
     });
 
+    // Extract simulation time - handle both bigint (new) and number (legacy) formats
+    const simTime = eventData.simulationTime !== undefined 
+      ? Number(eventData.simulationTime) 
+      : (eventData.time ?? 0);
+
     // Construct the new event object
     const newEvent: SimulationEvent = {
       id: uuidv4(), // Generate unique ID
       step: eventStepNumber, // Use the *incremented* step number for this event
-      time: eventData.time, // Time from WASM event
+      time: simTime, // Time from WASM event (converted from bigint ms)
       transitionId: eventData.transitionId,
       transitionName: transitionName, // Use validated name (label)
       tokens: {
@@ -253,7 +260,7 @@ export function useSimulationController() {
     // Update the local events state for the EventLog component
     setEvents(prevEvents => [...prevEvents, newEvent]);
     // Update the simulation time state
-    setSimulationTime(eventData.time);
+    setSimulationTime(simTime);
 
   // Keep dependencies stable: only include functions/setters
   }, [updateNodeMarking, findNodeById, setStepCounter, setEvents, setSimulationTime]);

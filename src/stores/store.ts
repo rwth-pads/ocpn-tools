@@ -26,6 +26,8 @@ const emptyState: AppState = {
   priorities: [],
   functions: [],
   uses: [],
+  simulationEpoch: null,
+  showMarkingDisplay: true,
 }
 
 export type StoreState = AppState & AppActions;
@@ -52,6 +54,8 @@ const useStore = create<StoreState>((set) => ({
   priorities: initialPriorities,
   functions: initialFunctions,
   uses: [],
+  simulationEpoch: null,
+  showMarkingDisplay: true,
 
   // Actions
   setNodes: (petriNetId: string, nodes: Node[]) => {
@@ -581,6 +585,16 @@ const useStore = create<StoreState>((set) => ({
       ])
     ),
   })),
+
+  setSimulationEpoch: (epoch: string | null) =>
+    set(() => ({
+      simulationEpoch: epoch,
+    })),
+
+  setShowMarkingDisplay: (show: boolean) =>
+    set(() => ({
+      showMarkingDisplay: show,
+    })),
 
   reset: () => {
     set(emptyState);

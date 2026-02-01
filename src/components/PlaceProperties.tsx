@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 
 import { RecordMarkingDialog } from '@/components/dialogs/RecordMarkingDialog';
+import { TimedMarkingDialog, TimedToken } from '@/components/dialogs/TimedMarkingDialog';
 import { ColorSet } from '@/declarations';
 
 // Define the type for the values within a parsed record
@@ -31,6 +32,7 @@ interface SelectedPlace {
 
 const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
   const [isRecordMarkingDialogOpen, setIsRecordMarkingDialogOpen] = useState(false);
+  const [isTimedMarkingDialogOpen, setIsTimedMarkingDialogOpen] = useState(false);
   // Use the specific type for the selectedPlace state
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
 
@@ -58,6 +60,53 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
   // Check if the selected colorSet is a UNIT type
   const selectedColorSet = colorSets.find((cs) => cs.name === data.colorSet);
   const isUnitType = selectedColorSet?.type === 'basic' && selectedColorSet?.definition?.includes('= unit;');
+  // Check if the selected colorSet is timed
+  const isTimed = selectedColorSet?.timed === true;
+
+  // Determine the base type of the colorset for timed marking editor
+  const getColorSetBaseType = (): 'int' | 'bool' | 'string' | 'unit' | 'other' => {
+    if (!selectedColorSet) return 'other';
+    const def = selectedColorSet.definition?.toLowerCase() || '';
+    if (def.includes('= unit')) return 'unit';
+    if (def.includes('= int')) return 'int';
+    if (def.includes('= bool')) return 'bool';
+    if (def.includes('= string')) return 'string';
+    return 'other';
+  };
+
+  // Parse timed marking string to TimedToken array
+  const parseTimedMarking = (marking: string): TimedToken[] => {
+    if (!marking) return [];
+    try {
+      const parsed = JSON.parse(marking);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => {
+          if (typeof item === 'object' && item !== null && 'value' in item && 'timestamp' in item) {
+            return { value: item.value, timestamp: Number(item.timestamp) || 0 };
+          }
+          // If it's a simple value, wrap it with timestamp 0
+          return { value: item, timestamp: 0 };
+        });
+      }
+    } catch {
+      // Try to parse as simple array and add default timestamps
+      try {
+        const simpleArray = JSON.parse(marking);
+        if (Array.isArray(simpleArray)) {
+          return simpleArray.map((v) => ({ value: v, timestamp: 0 }));
+        }
+      } catch {
+        // Fall through
+      }
+    }
+    return [];
+  };
+
+  // Format TimedToken array to marking string
+  const formatTimedMarking = (tokens: TimedToken[]): string => {
+    if (tokens.length === 0) return '';
+    return JSON.stringify(tokens.map((t) => ({ value: t.value, timestamp: t.timestamp })));
+  };
 
   // Helper to parse UNIT marking to count (handles both array format and number)
   const parseUnitMarkingCount = (marking: string): number => {
@@ -271,8 +320,8 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
 
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="initialMarking">Initial Marking</Label>
-        {isUnitType ? (
-          /* UNIT type: show simple number input */
+        {isUnitType && !isTimed ? (
+          /* UNIT type (non-timed): show simple number input */
           <Input
             id="initialMarking"
             type="number"
@@ -292,66 +341,103 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
               }
             }}
           />
+        ) : isTimed ? (
+          /* Timed colorset: show token count summary with Edit button */
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2 items-center">
+              <div className="flex-1 text-sm text-muted-foreground border rounded-md px-3 py-2 bg-muted/30">
+                {parseTimedMarking(data.initialMarking || "").length} timed token(s)
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedPlace({ id, data: { ...data } });
+                  setIsTimedMarkingDialogOpen(true);
+                }}
+              >
+                Edit
+              </Button>
+            </div>
+          </div>
         ) : (
-          /* Non-UNIT type: show text input with Edit button */
-          <div className="flex gap-2">
-            <Input
-              id="initialMarking"
-              value={data.initialMarking || ""}
-              onChange={(e) => {
-                if (activePetriNetId) {
-                  updateNodeData(activePetriNetId, id, {
-                    ...data,
-                    label: data.label || "",
-                    initialMarking: e.target.value,
-                    isArcMode: data.isArcMode || false,
-                    type: data.type || "defaultType",
-                    colorSet: data.colorSet || "defaultColorSet",
-                  });
-                }
-              }}
-            />
-            <Button
-              variant="outline"
-              onClick={() => {
-                // Ensure data conforms to SelectedPlaceData when setting state
-                setSelectedPlace({ id, data: { ...data } });
-                setIsRecordMarkingDialogOpen(true);
-              }}
-            >
-              Edit
-            </Button>
+          /* Non-UNIT, non-timed type: show text input with Edit button */
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <Input
+                id="initialMarking"
+                value={data.initialMarking || ""}
+                placeholder="e.g., [1, 2, 3]"
+                onChange={(e) => {
+                  if (activePetriNetId) {
+                    updateNodeData(activePetriNetId, id, {
+                      ...data,
+                      label: data.label || "",
+                      initialMarking: e.target.value,
+                      isArcMode: data.isArcMode || false,
+                      type: data.type || "defaultType",
+                      colorSet: data.colorSet || "defaultColorSet",
+                    });
+                  }
+                }}
+              />
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedPlace({ id, data: { ...data } });
+                  setIsRecordMarkingDialogOpen(true);
+                }}
+              >
+                Edit
+              </Button>
+            </div>
           </div>
         )}
       </div>
 
-      {
-        selectedPlace && (
+      {selectedPlace && (
+        <>
           <RecordMarkingDialog
             open={isRecordMarkingDialogOpen}
             onOpenChange={setIsRecordMarkingDialogOpen}
-            // Access properties safely using optional chaining or ensure selectedPlace is not null
             colorSetName={selectedPlace.data?.colorSet || ""}
             attributes={getRecordAttributes(selectedPlace.data?.colorSet || "")}
             initialData={parseInitialMarking(selectedPlace.data?.initialMarking || "")}
             onSave={(records) => {
               const formattedMarking = formatRecordMarking(records);
-              // Ensure selectedPlace is not null before accessing its properties
               if (activePetriNetId && selectedPlace) {
-                // Ensure all required fields for PlaceNodeData are provided
                 updateNodeData(activePetriNetId, selectedPlace.id, {
                   label: selectedPlace.data.label || "",
                   isArcMode: selectedPlace.data.isArcMode || false,
-                  type: selectedPlace.data.type || "place", // Assuming 'place' type for PlaceNode
+                  type: selectedPlace.data.type || "place",
                   colorSet: selectedPlace.data.colorSet || "INT",
                   initialMarking: formattedMarking,
-                  marking: formattedMarking // Add the missing 'marking' property
+                  marking: formattedMarking
                 });
               }
             }}
           />
-        )
-      }
+          <TimedMarkingDialog
+            open={isTimedMarkingDialogOpen}
+            onOpenChange={setIsTimedMarkingDialogOpen}
+            colorSetName={selectedPlace.data?.colorSet || ""}
+            colorSetType={getColorSetBaseType()}
+            initialData={parseTimedMarking(selectedPlace.data?.initialMarking || "")}
+            onSave={(tokens) => {
+              const formattedMarking = formatTimedMarking(tokens);
+              if (activePetriNetId && selectedPlace) {
+                updateNodeData(activePetriNetId, selectedPlace.id, {
+                  label: selectedPlace.data.label || "",
+                  isArcMode: selectedPlace.data.isArcMode || false,
+                  type: selectedPlace.data.type || "place",
+                  colorSet: selectedPlace.data.colorSet || "INT",
+                  initialMarking: formattedMarking,
+                  marking: formattedMarking
+                });
+              }
+            }}
+          />
+        </>
+      )}
 
     </div>
   );

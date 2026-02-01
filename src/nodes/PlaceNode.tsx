@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Handle, Position, NodeResizer, useConnection, useReactFlow } from '@xyflow/react';
 import useStore from '@/stores/store'; // Import Zustand store
+import { isTimedToken } from '@/types';
 
 // Export the interface so it can be imported elsewhere
 export interface PlaceNodeData {
@@ -9,7 +10,7 @@ export interface PlaceNodeData {
   type: string;
   colorSet: string;
   initialMarking: string;
-  marking: unknown[]; // Array of tokens (can be primitives, arrays for products, or objects for records)
+  marking: unknown[]; // Array of tokens (can be plain values or TimedToken objects)
   // Offset positions for draggable inscriptions
   colorSetOffset?: { x: number; y: number };
   tokenCountOffset?: { x: number; y: number };
@@ -103,23 +104,27 @@ function DraggableInscription({
   );
 }
 
-// Format a single token for display (handles objects/records, arrays, strings, numbers)
-function formatToken(token: unknown, isUnitType: boolean = false): string {
+// Format a single token value for display (handles objects/records, arrays, strings, numbers)
+function formatTokenValue(token: unknown, isUnitType: boolean = false): string {
   if (token === null || token === undefined) {
     return isUnitType ? '•' : '()';
   } else if (token instanceof Map) {
     // Convert Map to object notation
     const entries: string[] = [];
     token.forEach((value, key) => {
-      entries.push(`${key}=${formatToken(value)}`);
+      entries.push(`${key}=${formatTokenValue(value)}`);
     });
     return `{${entries.join(', ')}}`; 
   } else if (Array.isArray(token)) {
     // Product/tuple type
-    return `(${token.map(t => formatToken(t)).join(',')})`; 
+    return `(${token.map(t => formatTokenValue(t)).join(',')})`; 
   } else if (typeof token === 'object') {
+    // Check if it's a timed token - don't format the wrapper, just the value
+    if (isTimedToken(token)) {
+      return formatTokenValue(token.value, isUnitType);
+    }
     // Plain object (record type)
-    const entries = Object.entries(token).map(([k, v]) => `${k}=${formatToken(v)}`);
+    const entries = Object.entries(token).map(([k, v]) => `${k}=${formatTokenValue(v)}`);
     return `{${entries.join(', ')}}`; 
   } else if (typeof token === 'string') {
     return `"${token}"`;
@@ -128,15 +133,67 @@ function formatToken(token: unknown, isUnitType: boolean = false): string {
   }
 }
 
-// Format marking for display (CPN Tools style: 1`value ++ 1`value2)
-// For UNIT type, displays as N`• (e.g., "3`•" for 3 unit tokens)
-function formatMarkingDisplay(marking: unknown[], isUnitType: boolean = false): string {
-  if (isUnitType) {
-    // For UNIT type, show count with bullet: "3`•"
-    return `${marking.length}\`•`;
+// Format time for display - relative or absolute based on epoch
+function formatTimeDisplay(timestampMs: number, epoch: Date | null): string {
+  if (epoch) {
+    // Absolute time display
+    const date = new Date(epoch.getTime() + timestampMs);
+    return date.toLocaleString(undefined, { 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit', 
+      minute: '2-digit',
+      second: '2-digit'
+    });
   }
-  return marking.map(token => `1\`${formatToken(token, isUnitType)}`).join('++\n');
+  // Relative time display
+  if (timestampMs === 0) return '@0';
+  const seconds = timestampMs / 1000;
+  if (seconds < 60) return `@${seconds.toFixed(seconds % 1 === 0 ? 0 : 1)}s`;
+  const minutes = seconds / 60;
+  if (minutes < 60) return `@${minutes.toFixed(minutes % 1 === 0 ? 0 : 1)}m`;
+  const hours = minutes / 60;
+  if (hours < 24) return `@${hours.toFixed(hours % 1 === 0 ? 0 : 1)}h`;
+  const days = hours / 24;
+  return `@${days.toFixed(days % 1 === 0 ? 0 : 1)}d`;
 }
+
+// Get grouped marking data for table display
+export interface MarkingEntry {
+  count: number;
+  value: string;
+  timestamp: number;
+  timeDisplay: string;
+}
+
+function getMarkingTableData(marking: unknown[], isUnitType: boolean = false, isTimed: boolean = false, epoch: Date | null = null): MarkingEntry[] {
+  if (isUnitType && !isTimed) {
+    return [{ count: marking.length, value: '•', timestamp: 0, timeDisplay: '' }];
+  }
+  
+  // Group tokens by value (and timestamp for timed tokens)
+  const tokenCounts = new Map<string, MarkingEntry>();
+  for (const token of marking) {
+    const timestamp = isTimedToken(token) ? token.timestamp : 0;
+    const value = isTimedToken(token) ? formatTokenValue(token.value, isUnitType) : formatTokenValue(token, isUnitType);
+    const key = isTimed ? `${value}@${timestamp}` : value;
+    const existing = tokenCounts.get(key);
+    if (existing) {
+      existing.count++;
+    } else {
+      tokenCounts.set(key, { 
+        count: 1, 
+        value, 
+        timestamp,
+        timeDisplay: isTimed ? formatTimeDisplay(timestamp, epoch) : ''
+      });
+    }
+  }
+  
+  return Array.from(tokenCounts.values());
+}
+
+const MAX_VISIBLE_ROWS = 10;
 
 export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
   const connection = useConnection();
@@ -146,14 +203,21 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
   const colorSetColor = colorSet?.color || '#000000';
   // Check if this is a UNIT type colorset
   const isUnitType = colorSet?.type === 'basic' && colorSet?.definition?.includes('= unit;');
+  // Check if this is a timed colorset
+  const isTimed = colorSet?.timed === true;
   const activePetriNetId = useStore((state) => state.activePetriNetId);
   const updateNodeData = useStore((state) => state.updateNodeData);
+  const showMarkingDisplay = useStore((state) => state.showMarkingDisplay);
+  const simulationEpoch = useStore((state) => state.simulationEpoch);
+  const epoch = simulationEpoch ? new Date(simulationEpoch) : null;
 
   const isTarget = connection.inProgress && connection.fromNode.id !== id && connection.fromNode.type === 'transition';
 
   const hasMarking = data.marking && Array.isArray(data.marking) && data.marking.length > 0;
   const tokenCount = hasMarking ? data.marking.length : 0;
-  const markingDisplay = hasMarking ? formatMarkingDisplay(data.marking as unknown[], isUnitType) : '';
+  const markingTableData = hasMarking ? getMarkingTableData(data.marking as unknown[], isUnitType, isTimed, epoch) : [];
+  const visibleRows = markingTableData.slice(0, MAX_VISIBLE_ROWS);
+  const hasMoreRows = markingTableData.length > MAX_VISIBLE_ROWS;
 
   // Default offsets for inscriptions
   const colorSetOffset = data.colorSetOffset ?? { x: 0, y: 35 }; // Below the place
@@ -216,16 +280,31 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
         </DraggableInscription>
       )}
 
-      {/* Current marking rectangle - draggable */}
-      {hasMarking && (
+      {/* Current marking table - draggable */}
+      {hasMarking && showMarkingDisplay && (
         <DraggableInscription
           offset={markingOffset}
           onDragEnd={handleMarkingDragEnd}
           style={{ top: '50%', left: '50%' }}
         >
-          <div className="marking text-[9px] font-mono text-black px-1 py-0.5 rounded-sm whitespace-pre leading-tight">
-            {markingDisplay}
-          </div>
+          <table className="marking text-[7px] font-mono text-black rounded-sm border-collapse">
+            <tbody>
+              {visibleRows.map((entry, idx) => (
+                <tr key={idx}>
+                  <td className="px-1 py-0.5 text-right">{entry.count}`</td>
+                  <td className="px-1 py-0.5">{entry.value}</td>
+                  {isTimed && <td className="px-1 py-0.5 text-muted-foreground whitespace-nowrap">{entry.timeDisplay}</td>}
+                </tr>
+              ))}
+              {hasMoreRows && (
+                <tr>
+                  <td colSpan={isTimed ? 3 : 2} className="px-1 py-0.5 text-center text-muted-foreground">
+                    ...{markingTableData.length - MAX_VISIBLE_ROWS} more
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </DraggableInscription>
       )}
 

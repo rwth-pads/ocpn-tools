@@ -87,7 +87,8 @@ function convertToOCEL2(
   events: SimulationEvent[],
   colorSets: { name: string; type: string; definition: string }[],
   transitions: { id: string; name: string }[],
-  places: { id: string; name: string; colorSet: string }[]
+  places: { id: string; name: string; colorSet: string }[],
+  simulationEpoch: string | null
 ): OCEL2Export {
   // Build ObjectTypes from Record ColorSets
   const objectTypes: OCEL2ObjectType[] = [];
@@ -129,10 +130,16 @@ function convertToOCEL2(
   // Build Events and extract Objects
   const ocelEvents: OCEL2Event[] = [];
   
+  // Get epoch for simulation time calculation
+  const epochDate = simulationEpoch ? new Date(simulationEpoch) : null;
+  
   for (const event of events) {
     const eventId = `e${event.step}`;
     const eventType = event.transitionName;
-    const eventTime = event.timestamp.toISOString();
+    // Use simulation time (epoch + event.time) for OCEL export, fallback to wall-clock if no epoch
+    const eventTime = epochDate 
+      ? new Date(epochDate.getTime() + event.time).toISOString()
+      : event.timestamp.toISOString();
     
     // Track unique objects involved in this event (to avoid duplicates)
     // Map objectId -> colorSetName (for qualifier)
@@ -261,15 +268,19 @@ export function SimulationPanel() {
   const colorSets = useStore((state) => state.colorSets);
   const petriNetsById = useStore((state) => state.petriNetsById);
   const activePetriNetId = useStore((state) => state.activePetriNetId);
+  const simulationEpoch = useStore((state) => state.simulationEpoch);
+  const setSimulationEpoch = useStore((state) => state.setSimulationEpoch);
 
   const [ocelDialogOpen, setOcelDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tempConfig, setTempConfig] = useState<SimulationConfig>(simulationConfig);
+  const [tempEpoch, setTempEpoch] = useState<string>(simulationEpoch || '');
 
   // Reset temp config when dialog opens
   const handleSettingsOpen = (open: boolean) => {
     if (open) {
       setTempConfig(simulationConfig);
+      setTempEpoch(simulationEpoch || '');
     }
     setSettingsOpen(open);
   };
@@ -277,6 +288,7 @@ export function SimulationPanel() {
   // Save settings
   const handleSaveSettings = () => {
     setSimulationConfig(tempConfig);
+    setSimulationEpoch(tempEpoch || null);
     setSettingsOpen(false);
   };
 
@@ -307,7 +319,7 @@ export function SimulationPanel() {
 
   const handleExportOcel = (format: 'json' | 'xml' | 'sqlite') => {
     const { transitions, places } = getModelData();
-    const ocelData = convertToOCEL2(events, colorSets, transitions, places);
+    const ocelData = convertToOCEL2(events, colorSets, transitions, places, simulationEpoch || null);
     
     let content = "";
     let filename = `simulation_ocel2_${stepCounter}_events`;
@@ -369,12 +381,43 @@ ${evt.relationships.map(r => `      <relationship objectId="${r.objectId}" quali
 
   const canExport = isInitialized && events.length > 0;
 
-  // Format simulation time for display
+  // Format simulation time for display (time is in milliseconds)
+  const epoch = simulationEpoch ? new Date(simulationEpoch) : null;
+  
   const formatTime = (time: number | undefined) => {
-    if (time === undefined || time === null) return '0';
-    if (time === 0) return '0';
-    if (Number.isInteger(time)) return time.toString();
-    return time.toFixed(3);
+    if (time === undefined || time === null) time = 0;
+    
+    // If epoch is set, show absolute datetime
+    if (epoch) {
+      const absoluteDate = new Date(epoch.getTime() + time);
+      // Format as short date + time with milliseconds
+      const dateStr = absoluteDate.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+      const timeStr = absoluteDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const ms = absoluteDate.getMilliseconds().toString().padStart(3, '0');
+      return `${dateStr}, ${timeStr}.${ms}`;
+    }
+    
+    // No epoch - show relative time
+    if (time === 0) return '0ms';
+    
+    // For small times (< 1 minute), show milliseconds or seconds
+    if (time < 1000) {
+      return `${time}ms`;
+    } else if (time < 60000) {
+      const seconds = time / 1000;
+      return `${seconds.toFixed(1)}s`;
+    } else if (time < 3600000) {
+      // Less than 1 hour - show minutes:seconds
+      const minutes = Math.floor(time / 60000);
+      const seconds = Math.floor((time % 60000) / 1000);
+      return `${minutes}m ${seconds}s`;
+    } else {
+      // Show hours:minutes:seconds
+      const hours = Math.floor(time / 3600000);
+      const minutes = Math.floor((time % 3600000) / 60000);
+      const seconds = Math.floor((time % 60000) / 1000);
+      return `${hours}h ${minutes}m ${seconds}s`;
+    }
   };
 
   return (
@@ -424,7 +467,7 @@ ${evt.relationships.map(r => `      <relationship objectId="${r.objectId}" quali
       
       {/* Simulation Settings Dialog */}
       <Dialog open={settingsOpen} onOpenChange={handleSettingsOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle>Simulation Settings</DialogTitle>
           </DialogHeader>
@@ -458,6 +501,38 @@ ${evt.relationships.map(r => `      <relationship objectId="${r.objectId}" quali
                 className="col-span-2"
               />
             </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="simulationEpoch" className="text-right col-span-2">
+                Simulation epoch
+              </Label>
+              <Input
+                id="simulationEpoch"
+                type="datetime-local"
+                step="0.001"
+                value={tempEpoch}
+                onChange={(e) => setTempEpoch(e.target.value)}
+                className="col-span-2"
+              />
+              <div className="col-span-2 col-start-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const now = new Date();
+                    // Format as YYYY-MM-DDTHH:MM:SS.mmm for datetime-local input with step
+                    const formatted = now.toISOString().slice(0, 23);
+                    setTempEpoch(formatted);
+                  }}
+                >
+                  Now
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              The simulation epoch is the real-world datetime that corresponds to simulation time 0.
+              When set, simulation times will be displayed relative to this epoch.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSettingsOpen(false)}>

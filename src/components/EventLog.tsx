@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Search, Trash, Clock, Database } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import useStore from "@/stores/store"
 
 export interface SimulationEvent {
   id: string
@@ -30,6 +31,8 @@ interface EventLogProps {
 export function EventLog({ events, onClearLog, onExport, canExport, exportDisabledReason }: EventLogProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set())
+  const simulationEpoch = useStore((state) => state.simulationEpoch)
+  const epoch = simulationEpoch ? new Date(simulationEpoch) : null
 
   const toggleEventExpanded = (eventId: string) => {
     const newExpanded = new Set(expandedEvents)
@@ -48,19 +51,34 @@ export function EventLog({ events, onClearLog, onExport, canExport, exportDisabl
       event.tokens.produced.some((t) => t.placeName.toLowerCase().includes(searchTerm.toLowerCase())),
   )
 
-  // const formatTime = (time: number) => {
-  //   return time.toFixed(2)
-  // }
-
-  const formatDate = (date: Date) => {
-    // Format time as HH:MM:SS.mmm
-    const base = date.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-    const ms = date.getMilliseconds().toString().padStart(3, '0');
-    return `${base}.${ms}`;
+  // Format simulation time - show as absolute datetime if epoch is set, otherwise relative
+  const formatSimTime = (timeMs: number): { date?: string; time: string } => {
+    if (epoch) {
+      // Absolute time: epoch + simulation time
+      const absoluteDate = new Date(epoch.getTime() + timeMs)
+      const datePart = absoluteDate.toLocaleDateString([], {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+      const timePart = absoluteDate.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })
+      const ms = absoluteDate.getMilliseconds().toString().padStart(3, '0')
+      return { date: datePart, time: `${timePart}.${ms}` }
+    }
+    // Relative time display
+    if (timeMs === 0) return { time: '0' }
+    const seconds = timeMs / 1000
+    if (seconds < 60) return { time: `${seconds.toFixed(seconds % 1 === 0 ? 0 : 1)}s` }
+    const minutes = seconds / 60
+    if (minutes < 60) return { time: `${minutes.toFixed(minutes % 1 === 0 ? 0 : 1)}m` }
+    const hours = minutes / 60
+    if (hours < 24) return { time: `${hours.toFixed(hours % 1 === 0 ? 0 : 1)}h` }
+    const days = hours / 24
+    return { time: `${days.toFixed(days % 1 === 0 ? 0 : 1)}d` }
   }
 
   return (
@@ -115,10 +133,19 @@ export function EventLog({ events, onClearLog, onExport, canExport, exportDisabl
                       <Badge variant="outline">{event.step}</Badge>
                       <span className="font-medium">{event.transitionName}</span>
                     </div>
-                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      {/* <span>{formatTime(event.time)}</span> */}
-                      <span>{formatDate(event.timestamp)}</span>
+                    <div className="flex items-center space-x-1.5 text-muted-foreground">
+                      <Clock className="h-3 w-3 flex-shrink-0" />
+                      {(() => {
+                        const formatted = formatSimTime(event.time)
+                        return formatted.date ? (
+                          <div className="text-right text-xs leading-tight">
+                            <div>{formatted.date}</div>
+                            <div>{formatted.time}</div>
+                          </div>
+                        ) : (
+                          <span className="text-sm">{formatted.time}</span>
+                        )
+                      })()}
                     </div>
                   </div>
 

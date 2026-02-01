@@ -13,6 +13,12 @@ export type PetriNetData = {
   priorities: Priority[]
   functions: Function[]
   uses: Use[] // Added uses
+  // Simulation settings (optional for backward compatibility)
+  simulationSettings?: {
+    stepsPerRun?: number;
+    animationDelayMs?: number;
+    simulationEpoch?: string | null;
+  }
 }
 
 // Convert Petri Net data to CPN Tools XML format
@@ -268,6 +274,7 @@ export function convertToJSON(data: PetriNetData): string {
     priorities: data.priorities,
     functions: data.functions,
     uses: data.uses, // Include uses in JSON
+    simulationSettings: data.simulationSettings || undefined, // Include simulation settings if present
   };
 
   return JSON.stringify(transformedData, null, 2);
@@ -377,6 +384,13 @@ export function parseJSON(content: string): PetriNetData {
   const priorities: Priority[] = parsedData.priorities || [];
   const functions: Function[] = parsedData.functions || [];
   const uses: Use[] = parsedData.uses || []; // Parse uses
+  
+  // Parse simulation settings if present
+  const simulationSettings = parsedData.simulationSettings ? {
+    stepsPerRun: parsedData.simulationSettings.stepsPerRun,
+    animationDelayMs: parsedData.simulationSettings.animationDelayMs,
+    simulationEpoch: parsedData.simulationSettings.simulationEpoch,
+  } : undefined;
 
   return {
     petriNetsById,
@@ -386,6 +400,7 @@ export function parseJSON(content: string): PetriNetData {
     priorities,
     functions,
     uses, // Include uses in the returned data
+    simulationSettings, // Include simulation settings in the returned data
   };
 }
 

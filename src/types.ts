@@ -51,6 +51,7 @@ export type AppActions = {
   updateNodeData: (petriNetId: string, id: string, newData: PlaceNodeData | TransitionNodeData | AuxTextNodeData) => void;
   updateEdgeData: (petriNetId: string, id: string, newData: Record<string, unknown>) => void;
   updateEdgeLabel: (petriNetId: string, id: string, newLabel: string) => void;
+  swapEdgeDirection: (petriNetId: string, id: string) => void;
   applyInitialMarkings: () => void;
   setSelectedElement: (petriNetId: string, element: SelectedElement) => void;
   

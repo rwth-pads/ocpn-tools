@@ -411,7 +411,7 @@ ${evt.relationships.map(r => `      <relationship objectId="${r.objectId}" quali
       </div>
 
       {/* Event Log */}
-      <div className="flex-1 overflow-auto min-h-0">
+      <div className="flex-1 overflow-hidden min-h-0">
         <EventLog
           events={events}
           onClearLog={clearEvents}

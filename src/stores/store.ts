@@ -305,6 +305,43 @@ const useStore = create<StoreState>((set) => ({
     });
   },
 
+  // Swap edge source and target (reverse direction)
+  swapEdgeDirection: (petriNetId: string, id: string) => {
+    set((state) => {
+      const petriNet = state.petriNetsById[petriNetId];
+      const updatedEdges = petriNet.edges.map((edge) =>
+        edge.id === id 
+          ? { ...edge, source: edge.target, target: edge.source } 
+          : edge
+      );
+
+      // Update selectedElement if it matches the updated edge
+      const currentEdge = petriNet.edges.find(e => e.id === id);
+      const updatedSelectedElement =
+        petriNet.selectedElement?.type === 'edge' && petriNet.selectedElement.element.id === id && currentEdge
+          ? { 
+              ...petriNet.selectedElement, 
+              element: { 
+                ...petriNet.selectedElement.element, 
+                source: currentEdge.target, 
+                target: currentEdge.source 
+              } 
+            }
+          : petriNet.selectedElement;
+
+      return {
+        petriNetsById: {
+          ...state.petriNetsById,
+          [petriNetId]: {
+            ...petriNet,
+            edges: updatedEdges,
+            selectedElement: updatedSelectedElement,
+          },
+        },
+      };
+    });
+  },
+
   // Set marking = initialMarking for all places in the store
   applyInitialMarkings: () => {
     set((state) => {

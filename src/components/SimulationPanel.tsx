@@ -1,6 +1,5 @@
 import { useState, useContext, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Database } from 'lucide-react';
+import { Clock, Hash } from 'lucide-react';
 import { EventLog, SimulationEvent } from '@/components/EventLog';
 import { OCELExportDialog } from '@/components/dialogs/OCELExportDialog';
 // Correct the import path for SimulationContext
@@ -246,7 +245,7 @@ export function SimulationPanel() {
   if (!context) {
     throw new Error('SimulationPanel must be used within a SimulationProvider');
   }
-  const { events, clearEvents, isInitialized, stepCounter } = context;
+  const { events, clearEvents, isInitialized, stepCounter, simulationTime } = context;
 
   // Get model data from store for OCEL export
   const colorSets = useStore((state) => state.colorSets);
@@ -344,25 +343,46 @@ ${evt.relationships.map(r => `      <relationship objectId="${r.objectId}" quali
 
   const canExport = isInitialized && events.length > 0;
 
+  // Format simulation time for display
+  const formatTime = (time: number | undefined) => {
+    if (time === undefined || time === null) return '0';
+    if (time === 0) return '0';
+    if (Number.isInteger(time)) return time.toString();
+    return time.toFixed(3);
+  };
+
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-auto">
+    <div className="flex flex-col h-full gap-3">
+      {/* Simulation Status Box */}
+      <div className="border border-border rounded-lg p-4 bg-card">
+        <h3 className="text-sm font-semibold mb-3">Simulation Status</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex items-center gap-2">
+            <Hash className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <div className="text-xs text-muted-foreground">Step</div>
+              <div className="text-lg font-mono font-semibold">{stepCounter ?? 0}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <div className="text-xs text-muted-foreground">Time</div>
+              <div className="text-lg font-mono font-semibold">{formatTime(simulationTime)}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Event Log */}
+      <div className="flex-1 overflow-auto min-h-0">
         <EventLog
           events={events}
           onClearLog={clearEvents}
+          onExport={() => setOcelDialogOpen(true)}
+          canExport={canExport}
+          exportDisabledReason={!isInitialized ? "Simulation not initialized" : events.length === 0 ? "No simulation events to export" : undefined}
         />
-      </div>
-      <div className="flex justify-end mt-2">
-        <Button
-          variant="outline"
-          onClick={() => setOcelDialogOpen(true)}
-          className="flex items-center gap-2"
-          disabled={!canExport}
-          title={!isInitialized ? "Simulation not initialized" : events.length === 0 ? "No simulation events to export" : "Export simulation log as OCEL 2.0"}
-        >
-          <Database className="h-4 w-4" />
-          Export as OCEL 2.0
-        </Button>
       </div>
       <OCELExportDialog open={ocelDialogOpen} onOpenChange={setOcelDialogOpen} onExport={handleExportOcel} />
     </div>

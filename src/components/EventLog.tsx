@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
-import { Search, Trash, Clock } from "lucide-react"
+import { Search, Trash, Clock, Database } from "lucide-react"
 import { Input } from "@/components/ui/input"
 
 export interface SimulationEvent {
@@ -22,9 +22,12 @@ export interface SimulationEvent {
 interface EventLogProps {
   events: SimulationEvent[]
   onClearLog: () => void
+  onExport?: () => void
+  canExport?: boolean
+  exportDisabledReason?: string
 }
 
-export function EventLog({ events, onClearLog }: EventLogProps) {
+export function EventLog({ events, onClearLog, onExport, canExport, exportDisabledReason }: EventLogProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set())
 
@@ -61,7 +64,7 @@ export function EventLog({ events, onClearLog }: EventLogProps) {
   }
 
   return (
-    <Card className="h-full w-full">
+    <Card className="w-full">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
           <CardTitle>Event Log</CardTitle>
@@ -69,6 +72,18 @@ export function EventLog({ events, onClearLog }: EventLogProps) {
             <Button variant="outline" size="icon" onClick={onClearLog} title="Clear Log">
               <Trash className="h-4 w-4" />
             </Button>
+            {onExport && (
+              <Button
+                variant="outline"
+                onClick={onExport}
+                disabled={!canExport}
+                title={exportDisabledReason || "Export as OCEL 2.0"}
+                className="flex items-center gap-1 h-9 px-3"
+              >
+                <Database className="h-4 w-4" />
+                Export OCEL
+              </Button>
+            )}
           </div>
         </div>
         <div className="relative">

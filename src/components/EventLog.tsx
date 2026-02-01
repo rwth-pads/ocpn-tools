@@ -108,32 +108,32 @@ export function EventLog({ events, onClearLog }: EventLogProps) {
                   </div>
 
                   {expandedEvents.has(event.id) && (
-                    <div className="mt-2 pt-2 border-t text-sm space-y-3"> {/* Removed grid, added space-y */}
-                      <div>
+                    <div className="mt-2 pt-2 border-t text-sm space-y-3 overflow-hidden">
+                      <div className="min-w-0">
                         <h4 className="font-medium mb-1">Consumed Tokens:</h4>
                         {event.tokens.consumed.length === 0 ? (
                           <p className="text-muted-foreground text-xs pl-2">None</p>
                         ) : (
-                          <ul className="space-y-1 pl-2 text-xs"> {/* Added padding and adjusted text size */}
+                          <ul className="space-y-1 pl-2 text-xs">
                             {event.tokens.consumed.map((token, idx) => (
-                              <li key={`consumed-${idx}`} className="flex justify-between items-center"> {/* Align items center */}
+                              <li key={`consumed-${idx}`} className="min-w-0">
                                 <span className="text-muted-foreground">{token.placeName}:</span>
-                                <span className="font-mono bg-muted px-1 rounded">{token.tokens}</span> {/* Added background */} 
+                                <span className="font-mono bg-muted px-1 rounded ml-2 break-all whitespace-pre-wrap">{token.tokens}</span>
                               </li>
                             ))}
                           </ul>
                         )}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <h4 className="font-medium mb-1">Produced Tokens:</h4>
                         {event.tokens.produced.length === 0 ? (
                            <p className="text-muted-foreground text-xs pl-2">None</p>
                         ) : (
-                          <ul className="space-y-1 pl-2 text-xs"> {/* Added padding and adjusted text size */}
+                          <ul className="space-y-1 pl-2 text-xs">
                             {event.tokens.produced.map((token, idx) => (
-                              <li key={`produced-${idx}`} className="flex justify-between items-center"> {/* Align items center */}
+                              <li key={`produced-${idx}`} className="min-w-0">
                                 <span className="text-muted-foreground">{token.placeName}:</span>
-                                <span className="font-mono bg-muted px-1 rounded">{token.tokens}</span> {/* Added background */} 
+                                <span className="font-mono bg-muted px-1 rounded ml-2 break-all whitespace-pre-wrap">{token.tokens}</span>
                               </li>
                             ))}
                           </ul>

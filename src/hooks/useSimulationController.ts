@@ -57,6 +57,25 @@ function tokenToString(token: unknown): string {
   return JSON.stringify(normalized);
 }
 
+/**
+ * Formats an array of tokens for display.
+ * If all tokens are UNIT (null), displays as bullet count (e.g., "••" or "3•").
+ * Otherwise displays as JSON array.
+ */
+function formatTokensForDisplay(tokens: unknown[], isUnitType: boolean): string {
+  if (isUnitType || tokens.every(t => t === null || t === undefined)) {
+    // All unit tokens - display as bullets
+    const count = tokens.length;
+    if (count <= 3) {
+      return '•'.repeat(count);
+    } else {
+      return `${count}•`;
+    }
+  }
+  // Mixed or non-unit tokens - display as JSON
+  return JSON.stringify(tokens);
+}
+
 export function useSimulationController() {
   const wasmRef = useRef<InitOutput | null>(null); // Initialize as null
   const wasmSimulatorRef = useRef<WasmSimulator | null>(null);
@@ -180,6 +199,9 @@ export function useSimulationController() {
     // Ensure transitionName is a string (using label), fallback to transitionId
     const transitionName = (transitionNode?.data?.label && typeof transitionNode.data.label === 'string') ? transitionNode.data.label : eventData.transitionId;
 
+    // Get colorSets from store to check for UNIT types
+    const colorSets = useStore.getState().colorSets;
+
     // Helper to convert WASM token map to TokenMovement array for the event log
     const mapTokenMovements = (tokenMap: Map<string, number[]> | undefined): TokenMovement[] => {
         if (!tokenMap) return [];
@@ -188,12 +210,16 @@ export function useSimulationController() {
             const placeNode = findNodeById(placeId); // Use helper
             // Ensure placeName is a string (using label), fallback to placeId
             const placeName = (placeNode?.data?.label && typeof placeNode.data.label === 'string') ? placeNode.data.label : placeId;
-            // Normalize tokens (convert Maps to plain objects) before stringifying
+            // Check if this place uses a UNIT colorset
+            const placeColorSet = typeof placeNode?.data?.colorSet === 'string' ? placeNode.data.colorSet : '';
+            const isUnitType = placeColorSet.toUpperCase() === 'UNIT' || 
+                colorSets.some(cs => cs.name === placeColorSet && cs.name.toUpperCase() === 'UNIT');
+            // Normalize tokens (convert Maps to plain objects)
             const normalizedTokens = tokens.map(t => normalizeToken(t));
             movements.push({
                 placeId: placeId,
                 placeName: placeName, // Use validated name
-                tokens: JSON.stringify(normalizedTokens), // Stringify normalized tokens for display
+                tokens: formatTokensForDisplay(normalizedTokens, isUnitType), // Format with bullet for UNIT
             });
         });
         return movements;

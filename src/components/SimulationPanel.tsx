@@ -53,20 +53,22 @@ function extractIdFromToken(token: unknown): string | number | null {
 }
 
 /**
- * Generate a unique object ID from a token's content
+ * Generate a unique object ID from a token's content and its type
+ * Includes the type prefix to avoid collisions between different object types
  */
-function generateObjectId(token: unknown): string {
+function generateObjectId(token: unknown, typeName: string): string {
+  const typePrefix = typeName.toLowerCase();
   // Try to use an 'id' or 'ID' field if present
   const idValue = extractIdFromToken(token);
   if (idValue !== null) {
-    return String(idValue);
+    return `${typePrefix}_${idValue}`;
   }
   // Fallback: use stringified content hash
   const hash = JSON.stringify(token).split('').reduce((a, b) => {
     a = ((a << 5) - a) + b.charCodeAt(0);
     return a & a;
   }, 0);
-  return `obj_${Math.abs(hash)}`;
+  return `${typePrefix}_${Math.abs(hash)}`;
 }
 
 /**
@@ -123,8 +125,9 @@ function convertToOCEL2(
     const eventType = event.transitionName;
     const eventTime = event.timestamp.toISOString();
     
-    // Track unique object IDs involved in this event (to avoid duplicates)
-    const involvedObjectIds = new Set<string>();
+    // Track unique objects involved in this event (to avoid duplicates)
+    // Map objectId -> colorSetName (for qualifier)
+    const involvedObjects = new Map<string, string>();
     
     // Process consumed tokens
     for (const consumed of event.tokens.consumed) {
@@ -136,7 +139,7 @@ function convertToOCEL2(
           const tokens = JSON.parse(consumed.tokens);
           if (Array.isArray(tokens)) {
             for (const token of tokens) {
-              const objectId = generateObjectId(token);
+              const objectId = generateObjectId(token, colorSetName);
               
               // Add object if not already tracked
               if (!objectsMap.has(objectId)) {
@@ -160,8 +163,8 @@ function convertToOCEL2(
                 });
               }
               
-              // Track this object as involved in this event
-              involvedObjectIds.add(objectId);
+              // Track this object as involved in this event (with its type)
+              involvedObjects.set(objectId, colorSetName);
             }
           }
         } catch {
@@ -180,7 +183,7 @@ function convertToOCEL2(
           const tokens = JSON.parse(produced.tokens);
           if (Array.isArray(tokens)) {
             for (const token of tokens) {
-              const objectId = generateObjectId(token);
+              const objectId = generateObjectId(token, colorSetName);
               
               // Add object if not already tracked
               if (!objectsMap.has(objectId)) {
@@ -204,8 +207,8 @@ function convertToOCEL2(
                 });
               }
               
-              // Track this object as involved in this event
-              involvedObjectIds.add(objectId);
+              // Track this object as involved in this event (with its type)
+              involvedObjects.set(objectId, colorSetName);
             }
           }
         } catch {
@@ -214,10 +217,10 @@ function convertToOCEL2(
       }
     }
     
-    // Create relationships from unique involved objects (with empty qualifier)
-    const relationships = Array.from(involvedObjectIds).map(objectId => ({
+    // Create relationships from unique involved objects with type-based qualifiers
+    const relationships = Array.from(involvedObjects.entries()).map(([objectId, typeName]) => ({
       objectId,
-      qualifier: ''
+      qualifier: typeName.toLowerCase()
     }));
     
     ocelEvents.push({

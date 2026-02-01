@@ -6,6 +6,7 @@ import {
   ReactFlow,
   Background,
   Controls,
+  MiniMap,
   Panel,
   MarkerType,
   useReactFlow,
@@ -614,7 +615,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
             }}
           >
             <Background />
-            {/* <MiniMap /> */}
+            <MiniMap />
             <Controls />
             <Panel position="top-center">
               <Toolbar toggleArcMode={toggleArcMode} onApplyLayout={(options) => petriNet && applyLayout(options, petriNet.nodes, petriNet.edges)}/>

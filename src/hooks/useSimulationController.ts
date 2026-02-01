@@ -4,6 +4,7 @@ import init, { WasmSimulator, type InitOutput } from '@rwth-pads/cpnsim';
 import { PetriNetData, convertToJSON } from '@/utils/FileOperations';
 import type { SimulationEvent } from '@/components/EventLog'; // Import SimulationEvent
 import { v4 as uuidv4 } from 'uuid'; // For generating unique event IDs
+import { type SimulationConfig, DEFAULT_SIMULATION_CONFIG } from '@/context/useSimulationContextHook';
 
 // Define TokenMovement locally as it's not exported from EventLog
 export interface TokenMovement {
@@ -85,6 +86,7 @@ export function useSimulationController() {
   const [events, setEvents] = useState<SimulationEvent[]>([]); // State for simulation events
   const [stepCounter, setStepCounter] = useState(0); // State for step counter
   const [simulationTime, setSimulationTime] = useState(0.0); // State for simulation time
+  const [simulationConfig, setSimulationConfig] = useState<SimulationConfig>(DEFAULT_SIMULATION_CONFIG); // Simulation config
 
   // Get necessary actions/state selectors from Zustand store
   const updateNodeMarking = useStore((state) => state.updateNodeMarking);
@@ -563,7 +565,9 @@ export function useSimulationController() {
     isInitialized, 
     isRunning,
     simulationTime, 
-    stepCounter, 
+    stepCounter,
+    simulationConfig,
+    setSimulationConfig,
     ensureInitialized, 
     _executeWasmStep 
   };

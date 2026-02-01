@@ -64,10 +64,10 @@ export function EventLog({ events, onClearLog, onExport, canExport, exportDisabl
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-3">
+    <Card className="w-full h-full flex flex-col overflow-hidden">
+      <CardHeader className="pb-3 flex-shrink-0">
         <div className="flex justify-between items-center">
-          <CardTitle>Event Log</CardTitle>
+          <span className="text-sm font-semibold leading-none tracking-tight">Event Log</span>
           <div className="flex items-center space-x-1">
             <Button variant="outline" size="icon" onClick={onClearLog} title="Clear Log">
               <Trash className="h-4 w-4" />
@@ -96,8 +96,8 @@ export function EventLog({ events, onClearLog, onExport, canExport, exportDisabl
           />
         </div>
       </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-150">
+      <CardContent className="flex-1 overflow-hidden min-h-0">
+        <ScrollArea className="h-full">
           {filteredEvents.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               {events.length === 0 ? "No events recorded yet" : "No events match your search"}

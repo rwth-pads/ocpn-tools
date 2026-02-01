@@ -22,7 +22,8 @@ export function SimulationToolbar() {
     runMultipleStepsAnimated, 
     runMultipleStepsFast,
     stop,
-    isRunning 
+    isRunning,
+    simulationConfig
   } = context;
 
   const handleReset = () => {
@@ -38,11 +39,11 @@ export function SimulationToolbar() {
   };
 
   const handleRunAnimated = () => {
-    runMultipleStepsAnimated(50, 50);
+    runMultipleStepsAnimated(simulationConfig.stepsPerRun, simulationConfig.animationDelayMs);
   };
 
   const handleRunFast = () => {
-    runMultipleStepsFast(50);
+    runMultipleStepsFast(simulationConfig.stepsPerRun);
   };
 
   return (
@@ -55,7 +56,6 @@ export function SimulationToolbar() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                title="Reset Simulation" 
                 onClick={handleReset}
                 disabled={isRunning}
               >
@@ -76,7 +76,6 @@ export function SimulationToolbar() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                title="Stop Simulation" 
                 onClick={handleStop}
                 disabled={!isRunning}
               >
@@ -97,7 +96,6 @@ export function SimulationToolbar() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                title="Execute One Step" 
                 onClick={handleRunStep}
                 disabled={isRunning}
               >
@@ -111,53 +109,51 @@ export function SimulationToolbar() {
           </TooltipContent>
         </Tooltip>
 
-        {/* Play Button - Run 50 steps with animation */}
+        {/* Play Button - Run steps with animation */}
         <Tooltip>
           <TooltipTrigger asChild>
             <span>
               <Button
                 variant="ghost"
                 size="icon"
-                title="Run 50 Steps (Animated)"
                 onClick={handleRunAnimated}
                 disabled={isRunning}
                 className="relative"
               >
                 <Play className="h-5 w-5" />
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground font-medium">
-                  50
+                  {simulationConfig.stepsPerRun}
                 </span>
-                <span className="sr-only">Run 50 Steps (Animated)</span>
+                <span className="sr-only">Run {simulationConfig.stepsPerRun} Steps (Animated)</span>
               </Button>
             </span>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Run 50 Steps (with intermediate markings)</p>
+            <p>Run {simulationConfig.stepsPerRun} Steps (with intermediate markings)</p>
           </TooltipContent>
         </Tooltip>
 
-        {/* Fast Forward Button - Run 50 steps instantly */}
+        {/* Fast Forward Button - Run steps instantly */}
         <Tooltip>
           <TooltipTrigger asChild>
             <span>
               <Button
                 variant="ghost"
                 size="icon"
-                title="Run 50 Steps (Fast)"
                 onClick={handleRunFast}
                 disabled={isRunning}
                 className="relative"
               >
                 <FastForward className="h-5 w-5" />
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground font-medium">
-                  50
+                  {simulationConfig.stepsPerRun}
                 </span>
-                <span className="sr-only">Run 50 Steps (Fast)</span>
+                <span className="sr-only">Run {simulationConfig.stepsPerRun} Steps (Fast)</span>
               </Button>
             </span>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Run 50 Steps (without intermediate markings)</p>
+            <p>Run {simulationConfig.stepsPerRun} Steps (without intermediate markings)</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

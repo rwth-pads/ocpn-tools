@@ -1,9 +1,19 @@
 import { useState, useContext, useCallback } from 'react';
-import { Clock, Hash } from 'lucide-react';
+import { Clock, Hash, Settings } from 'lucide-react';
 import { EventLog, SimulationEvent } from '@/components/EventLog';
 import { OCELExportDialog } from '@/components/dialogs/OCELExportDialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 // Correct the import path for SimulationContext
-import { SimulationContext } from '@/context/useSimulationContextHook';
+import { SimulationContext, type SimulationConfig } from '@/context/useSimulationContextHook';
 import useStore from '@/stores/store';
 
 // OCEL 2.0 Types
@@ -245,7 +255,7 @@ export function SimulationPanel() {
   if (!context) {
     throw new Error('SimulationPanel must be used within a SimulationProvider');
   }
-  const { events, clearEvents, isInitialized, stepCounter, simulationTime } = context;
+  const { events, clearEvents, isInitialized, stepCounter, simulationTime, simulationConfig, setSimulationConfig } = context;
 
   // Get model data from store for OCEL export
   const colorSets = useStore((state) => state.colorSets);
@@ -253,6 +263,22 @@ export function SimulationPanel() {
   const activePetriNetId = useStore((state) => state.activePetriNetId);
 
   const [ocelDialogOpen, setOcelDialogOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [tempConfig, setTempConfig] = useState<SimulationConfig>(simulationConfig);
+
+  // Reset temp config when dialog opens
+  const handleSettingsOpen = (open: boolean) => {
+    if (open) {
+      setTempConfig(simulationConfig);
+    }
+    setSettingsOpen(open);
+  };
+
+  // Save settings
+  const handleSaveSettings = () => {
+    setSimulationConfig(tempConfig);
+    setSettingsOpen(false);
+  };
 
   // Get transitions and places from active Petri net
   const getModelData = useCallback(() => {
@@ -352,10 +378,20 @@ ${evt.relationships.map(r => `      <relationship objectId="${r.objectId}" quali
   };
 
   return (
-    <div className="flex flex-col h-full gap-3">
+    <div className="flex flex-col h-full gap-3 overflow-hidden">
       {/* Simulation Status Box */}
-      <div className="border border-border rounded-lg p-4 bg-card">
-        <h3 className="text-sm font-semibold mb-3">Simulation Status</h3>
+      <div className="border border-border rounded-lg p-4 bg-card flex-shrink-0">
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-sm font-semibold leading-none tracking-tight">Simulation Status</span>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setSettingsOpen(true)}
+            title="Simulation Settings"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center gap-2">
             <Hash className="h-4 w-4 text-muted-foreground" />
@@ -385,6 +421,54 @@ ${evt.relationships.map(r => `      <relationship objectId="${r.objectId}" quali
         />
       </div>
       <OCELExportDialog open={ocelDialogOpen} onOpenChange={setOcelDialogOpen} onExport={handleExportOcel} />
+      
+      {/* Simulation Settings Dialog */}
+      <Dialog open={settingsOpen} onOpenChange={handleSettingsOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Simulation Settings</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="stepsPerRun" className="text-right col-span-2">
+                Steps per run
+              </Label>
+              <Input
+                id="stepsPerRun"
+                type="number"
+                min={1}
+                max={1000}
+                value={tempConfig.stepsPerRun}
+                onChange={(e) => setTempConfig({ ...tempConfig, stepsPerRun: parseInt(e.target.value) || 1 })}
+                className="col-span-2"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="animationDelay" className="text-right col-span-2">
+                Animation delay (ms)
+              </Label>
+              <Input
+                id="animationDelay"
+                type="number"
+                min={0}
+                max={5000}
+                step={50}
+                value={tempConfig.animationDelayMs}
+                onChange={(e) => setTempConfig({ ...tempConfig, animationDelayMs: parseInt(e.target.value) || 0 })}
+                className="col-span-2"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSettingsOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveSettings}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

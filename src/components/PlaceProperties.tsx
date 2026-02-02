@@ -10,10 +10,12 @@ import { RecordMarkingDialog } from '@/components/dialogs/RecordMarkingDialog';
 import { TimedMarkingDialog, TimedToken } from '@/components/dialogs/TimedMarkingDialog';
 import { ColorSet } from '@/declarations';
 
-// Define the type for the values within a parsed record
-type RecordValue = string | number | boolean;
+// Define the type for the values within a parsed record (matches RecordMarkingDialog)
+type RecordValue = string | number | boolean | unknown[] | Record<string, unknown>;
 // Define the type for a single parsed record
 type ParsedRecord = Record<string, RecordValue>;
+// For multiset mode, entries can be any JSON value
+type MultisetEntry = string | number | boolean | unknown[] | Record<string, unknown>;
 
 // Define the type for the data part of the selected place
 interface SelectedPlaceData {
@@ -245,7 +247,7 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
   }
 
   // Helper function to format record marking
-  const formatRecordMarking = (records: ParsedRecord[]) => {
+  const formatRecordMarking = (records: ParsedRecord[] | MultisetEntry[]) => {
     if (!records || records.length === 0) return ""
 
     try {
@@ -411,7 +413,7 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
                   type: selectedPlace.data.type || "place",
                   colorSet: selectedPlace.data.colorSet || "INT",
                   initialMarking: formattedMarking,
-                  marking: formattedMarking
+                  marking: records as unknown[]
                 });
               }
             }}
@@ -431,7 +433,7 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
                   type: selectedPlace.data.type || "place",
                   colorSet: selectedPlace.data.colorSet || "INT",
                   initialMarking: formattedMarking,
-                  marking: formattedMarking
+                  marking: tokens as unknown[]
                 });
               }
             }}

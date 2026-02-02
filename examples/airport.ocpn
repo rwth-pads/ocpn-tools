@@ -1,0 +1,949 @@
+{
+  "petriNets": [
+    {
+      "id": "airport-net",
+      "name": "Airport Ground Handling",
+      "places": [
+        {
+          "id": "p-aircraft-queue",
+          "name": "Aircraft\nQueue",
+          "colorSet": "Aircraft",
+          "initialMarking": "[{\"value\": {\"id\": 1, \"typeCode\": \"A320\", \"airline\": \"LH\", \"carrierType\": \"full\"}, \"timestamp\": 0}, {\"value\": {\"id\": 2, \"typeCode\": \"B737\", \"airline\": \"RY\", \"carrierType\": \"low\"}, \"timestamp\": 180000}, {\"value\": {\"id\": 3, \"typeCode\": \"A350\", \"airline\": \"LH\", \"carrierType\": \"full\"}, \"timestamp\": 480000}, {\"value\": {\"id\": 4, \"typeCode\": \"B787\", \"airline\": \"UA\", \"carrierType\": \"full\"}, \"timestamp\": 840000}, {\"value\": {\"id\": 5, \"typeCode\": \"A320\", \"airline\": \"EW\", \"carrierType\": \"low\"}, \"timestamp\": 1140000}, {\"value\": {\"id\": 6, \"typeCode\": \"B737\", \"airline\": \"FR\", \"carrierType\": \"low\"}, \"timestamp\": 1500000}, {\"value\": {\"id\": 7, \"typeCode\": \"A380\", \"airline\": \"EK\", \"carrierType\": \"full\"}, \"timestamp\": 1920000}, {\"value\": {\"id\": 8, \"typeCode\": \"B777\", \"airline\": \"BA\", \"carrierType\": \"full\"}, \"timestamp\": 2340000}, {\"value\": {\"id\": 9, \"typeCode\": \"A321\", \"airline\": \"VY\", \"carrierType\": \"low\"}, \"timestamp\": 2580000}, {\"value\": {\"id\": 10, \"typeCode\": \"B737\", \"airline\": \"WN\", \"carrierType\": \"low\"}, \"timestamp\": 3060000}]",
+          "marking": [
+            {
+              "value": {
+                "id": 1,
+                "typeCode": "A320",
+                "airline": "LH",
+                "carrierType": "full"
+              },
+              "timestamp": 0
+            },
+            {
+              "value": {
+                "id": 2,
+                "typeCode": "B737",
+                "airline": "RY",
+                "carrierType": "low"
+              },
+              "timestamp": 180000
+            },
+            {
+              "value": {
+                "id": 3,
+                "typeCode": "A350",
+                "airline": "LH",
+                "carrierType": "full"
+              },
+              "timestamp": 480000
+            },
+            {
+              "value": {
+                "id": 4,
+                "typeCode": "B787",
+                "airline": "UA",
+                "carrierType": "full"
+              },
+              "timestamp": 840000
+            },
+            {
+              "value": {
+                "id": 5,
+                "typeCode": "A320",
+                "airline": "EW",
+                "carrierType": "low"
+              },
+              "timestamp": 1140000
+            },
+            {
+              "value": {
+                "id": 6,
+                "typeCode": "B737",
+                "airline": "FR",
+                "carrierType": "low"
+              },
+              "timestamp": 1500000
+            },
+            {
+              "value": {
+                "id": 7,
+                "typeCode": "A380",
+                "airline": "EK",
+                "carrierType": "full"
+              },
+              "timestamp": 1920000
+            },
+            {
+              "value": {
+                "id": 8,
+                "typeCode": "B777",
+                "airline": "BA",
+                "carrierType": "full"
+              },
+              "timestamp": 2340000
+            },
+            {
+              "value": {
+                "id": 9,
+                "typeCode": "A321",
+                "airline": "VY",
+                "carrierType": "low"
+              },
+              "timestamp": 2580000
+            },
+            {
+              "value": {
+                "id": 10,
+                "typeCode": "B737",
+                "airline": "WN",
+                "carrierType": "low"
+              },
+              "timestamp": 3060000
+            }
+          ],
+          "position": {
+            "x": 0,
+            "y": 468.75
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          },
+          "markingOffset": {
+            "x": 26.031781747053245,
+            "y": 55.872873011787014
+          }
+        },
+        {
+          "id": "p-runway-avail",
+          "name": "Runway\nAvailable",
+          "colorSet": "UNIT",
+          "initialMarking": "[()]",
+          "marking": [
+            null
+          ],
+          "position": {
+            "x": 2885,
+            "y": 483.75
+          },
+          "size": {
+            "width": 50,
+            "height": 35
+          }
+        },
+        {
+          "id": "p-aircraft-landed",
+          "name": "Aircraft\nLanded",
+          "colorSet": "Aircraft",
+          "initialMarking": "",
+          "marking": [],
+          "position": {
+            "x": 320,
+            "y": 342.5
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        },
+        {
+          "id": "p-tug-avail",
+          "name": "Tug\nAvailable",
+          "colorSet": "Tug",
+          "initialMarking": "[{\"id\": 1}, {\"id\": 2}, {\"id\": 3}]",
+          "marking": [
+            {
+              "id": 1
+            },
+            {
+              "id": 2
+            },
+            {
+              "id": 3
+            }
+          ],
+          "position": {
+            "x": 2885,
+            "y": 346.25
+          },
+          "size": {
+            "width": 50,
+            "height": 35
+          }
+        },
+        {
+          "id": "p-aircraft-taxiing",
+          "name": "Aircraft\nTaxiing",
+          "colorSet": "Aircraft",
+          "initialMarking": "",
+          "marking": [],
+          "position": {
+            "x": 640,
+            "y": 342.5
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        },
+        {
+          "id": "p-tug-busy",
+          "name": "Tug\nBusy",
+          "colorSet": "Tug",
+          "initialMarking": "",
+          "marking": [],
+          "position": {
+            "x": 2565,
+            "y": 248.75
+          },
+          "size": {
+            "width": 50,
+            "height": 35
+          }
+        },
+        {
+          "id": "p-gate-avail",
+          "name": "Gate\nAvailable",
+          "colorSet": "Gate",
+          "initialMarking": "[{\"id\": 1}, {\"id\": 2}, {\"id\": 3}]",
+          "marking": [
+            {
+              "id": 1
+            },
+            {
+              "id": 2
+            },
+            {
+              "id": 3
+            }
+          ],
+          "position": {
+            "x": 2565,
+            "y": 333.75
+          },
+          "size": {
+            "width": 50,
+            "height": 35
+          }
+        },
+        {
+          "id": "p-aircraft-at-gate",
+          "name": "Aircraft\nat Gate",
+          "colorSet": "Aircraft",
+          "initialMarking": "",
+          "marking": [],
+          "position": {
+            "x": 960,
+            "y": 233.75
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        },
+        {
+          "id": "p-gate-occupied",
+          "name": "Gate\nOccupied",
+          "colorSet": "Gate",
+          "initialMarking": "",
+          "marking": [],
+          "position": {
+            "x": 2245,
+            "y": 382.5
+          },
+          "size": {
+            "width": 50,
+            "height": 35
+          }
+        },
+        {
+          "id": "p-fuel-truck-avail",
+          "name": "Fuel Truck\nAvailable",
+          "colorSet": "FuelTruck",
+          "initialMarking": "[{\"id\": 1}, {\"id\": 2}]",
+          "marking": [
+            {
+              "id": 1
+            },
+            {
+              "id": 2
+            }
+          ],
+          "position": {
+            "x": 1602.5,
+            "y": 328.75
+          },
+          "size": {
+            "width": 55,
+            "height": 35
+          }
+        },
+        {
+          "id": "p-aircraft-fueling",
+          "name": "Aircraft\nFueling",
+          "colorSet": "Aircraft",
+          "initialMarking": "",
+          "marking": [],
+          "position": {
+            "x": 1280,
+            "y": 118.75
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        },
+        {
+          "id": "p-fuel-truck-busy",
+          "name": "Fuel Truck\nBusy",
+          "colorSet": "FuelTruck",
+          "initialMarking": "",
+          "marking": [],
+          "position": {
+            "x": 1282.5,
+            "y": 291.25
+          },
+          "size": {
+            "width": 55,
+            "height": 35
+          }
+        },
+        {
+          "id": "p-aircraft-fueled",
+          "name": "Aircraft\nFueled",
+          "colorSet": "Aircraft",
+          "initialMarking": "",
+          "marking": [],
+          "position": {
+            "x": 1600,
+            "y": 173.75
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        },
+        {
+          "id": "p-cleaning-crew-avail",
+          "name": "Cleaning\nCrew Avail",
+          "colorSet": "UNIT",
+          "initialMarking": "[(), ()]",
+          "marking": [
+            null,
+            null
+          ],
+          "position": {
+            "x": 2242.5,
+            "y": 127.5
+          },
+          "size": {
+            "width": 55,
+            "height": 35
+          }
+        },
+        {
+          "id": "p-aircraft-cleaning",
+          "name": "Aircraft\nCleaning",
+          "colorSet": "Aircraft",
+          "initialMarking": "",
+          "marking": [],
+          "position": {
+            "x": 1920,
+            "y": 0
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        },
+        {
+          "id": "p-cleaning-crew-busy",
+          "name": "Cleaning\nCrew Busy",
+          "colorSet": "UNIT",
+          "initialMarking": "",
+          "marking": [],
+          "position": {
+            "x": 1922.5,
+            "y": 90
+          },
+          "size": {
+            "width": 55,
+            "height": 35
+          }
+        },
+        {
+          "id": "p-aircraft-ready",
+          "name": "Aircraft\nReady",
+          "colorSet": "Aircraft",
+          "initialMarking": "",
+          "marking": [],
+          "position": {
+            "x": 2240,
+            "y": 212.5
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        },
+        {
+          "id": "p-aircraft-taxiing-out",
+          "name": "Aircraft\nTaxiing Out",
+          "colorSet": "Aircraft",
+          "initialMarking": "",
+          "marking": [],
+          "position": {
+            "x": 2560,
+            "y": 158.75
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        },
+        {
+          "id": "p-aircraft-departed",
+          "name": "Aircraft\nDeparted",
+          "colorSet": "Aircraft",
+          "initialMarking": "",
+          "marking": [],
+          "position": {
+            "x": 2880,
+            "y": 185
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        }
+      ],
+      "transitions": [
+        {
+          "id": "t-landing",
+          "name": "Landing",
+          "guard": "",
+          "time": "delay_min(5)",
+          "priority": "",
+          "position": {
+            "x": 160,
+            "y": 468.75
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        },
+        {
+          "id": "t-taxi-start",
+          "name": "Taxi\nStart",
+          "guard": "",
+          "time": "delay_min(6)",
+          "priority": "",
+          "position": {
+            "x": 480,
+            "y": 342.5
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        },
+        {
+          "id": "t-in-block",
+          "name": "In-Block",
+          "guard": "",
+          "time": "delay_min(3)",
+          "priority": "",
+          "position": {
+            "x": 800,
+            "y": 342.5
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        },
+        {
+          "id": "t-fuel-start",
+          "name": "Fueling\nStart",
+          "guard": "",
+          "time": "delay_min(2)",
+          "priority": "",
+          "position": {
+            "x": 1120,
+            "y": 233.75
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        },
+        {
+          "id": "t-fuel-end",
+          "name": "Fueling\nEnd",
+          "guard": "",
+          "time": "delay_min(22)",
+          "priority": "",
+          "position": {
+            "x": 1440,
+            "y": 206.25
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        },
+        {
+          "id": "t-clean-start",
+          "name": "Cleaning\nStart",
+          "guard": "ac.carrierType == \"full\"",
+          "time": "delay_min(2)",
+          "priority": "",
+          "position": {
+            "x": 1760,
+            "y": 71.25
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        },
+        {
+          "id": "t-clean-end",
+          "name": "Cleaning\nEnd",
+          "guard": "",
+          "time": "delay_min(30)",
+          "priority": "",
+          "position": {
+            "x": 2080,
+            "y": 43.75
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        },
+        {
+          "id": "t-skip-cleaning",
+          "name": "Skip\nCleaning",
+          "guard": "ac.carrierType == \"low\"",
+          "time": "delay_min(1)",
+          "priority": "",
+          "position": {
+            "x": 2080,
+            "y": 212.5
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        },
+        {
+          "id": "t-off-block",
+          "name": "Off-Block",
+          "guard": "",
+          "time": "delay_min(4)",
+          "priority": "",
+          "position": {
+            "x": 2400,
+            "y": 270
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        },
+        {
+          "id": "t-takeoff",
+          "name": "Takeoff",
+          "guard": "",
+          "time": "delay_min(10)",
+          "priority": "",
+          "position": {
+            "x": 2720,
+            "y": 215
+          },
+          "size": {
+            "width": 60,
+            "height": 40
+          }
+        }
+      ],
+      "arcs": [
+        {
+          "id": "e1",
+          "source": "p-aircraft-queue",
+          "target": "t-landing",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e2",
+          "source": "p-runway-avail",
+          "target": "t-landing",
+          "inscription": "rw",
+          "isBidirectional": false
+        },
+        {
+          "id": "e3",
+          "source": "t-landing",
+          "target": "p-aircraft-landed",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e5",
+          "source": "p-aircraft-landed",
+          "target": "t-taxi-start",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e7",
+          "source": "t-taxi-start",
+          "target": "p-aircraft-taxiing",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e4",
+          "source": "t-taxi-start",
+          "target": "p-runway-avail",
+          "inscription": "()",
+          "isBidirectional": false
+        },
+        {
+          "id": "e9",
+          "source": "p-aircraft-taxiing",
+          "target": "t-in-block",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e11",
+          "source": "p-gate-avail",
+          "target": "t-in-block",
+          "inscription": "gate",
+          "isBidirectional": false
+        },
+        {
+          "id": "e12",
+          "source": "t-in-block",
+          "target": "p-aircraft-at-gate",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e14",
+          "source": "t-in-block",
+          "target": "p-gate-occupied",
+          "inscription": "gate",
+          "isBidirectional": false
+        },
+        {
+          "id": "e15",
+          "source": "p-aircraft-at-gate",
+          "target": "t-fuel-start",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e16",
+          "source": "p-fuel-truck-avail",
+          "target": "t-fuel-start",
+          "inscription": "ft",
+          "isBidirectional": false
+        },
+        {
+          "id": "e17",
+          "source": "t-fuel-start",
+          "target": "p-aircraft-fueling",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e18",
+          "source": "t-fuel-start",
+          "target": "p-fuel-truck-busy",
+          "inscription": "ft",
+          "isBidirectional": false
+        },
+        {
+          "id": "e19",
+          "source": "p-aircraft-fueling",
+          "target": "t-fuel-end",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e20",
+          "source": "p-fuel-truck-busy",
+          "target": "t-fuel-end",
+          "inscription": "ft",
+          "isBidirectional": false
+        },
+        {
+          "id": "e21",
+          "source": "t-fuel-end",
+          "target": "p-aircraft-fueled",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e22",
+          "source": "t-fuel-end",
+          "target": "p-fuel-truck-avail",
+          "inscription": "ft",
+          "isBidirectional": false
+        },
+        {
+          "id": "e23",
+          "source": "p-aircraft-fueled",
+          "target": "t-clean-start",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e24",
+          "source": "p-cleaning-crew-avail",
+          "target": "t-clean-start",
+          "inscription": "crew",
+          "isBidirectional": false
+        },
+        {
+          "id": "e25",
+          "source": "t-clean-start",
+          "target": "p-aircraft-cleaning",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e26",
+          "source": "t-clean-start",
+          "target": "p-cleaning-crew-busy",
+          "inscription": "crew",
+          "isBidirectional": false
+        },
+        {
+          "id": "e27",
+          "source": "p-aircraft-cleaning",
+          "target": "t-clean-end",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e28",
+          "source": "p-cleaning-crew-busy",
+          "target": "t-clean-end",
+          "inscription": "crew",
+          "isBidirectional": false
+        },
+        {
+          "id": "e29",
+          "source": "t-clean-end",
+          "target": "p-aircraft-ready",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e30",
+          "source": "t-clean-end",
+          "target": "p-cleaning-crew-avail",
+          "inscription": "crew",
+          "isBidirectional": false
+        },
+        {
+          "id": "e31",
+          "source": "p-aircraft-fueled",
+          "target": "t-skip-cleaning",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e32",
+          "source": "t-skip-cleaning",
+          "target": "p-aircraft-ready",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e33",
+          "source": "p-aircraft-ready",
+          "target": "t-off-block",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e34",
+          "source": "p-gate-occupied",
+          "target": "t-off-block",
+          "inscription": "gate",
+          "isBidirectional": false
+        },
+        {
+          "id": "e35",
+          "source": "p-tug-avail",
+          "target": "t-off-block",
+          "inscription": "tug",
+          "isBidirectional": false
+        },
+        {
+          "id": "e36",
+          "source": "t-off-block",
+          "target": "p-aircraft-taxiing-out",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e37",
+          "source": "t-off-block",
+          "target": "p-gate-avail",
+          "inscription": "gate",
+          "isBidirectional": false
+        },
+        {
+          "id": "e38",
+          "source": "t-off-block",
+          "target": "p-tug-busy",
+          "inscription": "tug",
+          "isBidirectional": false
+        },
+        {
+          "id": "e39",
+          "source": "p-aircraft-taxiing-out",
+          "target": "t-takeoff",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e40",
+          "source": "p-tug-busy",
+          "target": "t-takeoff",
+          "inscription": "tug",
+          "isBidirectional": false
+        },
+        {
+          "id": "e41",
+          "source": "p-runway-avail",
+          "target": "t-takeoff",
+          "inscription": "rw",
+          "isBidirectional": false
+        },
+        {
+          "id": "e42",
+          "source": "t-takeoff",
+          "target": "p-aircraft-departed",
+          "inscription": "ac",
+          "isBidirectional": false
+        },
+        {
+          "id": "e43",
+          "source": "t-takeoff",
+          "target": "p-tug-avail",
+          "inscription": "tug",
+          "isBidirectional": false
+        },
+        {
+          "id": "e44",
+          "source": "t-takeoff",
+          "target": "p-runway-avail",
+          "inscription": "rw",
+          "isBidirectional": false
+        }
+      ]
+    }
+  ],
+  "colorSets": [
+    {
+      "id": "cs-unit",
+      "name": "UNIT",
+      "type": "basic",
+      "definition": "colset UNIT = unit;",
+      "color": "#6b7280",
+      "timed": true
+    },
+    {
+      "id": "cs-int",
+      "name": "INT",
+      "type": "basic",
+      "definition": "colset INT = int;",
+      "color": "#10b981"
+    },
+    {
+      "id": "cs-string",
+      "name": "STRING",
+      "type": "basic",
+      "definition": "colset STRING = string;",
+      "color": "#8b5cf6"
+    },
+    {
+      "id": "cs-aircraft",
+      "name": "Aircraft",
+      "type": "record",
+      "definition": "colset Aircraft = record id: INT * typeCode: STRING * airline: STRING * carrierType: STRING;",
+      "color": "#3b82f6",
+      "timed": true
+    },
+    {
+      "id": "cs-tug",
+      "name": "Tug",
+      "type": "record",
+      "definition": "colset Tug = record id: INT;",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "cs-fueltruck",
+      "name": "FuelTruck",
+      "type": "record",
+      "definition": "colset FuelTruck = record id: INT;",
+      "color": "#ef4444"
+    },
+    {
+      "id": "cs-gate",
+      "name": "Gate",
+      "type": "record",
+      "definition": "colset Gate = record id: INT;",
+      "color": "#06b6d4"
+    }
+  ],
+  "variables": [
+    {
+      "id": "var-ac",
+      "name": "ac",
+      "colorSet": "Aircraft"
+    },
+    {
+      "id": "var-tug",
+      "name": "tug",
+      "colorSet": "Tug"
+    },
+    {
+      "id": "var-ft",
+      "name": "ft",
+      "colorSet": "FuelTruck"
+    },
+    {
+      "id": "var-rw",
+      "name": "rw",
+      "colorSet": "UNIT"
+    },
+    {
+      "id": "var-gate",
+      "name": "gate",
+      "colorSet": "Gate"
+    },
+    {
+      "id": "var-crew",
+      "name": "crew",
+      "colorSet": "UNIT"
+    }
+  ],
+  "priorities": [],
+  "functions": [],
+  "uses": [],
+  "simulationSettings": {
+    "stepsPerRun": 50,
+    "animationDelayMs": 250,
+    "simulationEpoch": "2026-01-15T12:00:00+01:00"
+  }
+}

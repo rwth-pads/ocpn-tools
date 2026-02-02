@@ -16,6 +16,12 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    fs: {
+      // Disable strict mode to allow serving linked packages outside project root
+      strict: false,
+    },
+  },
   optimizeDeps: {
     exclude: ['@rwth-pads/cpnsim']
   }

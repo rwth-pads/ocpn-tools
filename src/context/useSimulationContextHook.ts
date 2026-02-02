@@ -1,16 +1,38 @@
 import { createContext, useContext } from 'react';
 import type { SimulationEvent } from '@/components/EventLog';
 
+// Configuration for simulation controls
+export interface SimulationConfig {
+  /** Number of steps to run for animated/fast execution */
+  stepsPerRun: number;
+  /** Delay between steps in milliseconds for animated execution */
+  animationDelayMs: number;
+}
+
+// Default simulation configuration
+export const DEFAULT_SIMULATION_CONFIG: SimulationConfig = {
+  stepsPerRun: 50,
+  animationDelayMs: 500,
+};
+
 // Define the type for the context value based on the hook's return type
 // Ensure this matches exactly what useSimulationController returns
 export type SimulationContextType = {
   runStep: () => Promise<void>;
+  runMultipleStepsAnimated: (steps: number, delayMs?: number) => Promise<void>;
+  runMultipleStepsFast: (steps: number) => Promise<void>;
+  stop: () => void;
+  fireTransition: (transitionId: string) => Promise<void>;
+  getEnabledTransitions: () => Promise<Array<{ transitionId: string; transitionName: string }>>;
   reset: () => Promise<void>;
   events: SimulationEvent[];
   clearEvents: () => void;
   isInitialized: boolean;
+  isRunning: boolean;
   simulationTime: number;
   stepCounter: number;
+  simulationConfig: SimulationConfig;
+  setSimulationConfig: (config: SimulationConfig) => void;
   ensureInitialized: () => Promise<void>;
   _executeWasmStep: () => void;
 };

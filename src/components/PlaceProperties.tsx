@@ -1,11 +1,41 @@
+import { useState } from 'react';
 import useStore from '@/stores/store';
 
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+
+import { RecordMarkingDialog } from '@/components/dialogs/RecordMarkingDialog';
+import { TimedMarkingDialog, TimedToken } from '@/components/dialogs/TimedMarkingDialog';
 import { ColorSet } from '@/declarations';
 
+// Define the type for the values within a parsed record
+type RecordValue = string | number | boolean;
+// Define the type for a single parsed record
+type ParsedRecord = Record<string, RecordValue>;
+
+// Define the type for the data part of the selected place
+interface SelectedPlaceData {
+  label?: string;
+  colorSet?: string;
+  isArcMode?: boolean;
+  type?: string;
+  initialMarking?: string;
+}
+
+// Define the type for the selected place state
+interface SelectedPlace {
+  id: string;
+  data: SelectedPlaceData;
+}
+
 const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
+  const [isRecordMarkingDialogOpen, setIsRecordMarkingDialogOpen] = useState(false);
+  const [isTimedMarkingDialogOpen, setIsTimedMarkingDialogOpen] = useState(false);
+  // Use the specific type for the selectedPlace state
+  const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
+
   // Access selectedElement from the store
   const activePetriNetId = useStore((state) => state.activePetriNetId);
   const selectedElement = useStore((state) => {
@@ -19,11 +49,213 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
     return <div>No node selected</div>;
   }
 
-  const { id, data }: { id: string; data: { label?: string; colorSet?: string; isArcMode?: boolean; type?: string; initialMarking?: string } } = selectedElement.element;
+  // Use the specific type here as well, although it's inferred correctly
+  const { id, data }: { id: string; data: SelectedPlaceData } = selectedElement.element;
 
   // Type guard to ensure data is of type PlaceNodeData
   if (!('colorSet' in data)) {
     return <div>Invalid node type</div>;
+  }
+
+  // Check if the selected colorSet is a UNIT type
+  const selectedColorSet = colorSets.find((cs) => cs.name === data.colorSet);
+  const isUnitType = selectedColorSet?.type === 'basic' && selectedColorSet?.definition?.includes('= unit;');
+  // Check if the selected colorSet is timed
+  const isTimed = selectedColorSet?.timed === true;
+
+  // Determine the base type of the colorset for timed marking editor
+  const getColorSetBaseType = (): 'int' | 'bool' | 'string' | 'unit' | 'other' => {
+    if (!selectedColorSet) return 'other';
+    const def = selectedColorSet.definition?.toLowerCase() || '';
+    if (def.includes('= unit')) return 'unit';
+    if (def.includes('= int')) return 'int';
+    if (def.includes('= bool')) return 'bool';
+    if (def.includes('= string')) return 'string';
+    return 'other';
+  };
+
+  // Parse timed marking string to TimedToken array
+  const parseTimedMarking = (marking: string): TimedToken[] => {
+    if (!marking) return [];
+    try {
+      const parsed = JSON.parse(marking);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => {
+          if (typeof item === 'object' && item !== null && 'value' in item && 'timestamp' in item) {
+            return { value: item.value, timestamp: Number(item.timestamp) || 0 };
+          }
+          // If it's a simple value, wrap it with timestamp 0
+          return { value: item, timestamp: 0 };
+        });
+      }
+    } catch {
+      // Try to parse as simple array and add default timestamps
+      try {
+        const simpleArray = JSON.parse(marking);
+        if (Array.isArray(simpleArray)) {
+          return simpleArray.map((v) => ({ value: v, timestamp: 0 }));
+        }
+      } catch {
+        // Fall through
+      }
+    }
+    return [];
+  };
+
+  // Format TimedToken array to marking string
+  const formatTimedMarking = (tokens: TimedToken[]): string => {
+    if (tokens.length === 0) return '';
+    return JSON.stringify(tokens.map((t) => ({ value: t.value, timestamp: t.timestamp })));
+  };
+
+  // Helper to parse UNIT marking to count (handles both array format and number)
+  const parseUnitMarkingCount = (marking: string): number => {
+    if (!marking) return 0;
+    const trimmed = marking.trim();
+    // If it's a number, return it directly
+    if (/^\d+$/.test(trimmed)) {
+      return parseInt(trimmed, 10);
+    }
+    // If it's an array of unit values like "[(), (), ()]", count them
+    if (trimmed.startsWith('[')) {
+      try {
+        // Count occurrences of "()" in the array
+        const matches = trimmed.match(/\(\)/g);
+        return matches ? matches.length : 0;
+      } catch {
+        return 0;
+      }
+    }
+    return 0;
+  };
+
+  // Helper to convert count to UNIT marking format
+  const countToUnitMarking = (count: number): string => {
+    if (count <= 0) return '';
+    // Create an array of N unit values: [(), (), ...]
+    const units = Array(count).fill('()').join(', ');
+    return `[${units}]`;
+  };
+
+  // Helper function to get record attributes
+  const getRecordAttributes = (colorSetName: string) => {
+    const colorSet = colorSets.find((cs) => cs.name === colorSetName)
+    if (!colorSet || colorSet.type !== "record") return []
+
+    // In a real implementation, parse the record definition
+    // For now, we'll use a simplified approach for the demo
+    if (colorSetName === "Product") {
+      return [
+        { name: "id", type: "INT" },
+        { name: "name", type: "STRING" },
+        { name: "price", type: "REAL" },
+      ]
+    } else if (colorSetName === "Order") {
+      return [
+        { name: "orderId", type: "STRING" },
+        { name: "status", type: "STRING" },
+        { name: "amount", type: "INT" },
+      ]
+    }
+
+    // Try to parse from the definition
+    try {
+      const recordRegex = /colset\s+(\w+)\s*=\s*record\s+([^;]+);/i
+      const fieldsRegex = /(\w+)\s*:\s*(\w+)/g
+
+      const match = colorSet.definition.match(recordRegex)
+      if (!match) return []
+
+      const fields = match[2]
+      const attributes = []
+      let fieldMatch
+
+      while ((fieldMatch = fieldsRegex.exec(fields)) !== null) {
+        attributes.push({
+          name: fieldMatch[1],
+          type: fieldMatch[2].toUpperCase(),
+        })
+      }
+
+      return attributes
+    } catch (error) {
+      console.error("Failed to parse record definition:", error)
+      return []
+    }
+  }
+
+  // Helper function to parse initial marking
+  const parseInitialMarking = (initialMarking: string): ParsedRecord[] => {
+    if (!initialMarking) return []
+
+    try {
+      // Try to parse as JSON first
+      if (initialMarking.trim().startsWith("[")) {
+        // Assuming JSON structure matches ParsedRecord[]
+        return JSON.parse(initialMarking) as ParsedRecord[];
+      }
+
+      // If not JSON, try to parse as CPN Tools format
+      const regex = /(\d+)`\{([^}]+)\}/g
+      const records: ParsedRecord[] = []
+      let match
+
+      while ((match = regex.exec(initialMarking)) !== null) {
+        const count = Number.parseInt(match[1], 10)
+        const recordStr = match[2]
+
+        // Parse record attributes
+        const attrRegex = /(\w+)=([^,]+)(?:,|$)/g
+        const record: ParsedRecord = {}
+        let attrMatch
+
+        while ((attrMatch = attrRegex.exec(recordStr)) !== null) {
+          let value: string | number | boolean = attrMatch[2].trim()
+          const key = attrMatch[1];
+
+          // Try to convert to appropriate type
+          if (!isNaN(Number(value))) {
+            if (value.includes(".")) {
+              record[key] = Number.parseFloat(value)
+            } else {
+              record[key] = Number.parseInt(value, 10)
+            }
+          } else if (value.toLowerCase() === "true" || value.toLowerCase() === "false") {
+            record[key] = value.toLowerCase() === "true"
+          } else {
+            // Remove quotes if present
+            if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+              value = value.substring(1, value.length - 1)
+            }
+            record[key] = value
+          }
+        }
+
+        // Add the record multiple times based on count
+        for (let i = 0; i < count; i++) {
+          records.push({ ...record })
+        }
+      }
+
+      return records
+    } catch (error) {
+      console.error("Failed to parse initial marking:", error)
+      return []
+    }
+  }
+
+  // Helper function to format record marking
+  const formatRecordMarking = (records: ParsedRecord[]) => {
+    if (!records || records.length === 0) return ""
+
+    try {
+      // For simplicity, we'll return as JSON string
+      // In a real implementation, you might format it according to CPN Tools syntax
+      return JSON.stringify(records)
+    } catch (error) {
+      console.error("Failed to format record marking:", error)
+      return ""
+    }
   }
 
   return (
@@ -88,24 +320,125 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
 
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="initialMarking">Initial Marking</Label>
-        <Input
-          id="initialMarking"
-          value={data.initialMarking || ""}
-          onChange={(e) => {
-            if (activePetriNetId) {
-              updateNodeData(activePetriNetId, id, {
-                ...data,
-                label: data.label || "",
-                initialMarking: e.target.value,
-                isArcMode: data.isArcMode || false,
-                type: data.type || "defaultType",
-                colorSet: data.colorSet || "defaultColorSet",
-              });
-            }
-          }
-          }
-        />
+        {isUnitType && !isTimed ? (
+          /* UNIT type (non-timed): show simple number input */
+          <Input
+            id="initialMarking"
+            type="number"
+            min="0"
+            value={parseUnitMarkingCount(data.initialMarking || "")}
+            onChange={(e) => {
+              if (activePetriNetId) {
+                const count = parseInt(e.target.value, 10) || 0;
+                updateNodeData(activePetriNetId, id, {
+                  ...data,
+                  label: data.label || "",
+                  initialMarking: countToUnitMarking(count),
+                  isArcMode: data.isArcMode || false,
+                  type: data.type || "defaultType",
+                  colorSet: data.colorSet || "defaultColorSet",
+                });
+              }
+            }}
+          />
+        ) : isTimed ? (
+          /* Timed colorset: show token count summary with Edit button */
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2 items-center">
+              <div className="flex-1 text-sm text-muted-foreground border rounded-md px-3 py-2 bg-muted/30">
+                {parseTimedMarking(data.initialMarking || "").length} timed token(s)
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedPlace({ id, data: { ...data } });
+                  setIsTimedMarkingDialogOpen(true);
+                }}
+              >
+                Edit
+              </Button>
+            </div>
+          </div>
+        ) : (
+          /* Non-UNIT, non-timed type: show text input with Edit button */
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <Input
+                id="initialMarking"
+                value={data.initialMarking || ""}
+                placeholder="e.g., [1, 2, 3]"
+                onChange={(e) => {
+                  if (activePetriNetId) {
+                    updateNodeData(activePetriNetId, id, {
+                      ...data,
+                      label: data.label || "",
+                      initialMarking: e.target.value,
+                      isArcMode: data.isArcMode || false,
+                      type: data.type || "defaultType",
+                      colorSet: data.colorSet || "defaultColorSet",
+                    });
+                  }
+                }}
+              />
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedPlace({ id, data: { ...data } });
+                  setIsRecordMarkingDialogOpen(true);
+                }}
+              >
+                Edit
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {selectedPlace && (
+        <>
+          <RecordMarkingDialog
+            open={isRecordMarkingDialogOpen}
+            onOpenChange={setIsRecordMarkingDialogOpen}
+            colorSetName={selectedPlace.data?.colorSet || ""}
+            attributes={getRecordAttributes(selectedPlace.data?.colorSet || "")}
+            initialData={parseInitialMarking(selectedPlace.data?.initialMarking || "")}
+            onSave={(records) => {
+              const formattedMarking = formatRecordMarking(records);
+              if (activePetriNetId && selectedPlace) {
+                updateNodeData(activePetriNetId, selectedPlace.id, {
+                  label: selectedPlace.data.label || "",
+                  isArcMode: selectedPlace.data.isArcMode || false,
+                  type: selectedPlace.data.type || "place",
+                  colorSet: selectedPlace.data.colorSet || "INT",
+                  initialMarking: formattedMarking,
+                  marking: formattedMarking
+                });
+              }
+            }}
+          />
+          <TimedMarkingDialog
+            open={isTimedMarkingDialogOpen}
+            onOpenChange={setIsTimedMarkingDialogOpen}
+            colorSetName={selectedPlace.data?.colorSet || ""}
+            colorSetType={getColorSetBaseType()}
+            initialData={parseTimedMarking(selectedPlace.data?.initialMarking || "")}
+            onSave={(tokens) => {
+              const formattedMarking = formatTimedMarking(tokens);
+              if (activePetriNetId && selectedPlace) {
+                updateNodeData(activePetriNetId, selectedPlace.id, {
+                  label: selectedPlace.data.label || "",
+                  isArcMode: selectedPlace.data.isArcMode || false,
+                  type: selectedPlace.data.type || "place",
+                  colorSet: selectedPlace.data.colorSet || "INT",
+                  initialMarking: formattedMarking,
+                  marking: formattedMarking
+                });
+              }
+            }}
+          />
+        </>
+      )}
+
     </div>
   );
 };

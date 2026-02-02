@@ -143,6 +143,7 @@
   align-items: center;
   justify-content: center;
   background-color: var(--xy-node-background-color-default);
+  line-height: 1.2;
 }
 
 .cpn-node label{
@@ -175,13 +176,22 @@
 }
 
 .auxtext-node {
-  display: flex;
-  justify-content:left;
-  align-items: start;
-  white-space: pre-wrap;
-  text-align: left;
+  /* Styles handled inline in component */
+}
+
+.inscription-node {
+  background-color: transparent;
+  padding: 1px 2px;
+  border-radius: 2px;
   width: max-content;
-  font-size: 9px;
+}
+
+.inscription-node:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.react-flow__node-inscription {
+  z-index: 10 !important;
 }
 
 .custom-handle {
@@ -199,6 +209,8 @@
 
 .edge-label-renderer__custom-edge {
   position: absolute;
-  background-color: white;
+  background-color: transparent;
   font-size: 9px;
+  pointer-events: auto;
+  z-index: 1000;
 }

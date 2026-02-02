@@ -1,6 +1,7 @@
 import { PlaceNode } from './PlaceNode';
 import TransitionNode from './TransitionNode';
 import AuxTextNode from './AuxTextNode';
+import InscriptionNode from './InscriptionNode';
 
 export const initialNodes = [
   { id: 'a',
@@ -11,10 +12,10 @@ export const initialNodes = [
   {
     id: 'b',
     type: 'transition',
-    position: { x: -100, y: 100 },
-    width: 50,
+    position: { x: -110, y: 100 },
+    width: 70,
     height: 30,
-    data: { label: 'transition', guard: '', time: '', priority: '', codeSegment: '' },
+    data: { label: 'transition', guard: 'var1>4', time: '', priority: '', codeSegment: '' },
   },
   {
     id: 'c',
@@ -30,4 +31,5 @@ export const nodeTypes = {
   'place': PlaceNode,
   'transition': TransitionNode,
   'auxText': AuxTextNode,
+  'inscription': InscriptionNode,
 };

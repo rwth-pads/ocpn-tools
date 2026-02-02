@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import type { ColorSet } from "@/declarations";
@@ -33,6 +34,7 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
   const [type, setType] = useState(colorSet?.type || "basic")
   const [definition, setDefinition] = useState(colorSet?.definition || "")
   const [color, setColor] = useState(colorSet?.color || "#3b82f6") // Default to blue
+  const [timed, setTimed] = useState(colorSet?.timed || false) // Whether this is a timed color set
 
   // For basic color sets
   const [basicType, setBasicType] = useState("int")
@@ -62,6 +64,7 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
       setName(colorSet.name);
       setType(colorSet.type);
       setDefinition(colorSet.definition);
+      setTimed(colorSet.timed || false); // Set timed from existing color set
 
       // Try to parse the definition based on type
       if (colorSet.type === "basic") {
@@ -182,6 +185,11 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
         def += type
     }
 
+    // Append "timed" suffix if this is a timed color set
+    if (timed) {
+      def += " timed"
+    }
+
     def += ";"
     return def
   }
@@ -195,6 +203,7 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
       type,
       definition: finalDefinition,
       color, // Include the color
+      timed, // Include the timed flag
     })
   }
 
@@ -236,6 +245,20 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
             className="w-full mt-2"
           />
         </div>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id="timed"
+          checked={timed}
+          onCheckedChange={(checked) => setTimed(checked === true)}
+        />
+        <Label htmlFor="timed" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+          Timed color set
+        </Label>
+        <span className="text-xs text-muted-foreground">
+          (tokens carry timestamps for timed simulations)
+        </span>
       </div>
 
       <Tabs defaultValue="visual" className="w-full">

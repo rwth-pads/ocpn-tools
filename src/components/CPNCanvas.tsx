@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useState, useContext } from 'react'; // Added useContext
+import React, { useCallback, useState, useContext } from 'react'; // Added useContext
 import useStore from '@/stores/store';
 import { usePetriNetHandlers } from '@/hooks/usePetriNetHandlers';
 
@@ -73,6 +73,8 @@ const selector = (state: StoreState) => ({
   priorities: state.priorities,
   functions: state.functions,
   uses: state.uses,
+  simulationEpoch: state.simulationEpoch,
+  setSimulationEpoch: state.setSimulationEpoch,
   createPetriNet: state.createPetriNet,
   setActivePetriNet: state.setActivePetriNet,
   setNodes: state.setNodes,
@@ -91,8 +93,8 @@ const defaultEdgeOptions = {
   markerEnd: {
     type: MarkerType.ArrowClosed,
     color: '#000',
-    width: 15,
-    height: 15,
+    width: 10,
+    height: 10,
   },
 };
 
@@ -106,8 +108,6 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
   const [dialPosition, setDialPosition] = useState({ x: 0, y: 0 });
 
   const simulationContext = useContext(SimulationContext); // Get simulation context
-
-  const reactFlowWrapper = useRef(null);
   
   const {
     petriNetOrder,
@@ -118,6 +118,8 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     priorities,
     functions,
     uses,
+    simulationEpoch,
+    setSimulationEpoch,
     createPetriNet,
     setActivePetriNet,
     setNodes,
@@ -171,6 +173,23 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       if (data.priorities) setPriorities(data.priorities);
       if (data.functions) setFunctions(data.functions);
       if (data.uses) setUses(data.uses);
+      
+      // Restore simulation settings if available
+      if (data.simulationSettings) {
+        // Restore simulation epoch
+        if (data.simulationSettings.simulationEpoch !== undefined) {
+          setSimulationEpoch(data.simulationSettings.simulationEpoch);
+        }
+        // Restore simulation config (stepsPerRun, animationDelayMs)
+        if (simulationContext?.setSimulationConfig) {
+          const currentConfig = simulationContext.simulationConfig;
+          simulationContext.setSimulationConfig({
+            ...currentConfig,
+            stepsPerRun: data.simulationSettings.stepsPerRun ?? currentConfig.stepsPerRun,
+            animationDelayMs: data.simulationSettings.animationDelayMs ?? currentConfig.animationDelayMs,
+          });
+        }
+      }
 
       // If we imported a JSON file, layout the graph
       if (fileName.endsWith('.json')) {
@@ -224,6 +243,12 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       priorities,
       functions,
       uses,
+      // Include simulation settings for JSON/OCPN format
+      simulationSettings: {
+        stepsPerRun: simulationContext?.simulationConfig?.stepsPerRun,
+        animationDelayMs: simulationContext?.simulationConfig?.animationDelayMs,
+        simulationEpoch: simulationEpoch,
+      },
     }
 
     switch (format) {
@@ -497,8 +522,8 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
   };
 
   return (
-    <div className="dndflow">
-      <div className="flex flex-col h-screen">
+    <div className="dndflow flex flex-col grow"> {/* Ensure this container allows growth */}
+      <div className="flex flex-col grow" style={{ height: 100 }}> {/* Ensure this container allows growth */}
         {/* Toolbar Panel */}
         <div className="flex items-center justify-between p-2 border-b">
           <div className="flex items-center gap-1">
@@ -587,8 +612,9 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
           </Tabs>
         </div>
 
-        {/* ReactFlow Component */}
-        <div className="flex-1 reactflow-wrapper" ref={reactFlowWrapper}>
+        {/* ReactFlow Component Wrapper */}
+        {/* Add w-full and h-full to ensure the wrapper takes available space */}
+        {/* <div className="reactflow-wrapper w-full h-full" ref={reactFlowWrapper}> */}
           <ReactFlow
             nodes={petriNet?.nodes || []}
             nodeTypes={nodeTypes}
@@ -609,11 +635,10 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
             connectionLineComponent={CustomConnectionLine}
             maxZoom={4}
             onInit={(instance) => {
-              setTimeout(() => {
-                instance.fitView({
-                  maxZoom: 4,
-                });
-              }, 100);
+              // Using requestAnimationFrame to ensure layout is stable
+              requestAnimationFrame(() => {
+                instance.fitView({ maxZoom: 4, padding: 0.1 });
+              });
             }}
           >
             <Background />
@@ -629,9 +654,9 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
               onClose={() => setIsDialOpen(false)}
               onSliceClick={handleSliceClick}
               size={200}
-            ></BoomerDial>
+            />
           </ReactFlow>
-        </div>
+        {/* </div> */}
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { Circle, Square, LetterText, ArrowRight } from "lucide-react"
+import { Circle, Square, LetterText, ArrowRight, SquareStack } from "lucide-react"
 
 import { Toggle } from '@/components/ui/toggle';
 
@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { LayoutPopover, LayoutOptions } from "@/components/LayoutPopover";
 
 import { useDnD } from '@/utils/DnDContext';
+import useStore from '@/stores/store';
 
 interface ToolbarProps {
   toggleArcMode: (pressed: boolean) => void;
@@ -23,6 +24,8 @@ interface ToolbarProps {
 
 export function Toolbar({ toggleArcMode, onApplyLayout }: ToolbarProps) {
   const [, setType] = useDnD();
+  const showMarkingDisplay = useStore((state) => state.showMarkingDisplay);
+  const setShowMarkingDisplay = useStore((state) => state.setShowMarkingDisplay);
 
   const onDragStart = (event: React.DragEvent<HTMLElement>, nodeType: string) => {
       //event.dataTransfer.setData("application/reactflow", nodeType);
@@ -139,7 +142,26 @@ export function Toolbar({ toggleArcMode, onApplyLayout }: ToolbarProps) {
         </div>
 
         <div className="flex items-center gap-1">
-        <LayoutPopover onApplyLayout={onApplyLayout} />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Toggle
+                    aria-label="Toggle Marking Display"
+                    pressed={showMarkingDisplay}
+                    onPressedChange={setShowMarkingDisplay}
+                  >
+                    <SquareStack className="h-4 w-4 text-green-600" />
+                    <span className="sr-only">Toggle Marking Display</span>
+                  </Toggle>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Toggle Marking Display</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <LayoutPopover onApplyLayout={onApplyLayout} />
         {/* <Popover>
           <PopoverTrigger>
             <TooltipProvider>

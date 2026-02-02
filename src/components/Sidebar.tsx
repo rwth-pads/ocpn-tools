@@ -2,7 +2,6 @@ import useStore from '@/stores/store';
 import { ResizablePanel } from '@/components/ui/resizable';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import PlaceProperties from './PlaceProperties';
@@ -59,21 +58,20 @@ const Sidebar = () => {
   };
 
   return (
-    <ResizablePanel defaultSize={20} className="min-w-[400px]">
-      <ScrollArea className="h-full">
-        <div className="px-4 py-2">
-          <h3 className="text-lg font-medium">OCPN Tools</h3>
-        </div>
-        <div className="px-4 py-2">
-          <Tabs defaultValue="model">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="model">Model</TabsTrigger>
-              <TabsTrigger value="simulation">Simulation</TabsTrigger>
-              {/* <TabsTrigger value="analysis">Analysis</TabsTrigger> */}
-            </TabsList>
-            <TabsContent value="model" className="space-y-4 mt-2">
+    <ResizablePanel defaultSize={20} className="min-w-[400px] flex flex-col h-full overflow-hidden">
+      <div className="px-4 py-2 flex-shrink-0">
+        <h3 className="text-lg font-medium">OCPN Tools</h3>
+      </div>
+      <div className="px-4 py-2 flex-1 flex flex-col overflow-hidden">
+        <Tabs defaultValue="model" className="flex flex-col flex-1 overflow-hidden">
+          <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+            <TabsTrigger value="model">Model</TabsTrigger>
+            <TabsTrigger value="simulation">Simulation</TabsTrigger>
+            {/* <TabsTrigger value="analysis">Analysis</TabsTrigger> */}
+          </TabsList>
+          <TabsContent value="model" className="space-y-4 mt-2 flex-1 overflow-auto">
 
-              <div className="space-y-4">
+            <div className="space-y-4">
                 <div className="space-y-2">
                   <Card>
                     <CardHeader className="px-4 pb-2">
@@ -113,14 +111,13 @@ const Sidebar = () => {
                 </div>
               </div>
             </TabsContent>
-            <TabsContent value="simulation" className="space-y-4 mt-2">
+            <TabsContent value="simulation" className="mt-2 flex-1 overflow-hidden">
               <SimulationPanel />
             </TabsContent>
           </Tabs>
 
 
         </div>
-      </ScrollArea>
     </ResizablePanel>
   );
 };

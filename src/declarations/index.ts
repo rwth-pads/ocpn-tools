@@ -6,6 +6,7 @@ export interface ColorSet {
   type: string
   definition: string
   color?: string // Add color property
+  timed?: boolean // Whether this is a timed color set
 }
 
 export interface Variable {

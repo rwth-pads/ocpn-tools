@@ -52,24 +52,24 @@ export function OCELExportDialog({ open, onOpenChange, onExport }: OCELExportDia
               </div>
             </div>
             <div className="flex items-start space-x-3 space-y-0">
-              <RadioGroupItem value="xml" id="xml" />
-              <div className="grid gap-1.5">
+              <RadioGroupItem value="xml" id="xml" disabled />
+              <div className="grid gap-1.5 opacity-50">
                 <Label htmlFor="xml" className="font-medium">
                   XML
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  XML format for OCEL 2.0. Good for compatibility with legacy systems.
+                  XML format for OCEL 2.0. Good for compatibility with legacy systems. (Coming soon)
                 </p>
               </div>
             </div>
             <div className="flex items-start space-x-3 space-y-0">
-              <RadioGroupItem value="sqlite" id="sqlite" />
-              <div className="grid gap-1.5">
+              <RadioGroupItem value="sqlite" id="sqlite" disabled />
+              <div className="grid gap-1.5 opacity-50">
                 <Label htmlFor="sqlite" className="font-medium">
                   SQLite
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  SQLite database format. Best for large event logs and direct database queries.
+                  SQLite database format. Best for large event logs and direct database queries. (Coming soon)
                 </p>
               </div>
             </div>

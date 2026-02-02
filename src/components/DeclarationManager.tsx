@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Trash2, GripVertical, Edit, ChevronRight, ChevronDown } from "lucide-react"
+import { Trash2, GripVertical, Edit, ChevronRight, ChevronDown, Clock } from "lucide-react"
 import { AdvancedColorSetEditor } from "@/components/AdvancedColorSetEditor";
 import { VariableEditor } from '@/components/VariableEditor';
 import { PriorityEditor } from "@/components/PriorityEditor";
@@ -30,6 +30,7 @@ export function DeclarationManager() {
   const setColorSets = useStore((state) => state.setColorSets);
   const onAddColorSet = useStore((state) => state.addColorSet);
   const onDeleteColorSet = useStore((state) => state.deleteColorSet);
+  const renameColorSet = useStore((state) => state.renameColorSet);
   const variables = useStore((state) => state.variables);
   const setVariables = useStore((state) => state.setVariables);
   const onAddVariable = useStore((state) => state.addVariable);
@@ -143,9 +144,12 @@ export function DeclarationManager() {
 
   const handleSaveAdvancedColorSet = (colorSet: Omit<ColorSet, "id">) => {
     if (selectedColorSet) {
-      // Update existing color set
+      // Check if name changed - if so, use renameColorSet to update all references
+      if (selectedColorSet.name !== colorSet.name && selectedColorSet.id) {
+        renameColorSet(selectedColorSet.id, colorSet.name);
+      }
+      // Update the color set with all other changes
       const updatedColorSets = colorSets.map((cs) => (cs.id === selectedColorSet.id ? { ...cs, ...colorSet } : cs))
-      //onReorderColorSets(updatedColorSets)
       setColorSets(updatedColorSets);
     } else {
       // Add new color set
@@ -311,8 +315,13 @@ export function DeclarationManager() {
                         <GripVertical className="h-4 w-4 text-muted-foreground" />
                       </div>
                       <div className="font-mono text-sm">
-                        {cs.definition}
+                        {cs.definition.replace(/^colset\s+/i, '').replace(/;$/, '')}
                       </div>
+                      {cs.timed && (
+                        <span title="Timed color set">
+                          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center">
                       <div

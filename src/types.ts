@@ -10,6 +10,23 @@ import { PlaceNodeData } from './nodes/PlaceNode';
 import { TransitionNodeData } from './nodes/TransitionNode';
 import { AuxTextNodeData } from './nodes/AuxTextNode';
 
+// A timed token has a value and a timestamp (in milliseconds)
+export interface TimedToken {
+  value: unknown;
+  timestamp: number; // Timestamp in milliseconds (0 = immediately available)
+}
+
+// Helper to check if a token is a timed token object
+export function isTimedToken(token: unknown): token is TimedToken {
+  return (
+    token !== null &&
+    typeof token === 'object' &&
+    'value' in token &&
+    'timestamp' in token &&
+    typeof (token as TimedToken).timestamp === 'number'
+  );
+}
+
 export type PetriNet = {
   id: string;
   name: string;
@@ -35,6 +52,8 @@ export type AppState = {
   priorities: Priority[];
   functions: Function[];
   uses: Use[];
+  simulationEpoch?: string | null; // ISO 8601 date string for simulation epoch
+  showMarkingDisplay: boolean; // Toggle for showing/hiding marking rectangles
 };
 
 export type AppActions = {
@@ -47,9 +66,11 @@ export type AppActions = {
   addNode: (petriNetId: string, newNode: Node) => void;
   addEdge: (petriNetId: string, edge: Edge) => void;
   updateNode: (petriNetId: string, node: Node) => void;
-  updateNodeMarking: (id: string, newMarking: (string | number)[]) => void;
+  updateNodeMarking: (id: string, newMarking: unknown[]) => void;
   updateNodeData: (petriNetId: string, id: string, newData: PlaceNodeData | TransitionNodeData | AuxTextNodeData) => void;
+  updateEdgeData: (petriNetId: string, id: string, newData: Record<string, unknown>) => void;
   updateEdgeLabel: (petriNetId: string, id: string, newLabel: string) => void;
+  swapEdgeDirection: (petriNetId: string, id: string) => void;
   applyInitialMarkings: () => void;
   setSelectedElement: (petriNetId: string, element: SelectedElement) => void;
   
@@ -64,6 +85,7 @@ export type AppActions = {
   addPriority: (newPriority: Priority) => void;
   addFunction: (newFunction: Function) => void;
   addUse: (newUse: Use) => void;
+  renameColorSet: (id: string, newName: string) => void;
   deleteColorSet: (id: string) => void;
   deleteVariable: (id: string) => void;
   deletePriority: (id: string) => void;
@@ -72,6 +94,8 @@ export type AppActions = {
   deleteUse: (id: string) => void;
 
   toggleArcMode: (state: boolean) => void;
+  setSimulationEpoch: (epoch: string | null) => void;
+  setShowMarkingDisplay: (show: boolean) => void;
   reset: () => void;
 };
 

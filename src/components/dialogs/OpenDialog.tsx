@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Upload, FileUp } from "lucide-react"
+import { Upload, FileUp, Plane } from "lucide-react"
 
 interface OpenDialogProps {
   open: boolean
@@ -20,6 +20,7 @@ interface OpenDialogProps {
 
 export function OpenDialog({ open, onOpenChange, onFileLoaded }: OpenDialogProps) {
   const [isDragging, setIsDragging] = useState(false)
+  const [isLoadingExample, setIsLoadingExample] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -63,6 +64,23 @@ export function OpenDialog({ open, onOpenChange, onFileLoaded }: OpenDialogProps
     fileInputRef.current?.click()
   }
 
+  const handleLoadExample = async () => {
+    setIsLoadingExample(true)
+    try {
+      const response = await fetch(`${import.meta.env.BASE_URL}examples/airport.ocpn`)
+      if (!response.ok) {
+        throw new Error('Failed to load example file')
+      }
+      const content = await response.text()
+      onFileLoaded(content, 'airport.ocpn')
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Error loading example:', error)
+    } finally {
+      setIsLoadingExample(false)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
@@ -96,6 +114,18 @@ export function OpenDialog({ open, onOpenChange, onFileLoaded }: OpenDialogProps
               Open File...
             </Button>
           </div>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Or try an example:</span>
+          <Button 
+            variant="link" 
+            className="p-0 h-auto text-sm" 
+            onClick={handleLoadExample}
+            disabled={isLoadingExample}
+          >
+            <Plane className="mr-1 h-3 w-3" />
+            Airport Ground Handling
+          </Button>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

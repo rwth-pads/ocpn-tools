@@ -26,6 +26,8 @@ const emptyState: AppState = {
   priorities: [],
   functions: [],
   uses: [],
+  simulationEpoch: null,
+  showMarkingDisplay: true,
 }
 
 export type StoreState = AppState & AppActions;
@@ -52,6 +54,8 @@ const useStore = create<StoreState>((set) => ({
   priorities: initialPriorities,
   functions: initialFunctions,
   uses: [],
+  simulationEpoch: null,
+  showMarkingDisplay: true,
 
   // Actions
   setNodes: (petriNetId: string, nodes: Node[]) => {
@@ -171,7 +175,7 @@ const useStore = create<StoreState>((set) => ({
       };
     });
   },
-  updateNodeMarking: (id: string, newMarking: (string | number)[]) => {
+  updateNodeMarking: (id: string, newMarking: unknown[]) => {
     set((state) => {
       const petriNet = state.petriNetsById[state.activePetriNetId!];
       const updatedNodes = petriNet.nodes.map((node) =>
@@ -192,29 +196,93 @@ const useStore = create<StoreState>((set) => ({
   updateNodeData: (petriNetId, id: string, newData: PlaceNodeData | TransitionNodeData | AuxTextNodeData) => {
     set((state) => {
       const petriNet = state.petriNetsById[petriNetId];
-      const updatedNodes = petriNet.nodes.map((node) =>
-      node.id === id ? { ...node, data: { ...node.data, ...newData } } : node
+      
+      // Mapping from parent node properties to inscription types
+      const propertyToInscriptionType: Record<string, string> = {
+        initialMarking: 'initialMarking',
+        colorSet: 'colorSet',
+        guard: 'guard',
+        time: 'time',
+        priority: 'priority',
+        codeSegment: 'codeSegment',
+      };
+      
+      // First pass: update the target node
+      let updatedNodes = petriNet.nodes.map((node) =>
+        node.id === id ? { ...node, data: { ...node.data, ...newData } } : node
       );
+      
+      // Second pass: update any child inscription nodes whose labels should reflect parent data
+      updatedNodes = updatedNodes.map((node) => {
+        // Check if this is an inscription node that is a child of the updated node
+        if (node.type === 'inscription' && node.parentId === id) {
+          const inscriptionType = node.data?.inscriptionType as string;
+          // Find which parent property this inscription type maps to
+          const parentProperty = Object.entries(propertyToInscriptionType).find(
+            ([, insType]) => insType === inscriptionType
+          )?.[0];
+          
+          if (parentProperty && parentProperty in newData) {
+            // Update the inscription label to match the new parent property value
+            // Cast through unknown to satisfy TypeScript
+            const newLabel = (newData as unknown as Record<string, string>)[parentProperty];
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                label: newLabel || '',
+              },
+            };
+          }
+        }
+        return node;
+      });
 
       // Update selectedElement if it matches the updated node
       const updatedSelectedElement =
-      petriNet.selectedElement?.type === 'node' && petriNet.selectedElement.element.id === id
-        ? { ...petriNet.selectedElement, element: { ...petriNet.selectedElement.element, data: { ...newData } } }
-        : petriNet.selectedElement;
+        petriNet.selectedElement?.type === 'node' && petriNet.selectedElement.element.id === id
+          ? { ...petriNet.selectedElement, element: { ...petriNet.selectedElement.element, data: { ...newData } } }
+          : petriNet.selectedElement;
 
       return {
-      petriNetsById: {
-        ...state.petriNetsById,
-        [petriNetId]: {
-        ...petriNet,
-        nodes: updatedNodes,
-        selectedElement: updatedSelectedElement,
+        petriNetsById: {
+          ...state.petriNetsById,
+          [petriNetId]: {
+            ...petriNet,
+            nodes: updatedNodes,
+            selectedElement: updatedSelectedElement,
+          },
         },
-      },
       };
     });
   },
   // Update edge data
+  updateEdgeData: (petriNetId: string, id: string, newData: Record<string, unknown>) => {
+    set((state) => {
+      const petriNet = state.petriNetsById[petriNetId];
+      const updatedEdges = petriNet.edges.map((edge) =>
+        edge.id === id ? { ...edge, data: { ...edge.data, ...newData } } : edge
+      );
+
+      // Update selectedElement if it matches the updated edge
+      const updatedSelectedElement =
+        petriNet.selectedElement?.type === 'edge' && petriNet.selectedElement.element.id === id
+          ? { ...petriNet.selectedElement, element: { ...petriNet.selectedElement.element, data: { ...petriNet.selectedElement.element.data, ...newData } } }
+          : petriNet.selectedElement;
+
+      return {
+        petriNetsById: {
+          ...state.petriNetsById,
+          [petriNetId]: {
+            ...petriNet,
+            edges: updatedEdges,
+            selectedElement: updatedSelectedElement,
+          },
+        },
+      };
+    });
+  },
+  // Update edge label
   updateEdgeLabel: (petriNetId: string, id: string, newLabel: string) => {
     set((state) => {
       const petriNet = state.petriNetsById[petriNetId];
@@ -241,18 +309,63 @@ const useStore = create<StoreState>((set) => ({
     });
   },
 
+  // Swap edge source and target (reverse direction)
+  swapEdgeDirection: (petriNetId: string, id: string) => {
+    set((state) => {
+      const petriNet = state.petriNetsById[petriNetId];
+      const updatedEdges = petriNet.edges.map((edge) =>
+        edge.id === id 
+          ? { ...edge, source: edge.target, target: edge.source } 
+          : edge
+      );
+
+      // Update selectedElement if it matches the updated edge
+      const currentEdge = petriNet.edges.find(e => e.id === id);
+      const updatedSelectedElement =
+        petriNet.selectedElement?.type === 'edge' && petriNet.selectedElement.element.id === id && currentEdge
+          ? { 
+              ...petriNet.selectedElement, 
+              element: { 
+                ...petriNet.selectedElement.element, 
+                source: currentEdge.target, 
+                target: currentEdge.source 
+              } 
+            }
+          : petriNet.selectedElement;
+
+      return {
+        petriNetsById: {
+          ...state.petriNetsById,
+          [petriNetId]: {
+            ...petriNet,
+            edges: updatedEdges,
+            selectedElement: updatedSelectedElement,
+          },
+        },
+      };
+    });
+  },
+
   // Set marking = initialMarking for all places in the store
   applyInitialMarkings: () => {
     set((state) => {
       const petriNet = state.petriNetsById[state.activePetriNetId!];
       const updatedNodes = petriNet.nodes.map((node) => {
         if (node.type === 'place') {
-          let marking: (string | number)[] = []; // Ensure marking is typed correctly
+          let marking: (string | number | null)[] = []; // Include null for unit tokens
           if (node.data.initialMarking) {
             try {
               if (typeof node.data.initialMarking === 'string' && node.data.initialMarking.trim() !== '') {
-                let parsedMarking: (string | number)[] = []; // Ensure parsedMarking is typed correctly
-                if (node.data.initialMarking.endsWith('.all()')) {
+                let parsedMarking: (string | number | null)[] = []; // Include null for unit tokens
+                
+                // Check for UNIT type marking: [(), (), ...]
+                const unitMatch = node.data.initialMarking.match(/^\s*\[\s*((?:\(\)\s*,?\s*)*)\s*\]\s*$/);
+                if (unitMatch) {
+                  // Count the number of () in the array
+                  const unitCount = (node.data.initialMarking.match(/\(\)/g) || []).length;
+                  // Create array of null values to represent unit tokens
+                  parsedMarking = Array(unitCount).fill(null);
+                } else if (node.data.initialMarking.endsWith('.all()')) {
                   const colorSetName = node.data.initialMarking.substring(0, node.data.initialMarking.length - '.all()'.length).trim();
                   const colorSet = state.colorSets.find(cs => cs.name === colorSetName);
 
@@ -276,7 +389,14 @@ const useStore = create<StoreState>((set) => ({
                   }
                 } else {
                   // Attempt to parse as JSON for other cases
-                  parsedMarking = JSON.parse(node.data.initialMarking);
+                  const parsed = JSON.parse(node.data.initialMarking);
+                  // Ensure result is an array
+                  if (Array.isArray(parsed)) {
+                    parsedMarking = parsed;
+                  } else {
+                    // Single value - wrap in array
+                    parsedMarking = [parsed];
+                  }
                 }
                 marking = parsedMarking;
               }
@@ -364,6 +484,50 @@ const useStore = create<StoreState>((set) => ({
       { ...newFunction, id: newFunction.id ?? uuidv4() },
     ],
   })),
+  // Rename a color set and update all references (places, variables)
+  renameColorSet: (id: string, newName: string) =>
+  set((state) => {
+    // Find the old name
+    const colorSet = state.colorSets.find((cs) => cs.id === id);
+    if (!colorSet) return state;
+    
+    const oldName = colorSet.name;
+    if (oldName === newName) return state; // No change needed
+    
+    // Update the color set name
+    const updatedColorSets = state.colorSets.map((cs) =>
+      cs.id === id ? { ...cs, name: newName } : cs
+    );
+    
+    // Update all variables that reference this color set
+    const updatedVariables = state.variables.map((v) =>
+      v.colorSet === oldName ? { ...v, colorSet: newName } : v
+    );
+    
+    // Update all places in all Petri nets that reference this color set
+    const updatedPetriNetsById: typeof state.petriNetsById = {};
+    for (const [netId, petriNet] of Object.entries(state.petriNetsById)) {
+      const updatedNodes = petriNet.nodes.map((node) => {
+        if (node.type === 'place' && node.data?.colorSet === oldName) {
+          return {
+            ...node,
+            data: { ...node.data, colorSet: newName },
+          };
+        }
+        return node;
+      });
+      updatedPetriNetsById[netId] = {
+        ...petriNet,
+        nodes: updatedNodes,
+      };
+    }
+    
+    return {
+      colorSets: updatedColorSets,
+      variables: updatedVariables,
+      petriNetsById: updatedPetriNetsById,
+    };
+  }),
   // Remove a color set
   deleteColorSet: (id) =>
   set((state) => ({
@@ -421,6 +585,16 @@ const useStore = create<StoreState>((set) => ({
       ])
     ),
   })),
+
+  setSimulationEpoch: (epoch: string | null) =>
+    set(() => ({
+      simulationEpoch: epoch,
+    })),
+
+  setShowMarkingDisplay: (show: boolean) =>
+    set(() => ({
+      showMarkingDisplay: show,
+    })),
 
   reset: () => {
     set(emptyState);

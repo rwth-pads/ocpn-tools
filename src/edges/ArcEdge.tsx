@@ -119,7 +119,15 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
   // State for bendpoint interactions
   const [hoveredBendpointIndex, setHoveredBendpointIndex] = useState<number | null>(null);
   const [draggingBendpointIndex, setDraggingBendpointIndex] = useState<number | null>(null);
-  const bendpointDragRef = useRef<{ startX: number; startY: number; originalBendpoints: { x: number; y: number }[]; hasDragged: boolean } | null>(null);
+  const bendpointDragRef = useRef<{ 
+    startX: number; 
+    startY: number; 
+    lastClientX: number;
+    lastClientY: number;
+    originalBendpoints: { x: number; y: number }[]; 
+    hasDragged: boolean;
+    index: number;
+  } | null>(null);
   // Ref to track new bendpoint creation state (to distinguish click from drag on arc path)
   const arcPathDragRef = useRef<{ startX: number; startY: number; insertIndex: number; newBendpoint: { x: number; y: number }; hasDragged: boolean } | null>(null);
 
@@ -205,26 +213,132 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
     bendpointDragRef.current = {
       startX: e.clientX,
       startY: e.clientY,
+      lastClientX: e.clientX,
+      lastClientY: e.clientY,
       originalBendpoints: [...(data?.bendpoints ?? [])],
       hasDragged: false,
+      index,
     };
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
+    // Get adjacent points for snapping (source/target nodes or adjacent bendpoints)
+    const getAdjacentPoints = () => {
+      const bendpoints = bendpointDragRef.current?.originalBendpoints ?? [];
+      const sourcePos = sourceNode ? {
+        x: sourceNode.internals.positionAbsolute.x + (sourceNode.measured?.width ?? 0) / 2,
+        y: sourceNode.internals.positionAbsolute.y + (sourceNode.measured?.height ?? 0) / 2,
+      } : null;
+      const targetPos = targetNode ? {
+        x: targetNode.internals.positionAbsolute.x + (targetNode.measured?.width ?? 0) / 2,
+        y: targetNode.internals.positionAbsolute.y + (targetNode.measured?.height ?? 0) / 2,
+      } : null;
+      
+      const idx = bendpointDragRef.current?.index ?? 0;
+      const prevPoint = idx === 0 ? sourcePos : bendpoints[idx - 1];
+      const nextPoint = idx === bendpoints.length - 1 ? targetPos : bendpoints[idx + 1];
+      
+      return { prevPoint, nextPoint };
+    };
+
+    // Calculate snapped position for horizontal/vertical alignment
+    const calculateSnappedPosition = (rawX: number, rawY: number) => {
+      const { prevPoint, nextPoint } = getAdjacentPoints();
+      if (!prevPoint && !nextPoint) return { x: rawX, y: rawY };
+      
+      let snappedX = rawX;
+      let snappedY = rawY;
+      
+      // Check for horizontal/vertical alignment with previous point
+      if (prevPoint) {
+        const dxPrev = Math.abs(rawX - prevPoint.x);
+        const dyPrev = Math.abs(rawY - prevPoint.y);
+        
+        // If close to vertical alignment with prev point
+        if (dxPrev < 20) {
+          snappedX = prevPoint.x;
+        }
+        // If close to horizontal alignment with prev point
+        if (dyPrev < 20) {
+          snappedY = prevPoint.y;
+        }
+      }
+      
+      // Check for horizontal/vertical alignment with next point
+      if (nextPoint) {
+        const dxNext = Math.abs(rawX - nextPoint.x);
+        const dyNext = Math.abs(rawY - nextPoint.y);
+        
+        // If close to vertical alignment with next point
+        if (dxNext < 20) {
+          snappedX = nextPoint.x;
+        }
+        // If close to horizontal alignment with next point
+        if (dyNext < 20) {
+          snappedY = nextPoint.y;
+        }
+      }
+      
+      return { x: snappedX, y: snappedY };
+    };
+
+    // Function to update bendpoint position based on current state
+    const updateBendpointPosition = (clientX: number, clientY: number, shiftKey: boolean) => {
       if (!bendpointDragRef.current || !activePetriNetId) return;
       const zoom = getZoom();
-      const dx = (moveEvent.clientX - bendpointDragRef.current.startX) / zoom;
-      const dy = (moveEvent.clientY - bendpointDragRef.current.startY) / zoom;
+      const dx = (clientX - bendpointDragRef.current.startX) / zoom;
+      const dy = (clientY - bendpointDragRef.current.startY) / zoom;
       
       // Mark as dragged if moved more than 3 pixels
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
         bendpointDragRef.current.hasDragged = true;
       }
       
+      const idx = bendpointDragRef.current.index;
+      const originalBp = bendpointDragRef.current.originalBendpoints[idx];
+      let newX = originalBp.x + dx;
+      let newY = originalBp.y + dy;
+      
+      // Apply snapping if Shift is held
+      if (shiftKey) {
+        const snapped = calculateSnappedPosition(newX, newY);
+        newX = snapped.x;
+        newY = snapped.y;
+      }
+      
       const newBendpoints = bendpointDragRef.current.originalBendpoints.map((bp, i) => 
-        i === index ? { x: bp.x + dx, y: bp.y + dy } : bp
+        i === idx ? { x: newX, y: newY } : bp
       );
       
       updateEdgeData(activePetriNetId, id, { bendpoints: newBendpoints });
+    };
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!bendpointDragRef.current) return;
+      // Store last mouse position for key event handling
+      bendpointDragRef.current.lastClientX = moveEvent.clientX;
+      bendpointDragRef.current.lastClientY = moveEvent.clientY;
+      
+      updateBendpointPosition(moveEvent.clientX, moveEvent.clientY, moveEvent.shiftKey);
+    };
+
+    // Handle keydown/keyup for Shift to update position immediately
+    const handleKeyDown = (keyEvent: KeyboardEvent) => {
+      if (keyEvent.key === 'Shift' && bendpointDragRef.current) {
+        updateBendpointPosition(
+          bendpointDragRef.current.lastClientX,
+          bendpointDragRef.current.lastClientY,
+          true
+        );
+      }
+    };
+    
+    const handleKeyUp = (keyEvent: KeyboardEvent) => {
+      if (keyEvent.key === 'Shift' && bendpointDragRef.current) {
+        updateBendpointPosition(
+          bendpointDragRef.current.lastClientX,
+          bendpointDragRef.current.lastClientY,
+          false
+        );
+      }
     };
 
     const handleMouseUp = () => {
@@ -242,11 +356,15 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
       bendpointDragRef.current = null;
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-  }, [activePetriNetId, id, data?.bendpoints, updateEdgeData, getZoom]);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+  }, [activePetriNetId, id, data?.bendpoints, sourceNode, targetNode, updateEdgeData, getZoom]);
 
   // Handler for creating a new bendpoint on the arc path (or selecting arc on click)
   const handleArcPathMouseDown = useCallback((e: React.MouseEvent) => {
@@ -265,8 +383,32 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
     svgPoint.x = e.clientX;
     svgPoint.y = e.clientY;
     const ctm = svgElement.getScreenCTM();
-    if (!ctm) return;
-    const transformedPoint = svgPoint.matrixTransform(ctm.inverse());
+    
+    let transformedPoint: { x: number; y: number };
+    if (ctm) {
+      const pt = svgPoint.matrixTransform(ctm.inverse());
+      transformedPoint = { x: pt.x, y: pt.y };
+    } else {
+      // Fallback: use getBoundingClientRect and zoom level
+      const rect = svgElement.getBoundingClientRect();
+      const zoom = getZoom();
+      // Get the viewBox to understand the coordinate system
+      const viewBox = svgElement.viewBox.baseVal;
+      if (viewBox && viewBox.width > 0) {
+        const scaleX = viewBox.width / rect.width;
+        const scaleY = viewBox.height / rect.height;
+        transformedPoint = {
+          x: viewBox.x + (e.clientX - rect.left) * scaleX,
+          y: viewBox.y + (e.clientY - rect.top) * scaleY,
+        };
+      } else {
+        // Last resort fallback using zoom
+        transformedPoint = {
+          x: (e.clientX - rect.left) / zoom,
+          y: (e.clientY - rect.top) / zoom,
+        };
+      }
+    }
 
     const newBendpoint = { x: transformedPoint.x, y: transformedPoint.y };
     
@@ -302,6 +444,38 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
       hasDragged: false,
     };
 
+    // Get source and target positions for snapping
+    const sourcePos = sourceNode ? {
+      x: sourceNode.internals.positionAbsolute.x + (sourceNode.measured?.width ?? 0) / 2,
+      y: sourceNode.internals.positionAbsolute.y + (sourceNode.measured?.height ?? 0) / 2,
+    } : { x: 0, y: 0 };
+    const targetPos = targetNode ? {
+      x: targetNode.internals.positionAbsolute.x + (targetNode.measured?.width ?? 0) / 2,
+      y: targetNode.internals.positionAbsolute.y + (targetNode.measured?.height ?? 0) / 2,
+    } : { x: 0, y: 0 };
+
+    // Calculate snapped position for a new bendpoint at insertIndex
+    const calculateNewBendpointSnappedPosition = (rawX: number, rawY: number, bendpoints: { x: number; y: number }[], idx: number) => {
+      // Previous point is either source or the previous bendpoint
+      const prevPoint = idx === 0 ? sourcePos : bendpoints[idx - 1];
+      // Next point is either target or the next bendpoint (idx+1 since bendpoints array includes the current one)
+      const nextPoint = idx === bendpoints.length - 1 ? targetPos : bendpoints[idx + 1];
+      
+      let snappedX = rawX;
+      let snappedY = rawY;
+      
+      if (prevPoint) {
+        if (Math.abs(rawX - prevPoint.x) < 20) snappedX = prevPoint.x;
+        if (Math.abs(rawY - prevPoint.y) < 20) snappedY = prevPoint.y;
+      }
+      if (nextPoint) {
+        if (Math.abs(rawX - nextPoint.x) < 20) snappedX = nextPoint.x;
+        if (Math.abs(rawY - nextPoint.y) < 20) snappedY = nextPoint.y;
+      }
+      
+      return { x: snappedX, y: snappedY };
+    };
+
     const handleMouseMove = (moveEvent: MouseEvent) => {
       if (!arcPathDragRef.current || !activePetriNetId) return;
       const z = getZoom();
@@ -325,15 +499,76 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
         bendpointDragRef.current = {
           startX: arcPathDragRef.current.startX,
           startY: arcPathDragRef.current.startY,
+          lastClientX: moveEvent.clientX,
+          lastClientY: moveEvent.clientY,
           originalBendpoints: newBendpoints,
           hasDragged: true,
+          index: insertIndex,
         };
       }
       
       // If we're dragging, update the bendpoint position
       if (bendpointDragRef.current) {
+        // Store last mouse position
+        bendpointDragRef.current.lastClientX = moveEvent.clientX;
+        bendpointDragRef.current.lastClientY = moveEvent.clientY;
+        
+        const idx = bendpointDragRef.current.index;
+        const originalBp = bendpointDragRef.current.originalBendpoints[idx];
+        let newX = originalBp.x + dx;
+        let newY = originalBp.y + dy;
+        
+        // Apply snapping if Shift is held
+        if (moveEvent.shiftKey) {
+          const snapped = calculateNewBendpointSnappedPosition(
+            newX, newY, 
+            bendpointDragRef.current.originalBendpoints, 
+            idx
+          );
+          newX = snapped.x;
+          newY = snapped.y;
+        }
+        
         const updatedBendpoints = bendpointDragRef.current.originalBendpoints.map((bp, i) => 
-          i === insertIndex ? { x: bp.x + dx, y: bp.y + dy } : bp
+          i === idx ? { x: newX, y: newY } : bp
+        );
+        updateEdgeData(activePetriNetId, id, { bendpoints: updatedBendpoints });
+      }
+    };
+
+    // Handle keydown/keyup for Shift to update position immediately
+    const handleKeyDown = (keyEvent: KeyboardEvent) => {
+      if (keyEvent.key === 'Shift' && bendpointDragRef.current && activePetriNetId) {
+        const z = getZoom();
+        const dx = (bendpointDragRef.current.lastClientX - bendpointDragRef.current.startX) / z;
+        const dy = (bendpointDragRef.current.lastClientY - bendpointDragRef.current.startY) / z;
+        
+        const idx = bendpointDragRef.current.index;
+        const originalBp = bendpointDragRef.current.originalBendpoints[idx];
+        const snapped = calculateNewBendpointSnappedPosition(
+          originalBp.x + dx, originalBp.y + dy,
+          bendpointDragRef.current.originalBendpoints,
+          idx
+        );
+        
+        const updatedBendpoints = bendpointDragRef.current.originalBendpoints.map((bp, i) => 
+          i === idx ? snapped : bp
+        );
+        updateEdgeData(activePetriNetId, id, { bendpoints: updatedBendpoints });
+      }
+    };
+    
+    const handleKeyUp = (keyEvent: KeyboardEvent) => {
+      if (keyEvent.key === 'Shift' && bendpointDragRef.current && activePetriNetId) {
+        const z = getZoom();
+        const dx = (bendpointDragRef.current.lastClientX - bendpointDragRef.current.startX) / z;
+        const dy = (bendpointDragRef.current.lastClientY - bendpointDragRef.current.startY) / z;
+        
+        const idx = bendpointDragRef.current.index;
+        const originalBp = bendpointDragRef.current.originalBendpoints[idx];
+        
+        const updatedBendpoints = bendpointDragRef.current.originalBendpoints.map((bp, i) => 
+          i === idx ? { x: originalBp.x + dx, y: originalBp.y + dy } : bp
         );
         updateEdgeData(activePetriNetId, id, { bendpoints: updatedBendpoints });
       }
@@ -353,10 +588,14 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
       bendpointDragRef.current = null;
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
   }, [activePetriNetId, id, data?.bendpoints, sourceNode, targetNode, edges, updateEdgeData, setSelectedElement, getZoom]);
 
   if (!sourceNode || !targetNode) {

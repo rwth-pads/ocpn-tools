@@ -3,6 +3,33 @@ import { useInternalNode, EdgeLabelRenderer, useReactFlow } from '@xyflow/react'
 import { getEdgeParams, getNodeIntersectionToPoint } from '../utils.js';
 import useStore from '@/stores/store'; // Import Zustand store
 
+/**
+ * Calculate the distance from a point to a line segment
+ */
+function distanceToSegment(
+  point: { x: number; y: number },
+  p1: { x: number; y: number },
+  p2: { x: number; y: number }
+): number {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const lengthSq = dx * dx + dy * dy;
+  
+  if (lengthSq === 0) {
+    // p1 and p2 are the same point
+    return Math.sqrt((point.x - p1.x) ** 2 + (point.y - p1.y) ** 2);
+  }
+  
+  // Project point onto the line segment
+  let t = ((point.x - p1.x) * dx + (point.y - p1.y) * dy) / lengthSq;
+  t = Math.max(0, Math.min(1, t));
+  
+  const projX = p1.x + t * dx;
+  const projY = p1.y + t * dy;
+  
+  return Math.sqrt((point.x - projX) ** 2 + (point.y - projY) ** 2);
+}
+
 interface FloatingEdgeProps {
   id: string;
   source: string;
@@ -47,19 +74,38 @@ function buildPathWithBendpoints(
   // Final segment to target
   path += ` L ${tx},${ty}`;
 
-  // Calculate label position at the middle of the path
-  // For simplicity, place it at the first bendpoint or midpoint of first segment
-  let labelX: number, labelY: number;
+  // Calculate label position at the middle of the path by arc length
+  // Build array of all points: source -> bendpoints -> target
+  const allPoints = [{ x: sx, y: sy }, ...bendpoints, { x: tx, y: ty }];
   
-  if (bendpoints.length === 1) {
-    // Single bendpoint - place label near the bendpoint
-    labelX = bendpoints[0].x;
-    labelY = bendpoints[0].y;
-  } else {
-    // Multiple bendpoints - place label at the middle bendpoint
-    const midIndex = Math.floor(bendpoints.length / 2);
-    labelX = bendpoints[midIndex].x;
-    labelY = bendpoints[midIndex].y;
+  // Calculate cumulative lengths of each segment
+  const segmentLengths: number[] = [];
+  let totalLength = 0;
+  for (let i = 1; i < allPoints.length; i++) {
+    const dx = allPoints[i].x - allPoints[i - 1].x;
+    const dy = allPoints[i].y - allPoints[i - 1].y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    segmentLengths.push(len);
+    totalLength += len;
+  }
+  
+  // Find the point at half the total length
+  const targetLength = totalLength / 2;
+  let accumulatedLength = 0;
+  let labelX = (sx + tx) / 2;
+  let labelY = (sy + ty) / 2;
+  
+  for (let i = 0; i < segmentLengths.length; i++) {
+    const segLen = segmentLengths[i];
+    if (accumulatedLength + segLen >= targetLength) {
+      // The midpoint is on this segment
+      const remainingLength = targetLength - accumulatedLength;
+      const t = segLen > 0 ? remainingLength / segLen : 0;
+      labelX = allPoints[i].x + t * (allPoints[i + 1].x - allPoints[i].x);
+      labelY = allPoints[i].y + t * (allPoints[i + 1].y - allPoints[i].y);
+      break;
+    }
+    accumulatedLength += segLen;
   }
 
   return { path, labelX, labelY };
@@ -68,6 +114,19 @@ function buildPathWithBendpoints(
 function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) {
   const sourceNode = useInternalNode(source);
   const targetNode = useInternalNode(target);
+  const { getZoom } = useReactFlow();
+
+  // State for bendpoint interactions
+  const [hoveredBendpointIndex, setHoveredBendpointIndex] = useState<number | null>(null);
+  const [draggingBendpointIndex, setDraggingBendpointIndex] = useState<number | null>(null);
+  const bendpointDragRef = useRef<{ startX: number; startY: number; originalBendpoints: { x: number; y: number }[]; hasDragged: boolean } | null>(null);
+  // Ref to track new bendpoint creation state (to distinguish click from drag on arc path)
+  const arcPathDragRef = useRef<{ startX: number; startY: number; insertIndex: number; newBendpoint: { x: number; y: number }; hasDragged: boolean } | null>(null);
+
+  // Get store actions and state
+  const activePetriNetId = useStore((state) => state.activePetriNetId);
+  const updateEdgeData = useStore((state) => state.updateEdgeData);
+  const setSelectedElement = useStore((state) => state.setSelectedElement);
 
   // Get edges from store to detect parallel arcs
   const edges = useStore((state) => {
@@ -128,10 +187,6 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
     return '#000';
   });
   
-  // Get the updateEdgeData function from the store
-  const updateEdgeData = useStore((state) => state.updateEdgeData);
-  const activePetriNetId = useStore((state) => state.activePetriNetId);
-
   // Handler for when label is dragged - must be before early return
   const handleLabelDragEnd = useCallback((newOffset: { x: number; y: number }) => {
     if (activePetriNetId) {
@@ -141,6 +196,168 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
       });
     }
   }, [activePetriNetId, id, data, updateEdgeData]);
+
+  // Handler for starting a bendpoint drag
+  const handleBendpointDragStart = useCallback((e: React.MouseEvent, index: number) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setDraggingBendpointIndex(index);
+    bendpointDragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      originalBendpoints: [...(data?.bendpoints ?? [])],
+      hasDragged: false,
+    };
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!bendpointDragRef.current || !activePetriNetId) return;
+      const zoom = getZoom();
+      const dx = (moveEvent.clientX - bendpointDragRef.current.startX) / zoom;
+      const dy = (moveEvent.clientY - bendpointDragRef.current.startY) / zoom;
+      
+      // Mark as dragged if moved more than 3 pixels
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        bendpointDragRef.current.hasDragged = true;
+      }
+      
+      const newBendpoints = bendpointDragRef.current.originalBendpoints.map((bp, i) => 
+        i === index ? { x: bp.x + dx, y: bp.y + dy } : bp
+      );
+      
+      updateEdgeData(activePetriNetId, id, { bendpoints: newBendpoints });
+    };
+
+    const handleMouseUp = () => {
+      const didDrag = bendpointDragRef.current?.hasDragged ?? false;
+      setDraggingBendpointIndex(null);
+      
+      // If no actual drag happened, treat as a click → delete the bendpoint
+      if (!didDrag && activePetriNetId && data?.bendpoints) {
+        const newBendpoints = data.bendpoints.filter((_, i) => i !== index);
+        updateEdgeData(activePetriNetId, id, {
+          bendpoints: newBendpoints.length > 0 ? newBendpoints : undefined,
+        });
+      }
+      
+      bendpointDragRef.current = null;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [activePetriNetId, id, data?.bendpoints, updateEdgeData, getZoom]);
+
+  // Handler for creating a new bendpoint on the arc path (or selecting arc on click)
+  const handleArcPathMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return; // Only left click
+    e.stopPropagation();
+    e.preventDefault();
+
+    if (!activePetriNetId) return;
+
+    // Convert screen coordinates to canvas coordinates using SVG transform
+    const svgElement = (e.target as SVGElement).closest('svg');
+    if (!svgElement) return;
+
+    // Transform point using the SVG's viewBox/transform
+    const svgPoint = svgElement.createSVGPoint();
+    svgPoint.x = e.clientX;
+    svgPoint.y = e.clientY;
+    const ctm = svgElement.getScreenCTM();
+    if (!ctm) return;
+    const transformedPoint = svgPoint.matrixTransform(ctm.inverse());
+
+    const newBendpoint = { x: transformedPoint.x, y: transformedPoint.y };
+    
+    // Calculate where to insert the bendpoint (for when drag is confirmed)
+    const currentBendpoints = data?.bendpoints ?? [];
+    let insertIndex = 0;
+    
+    if (currentBendpoints.length > 0) {
+      // Find the segment closest to the click point
+      const sourcePos = sourceNode ? { x: sourceNode.internals.positionAbsolute.x + (sourceNode.measured?.width ?? 0) / 2, y: sourceNode.internals.positionAbsolute.y + (sourceNode.measured?.height ?? 0) / 2 } : { x: 0, y: 0 };
+      const targetPos = targetNode ? { x: targetNode.internals.positionAbsolute.x + (targetNode.measured?.width ?? 0) / 2, y: targetNode.internals.positionAbsolute.y + (targetNode.measured?.height ?? 0) / 2 } : { x: 0, y: 0 };
+      
+      const allPoints = [sourcePos, ...currentBendpoints, targetPos];
+      let minDist = Infinity;
+      
+      for (let i = 0; i < allPoints.length - 1; i++) {
+        const p1 = allPoints[i];
+        const p2 = allPoints[i + 1];
+        const dist = distanceToSegment(newBendpoint, p1, p2);
+        if (dist < minDist) {
+          minDist = dist;
+          insertIndex = i;
+        }
+      }
+    }
+
+    // Store drag info but DON'T create bendpoint yet
+    arcPathDragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      insertIndex,
+      newBendpoint,
+      hasDragged: false,
+    };
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!arcPathDragRef.current || !activePetriNetId) return;
+      const z = getZoom();
+      const dx = (moveEvent.clientX - arcPathDragRef.current.startX) / z;
+      const dy = (moveEvent.clientY - arcPathDragRef.current.startY) / z;
+      
+      // Check if we've moved enough to consider it a drag
+      if (!arcPathDragRef.current.hasDragged && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+        arcPathDragRef.current.hasDragged = true;
+        
+        // NOW create the bendpoint since user started dragging
+        const newBendpoints = [
+          ...currentBendpoints.slice(0, insertIndex),
+          arcPathDragRef.current.newBendpoint,
+          ...currentBendpoints.slice(insertIndex),
+        ];
+        updateEdgeData(activePetriNetId, id, { bendpoints: newBendpoints });
+        
+        // Switch to bendpoint drag ref for continued dragging
+        setDraggingBendpointIndex(insertIndex);
+        bendpointDragRef.current = {
+          startX: arcPathDragRef.current.startX,
+          startY: arcPathDragRef.current.startY,
+          originalBendpoints: newBendpoints,
+          hasDragged: true,
+        };
+      }
+      
+      // If we're dragging, update the bendpoint position
+      if (bendpointDragRef.current) {
+        const updatedBendpoints = bendpointDragRef.current.originalBendpoints.map((bp, i) => 
+          i === insertIndex ? { x: bp.x + dx, y: bp.y + dy } : bp
+        );
+        updateEdgeData(activePetriNetId, id, { bendpoints: updatedBendpoints });
+      }
+    };
+
+    const handleMouseUp = () => {
+      // If no drag happened, treat as a click → select the arc
+      if (arcPathDragRef.current && !arcPathDragRef.current.hasDragged) {
+        const edge = edges.find(e => e.id === id);
+        if (edge && activePetriNetId) {
+          setSelectedElement(activePetriNetId, { type: 'edge', element: edge });
+        }
+      }
+      
+      setDraggingBendpointIndex(null);
+      arcPathDragRef.current = null;
+      bendpointDragRef.current = null;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [activePetriNetId, id, data?.bendpoints, sourceNode, targetNode, edges, updateEdgeData, setSelectedElement, getZoom]);
 
   if (!sourceNode || !targetNode) {
     return null;
@@ -247,11 +464,68 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
   const baseLabelX = labelX + labelPerpX * labelOffsetDistance;
   const baseLabelY = labelY + labelPerpY * labelOffsetDistance;
   
-  const formattedLabel = typeof label === 'string' ? label : label;
+  // Hide default unit token inscription "1`()" - CPN Tools doesn't display this by default
+  const isDefaultUnitInscription = typeof label === 'string' && 
+    (label.trim() === '1`()' || label.trim() === '()');
+  const formattedLabel = isDefaultUnitInscription ? null : label;
+
+  // Compute the actual bendpoints positions for rendering (with offset)
+  const displayBendpoints = bendpoints && offsetAmount !== 0
+    ? bendpoints.map(bp => ({
+        x: bp.x + perpX * offsetAmount,
+        y: bp.y + perpY * offsetAmount,
+      }))
+    : bendpoints;
   
   return (
     <>
-      {renderArcPath(id, edgePath, colorSetColor, isBidirectional, style)}
+      {renderArcPath(
+        id, 
+        edgePath, 
+        colorSetColor, 
+        isBidirectional, 
+        style,
+        handleArcPathMouseDown,
+      )}
+      {/* Render interactive bendpoint handles - always visible on hover */}
+      {displayBendpoints && displayBendpoints.length > 0 && (
+        <g className="bendpoint-handles">
+          {displayBendpoints.map((bp, index) => (
+            <g key={index}>
+              {/* Larger invisible hit area */}
+              <circle
+                cx={bp.x}
+                cy={bp.y}
+                r={12}
+                fill="transparent"
+                style={{ cursor: 'grab', pointerEvents: 'all' }}
+                onMouseEnter={() => setHoveredBendpointIndex(index)}
+                onMouseLeave={() => {
+                  if (draggingBendpointIndex !== index) {
+                    setHoveredBendpointIndex(null);
+                  }
+                }}
+                onMouseDown={(e) => handleBendpointDragStart(e, index)}
+              />
+              {/* Visible circle on hover or drag */}
+              {(hoveredBendpointIndex === index || draggingBendpointIndex === index) && (
+                <circle
+                  cx={bp.x}
+                  cy={bp.y}
+                  r={5}
+                  fill={colorSetColor}
+                  stroke="white"
+                  strokeWidth={1.5}
+                  style={{ 
+                    pointerEvents: 'none',
+                    cursor: draggingBendpointIndex === index ? 'grabbing' : 'grab',
+                  }}
+                />
+              )}
+            </g>
+          ))}
+        </g>
+      )}
       {formattedLabel && (
         <DraggableArcLabel
           id={id}
@@ -273,6 +547,7 @@ function renderArcPath(
   colorSetColor: string,
   isBidirectional: boolean,
   style?: React.CSSProperties,
+  onPathMouseDown?: (e: React.MouseEvent) => void,
 ) {
   return (
     <g>
@@ -309,6 +584,17 @@ function renderArcPath(
           />
         </marker>
       </defs>
+      {/* Invisible wider path for easier clicking/dragging to add bendpoints or select arc */}
+      {onPathMouseDown && (
+        <path
+          d={edgePath}
+          fill="none"
+          stroke="transparent"
+          strokeWidth={16}
+          style={{ cursor: 'pointer', pointerEvents: 'stroke' }}
+          onMouseDown={onPathMouseDown}
+        />
+      )}
       {/* Edge Path */}
       <path
         id={id}

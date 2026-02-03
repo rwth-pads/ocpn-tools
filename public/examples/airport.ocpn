@@ -163,12 +163,16 @@
             }
           ],
           "position": {
-            "x": 2885,
-            "y": 346.25
+            "x": 2575.9833098566933,
+            "y": 225.3599541856954
           },
           "size": {
             "width": 50,
             "height": 35
+          },
+          "markingOffset": {
+            "x": 46.11241804679068,
+            "y": -10.866520972072326
           }
         },
         {
@@ -193,8 +197,8 @@
           "initialMarking": "",
           "marking": [],
           "position": {
-            "x": 2565,
-            "y": 248.75
+            "x": 2585.3747268226357,
+            "y": 283.3870355984805
           },
           "size": {
             "width": 50,
@@ -218,12 +222,12 @@
             }
           ],
           "position": {
-            "x": 2565,
-            "y": 333.75
+            "x": 2401.189548830233,
+            "y": 345.97483609358136
           },
           "size": {
-            "width": 50,
-            "height": 35
+            "width": 61,
+            "height": 38
           }
         },
         {
@@ -248,12 +252,12 @@
           "initialMarking": "",
           "marking": [],
           "position": {
-            "x": 2245,
-            "y": 382.5
+            "x": 2240.835071413927,
+            "y": 378.3350714139272
           },
           "size": {
-            "width": 50,
-            "height": 35
+            "width": 75,
+            "height": 45
           }
         },
         {
@@ -270,12 +274,12 @@
             }
           ],
           "position": {
-            "x": 1602.5,
-            "y": 328.75
+            "x": 1278.468556003538,
+            "y": 212.12782819653702
           },
           "size": {
-            "width": 55,
-            "height": 35
+            "width": 73,
+            "height": 45
           }
         },
         {
@@ -285,8 +289,8 @@
           "initialMarking": "",
           "marking": [],
           "position": {
-            "x": 1280,
-            "y": 118.75
+            "x": 1285.830900020502,
+            "y": 119.58298571721454
           },
           "size": {
             "width": 60,
@@ -301,11 +305,11 @@
           "marking": [],
           "position": {
             "x": 1282.5,
-            "y": 291.25
+            "y": 286.25
           },
           "size": {
-            "width": 55,
-            "height": 35
+            "width": 74,
+            "height": 40
           }
         },
         {
@@ -315,8 +319,8 @@
           "initialMarking": "",
           "marking": [],
           "position": {
-            "x": 1600,
-            "y": 173.75
+            "x": 1601.005053812967,
+            "y": 170.7348385610989
           },
           "size": {
             "width": 60,
@@ -333,12 +337,20 @@
             null
           ],
           "position": {
-            "x": 2242.5,
-            "y": 127.5
+            "x": 1914.0650089393177,
+            "y": 71.77734335633484
           },
           "size": {
-            "width": 55,
-            "height": 35
+            "width": 69,
+            "height": 48
+          },
+          "tokenCountOffset": {
+            "x": 35.34849337668068,
+            "y": -4.20396204794764
+          },
+          "markingOffset": {
+            "x": 40.00000000000001,
+            "y": 16.716796993099553
           }
         },
         {
@@ -349,11 +361,11 @@
           "marking": [],
           "position": {
             "x": 1920,
-            "y": 0
+            "y": -3
           },
           "size": {
-            "width": 60,
-            "height": 40
+            "width": 68,
+            "height": 43
           }
         },
         {
@@ -363,12 +375,12 @@
           "initialMarking": "",
           "marking": [],
           "position": {
-            "x": 1922.5,
-            "y": 90
+            "x": 1918.4207521960545,
+            "y": 129.9604069004946
           },
           "size": {
-            "width": 55,
-            "height": 35
+            "width": 67,
+            "height": 52
           }
         },
         {
@@ -394,11 +406,11 @@
           "marking": [],
           "position": {
             "x": 2560,
-            "y": 158.75
+            "y": 152.75
           },
           "size": {
-            "width": 60,
-            "height": 40
+            "width": 76,
+            "height": 46
           }
         },
         {
@@ -408,12 +420,16 @@
           "initialMarking": "",
           "marking": [],
           "position": {
-            "x": 2880,
-            "y": 185
+            "x": 2942.4739287910916,
+            "y": 181.66805713114178
           },
           "size": {
             "width": 60,
             "height": 40
+          },
+          "markingOffset": {
+            "x": 54.99374290986199,
+            "y": -154.10235768469263
           }
         }
       ],
@@ -485,8 +501,8 @@
           "time": "delay_min(22)",
           "priority": "",
           "position": {
-            "x": 1440,
-            "y": 206.25
+            "x": 1441.6659714344291,
+            "y": 207.08298571721457
           },
           "size": {
             "width": 60,
@@ -757,7 +773,11 @@
           "source": "p-aircraft-fueled",
           "target": "t-skip-cleaning",
           "inscription": "ac",
-          "isBidirectional": false
+          "isBidirectional": false,
+          "labelOffset": {
+            "x": -28.141506763076805,
+            "y": 30.15161438901086
+          }
         },
         {
           "id": "e32",
@@ -799,14 +819,22 @@
           "source": "t-off-block",
           "target": "p-gate-avail",
           "inscription": "gate",
-          "isBidirectional": false
+          "isBidirectional": false,
+          "labelOffset": {
+            "x": -2.498957151643664,
+            "y": 9.162842889360101
+          }
         },
         {
           "id": "e38",
           "source": "t-off-block",
           "target": "p-tug-busy",
           "inscription": "tug",
-          "isBidirectional": false
+          "isBidirectional": false,
+          "labelOffset": {
+            "x": 17.492700061505648,
+            "y": 24.156585799222086
+          }
         },
         {
           "id": "e39",
@@ -834,7 +862,11 @@
           "source": "t-takeoff",
           "target": "p-aircraft-departed",
           "inscription": "ac",
-          "isBidirectional": false
+          "isBidirectional": false,
+          "labelOffset": {
+            "x": 1.5920759041047192,
+            "y": 28.657366273884946
+          }
         },
         {
           "id": "e43",

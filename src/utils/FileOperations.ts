@@ -696,6 +696,36 @@ function parseCPNToolsXML(content: string): PetriNetData {
       
       const placeId = place.getAttribute('id') || uuidv4();
       
+      // Calculate colorSet label offset from place center (for PlaceNode's DraggableInscription)
+      const typeElement = place.querySelector('type');
+      let colorSetOffset: { x: number; y: number } | undefined;
+      if (typeElement) {
+        const typePosattr = typeElement.querySelector('posattr');
+        if (typePosattr) {
+          const typeX = parseFloat(typePosattr.getAttribute('x') || '0');
+          const typeY = -parseFloat(typePosattr.getAttribute('y') || '0');
+          colorSetOffset = {
+            x: typeX - centerX,
+            y: typeY - centerY,
+          };
+        }
+      }
+      
+      // Calculate initialMarking label offset from place center
+      const initmarkElement = place.querySelector('initmark');
+      let markingOffset: { x: number; y: number } | undefined;
+      if (initmarkElement) {
+        const initmarkPosattr = initmarkElement.querySelector('posattr');
+        if (initmarkPosattr) {
+          const initmarkX = parseFloat(initmarkPosattr.getAttribute('x') || '0');
+          const initmarkY = -parseFloat(initmarkPosattr.getAttribute('y') || '0');
+          markingOffset = {
+            x: initmarkX - centerX,
+            y: initmarkY - centerY,
+          };
+        }
+      }
+      
       const placeNode = {
         id: placeId,
         type: 'place',
@@ -709,16 +739,14 @@ function parseCPNToolsXML(content: string): PetriNetData {
           label: place.querySelector('text')?.textContent || '',
           colorSet: place.querySelector('type text')?.textContent || '',
           initialMarking: rawInitialMarking,
+          colorSetOffset,
+          markingOffset,
         },
       };
       
-      // Create inscription child nodes
-      const inscriptions = [
-        createInscriptionNode(placeId, centerX, centerY, width, height, place.querySelector('type'), 'colorSet'),
-        createInscriptionNode(placeId, centerX, centerY, width, height, place.querySelector('initmark'), 'initialMarking'),
-      ].filter((n): n is NonNullable<typeof n> => n !== null);
-      
-      return [placeNode, ...inscriptions];
+      // Don't create separate inscription nodes for colorSet and initialMarking
+      // as PlaceNode handles these internally with DraggableInscription
+      return [placeNode];
     });
 
     // Parse transitions with their inscriptions

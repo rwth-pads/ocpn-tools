@@ -266,6 +266,7 @@ export function convertToJSON(data: PetriNetData): string {
           inscription: arc.label || "", // Use "inscription" instead of "label"
           isBidirectional: arc.data?.isBidirectional || false, // Include bidirectional flag
           labelOffset: arc.data?.labelOffset || undefined, // Include label offset if set
+          bendpoints: arc.data?.bendpoints || undefined, // Include bendpoints if set
         })),
       };
     }),
@@ -323,6 +324,7 @@ export function parseJSON(content: string): PetriNetData {
       inscription?: string;
       isBidirectional?: boolean;
       labelOffset?: { x: number; y: number };
+      bendpoints?: { x: number; y: number }[];
     }[];
   }) => {
     const places = petriNet.places.map((place) => ({
@@ -364,6 +366,7 @@ export function parseJSON(content: string): PetriNetData {
       data: {
         isBidirectional: arc.isBidirectional || false,
         labelOffset: arc.labelOffset || undefined,
+        bendpoints: arc.bendpoints || undefined,
       },
     }));
 

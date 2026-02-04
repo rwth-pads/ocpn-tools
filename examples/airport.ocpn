@@ -222,12 +222,16 @@
             }
           ],
           "position": {
-            "x": 2401.189548830233,
-            "y": 345.97483609358136
+            "x": 2081.3259927425856,
+            "y": 316.3437703277423
           },
           "size": {
             "width": 61,
             "height": 38
+          },
+          "markingOffset": {
+            "x": 43.79885458536398,
+            "y": -44.066713190222224
           }
         },
         {
@@ -252,8 +256,8 @@
           "initialMarking": "",
           "marking": [],
           "position": {
-            "x": 2240.835071413927,
-            "y": 378.3350714139272
+            "x": 2075.9647824091303,
+            "y": 383.65346783343676
           },
           "size": {
             "width": 75,
@@ -280,6 +284,10 @@
           "size": {
             "width": 73,
             "height": 45
+          },
+          "colorSetOffset": {
+            "x": 6.078167336582376,
+            "y": 26.642519912199234
           }
         },
         {
@@ -310,6 +318,10 @@
           "size": {
             "width": 74,
             "height": 40
+          },
+          "colorSetOffset": {
+            "x": 9.87702192194636,
+            "y": 25.882748995126434
           }
         },
         {
@@ -453,8 +465,8 @@
           "id": "t-taxi-start",
           "name": "Taxi\nStart",
           "guard": "",
-          "time": "delay_min(6)",
-          "priority": "",
+          "time": "delay_min(discrete(3,10))+delay_sec(discrete(0,59))",
+          "priority": "NONE",
           "position": {
             "x": 480,
             "y": 342.5
@@ -498,8 +510,8 @@
           "id": "t-fuel-end",
           "name": "Fueling\nEnd",
           "guard": "",
-          "time": "delay_min(22)",
-          "priority": "",
+          "time": "delay_min(discrete(15,25))",
+          "priority": "NONE",
           "position": {
             "x": 1441.6659714344291,
             "y": 207.08298571721457
@@ -626,7 +638,17 @@
           "source": "t-taxi-start",
           "target": "p-runway-avail",
           "inscription": "()",
-          "isBidirectional": false
+          "isBidirectional": false,
+          "bendpoints": [
+            {
+              "x": 510,
+              "y": 464.7554484479831
+            },
+            {
+              "x": 2820.7022042090157,
+              "y": 464.7554484479831
+            }
+          ]
         },
         {
           "id": "e9",
@@ -654,7 +676,13 @@
           "source": "t-in-block",
           "target": "p-gate-occupied",
           "inscription": "gate",
-          "isBidirectional": false
+          "isBidirectional": false,
+          "bendpoints": [
+            {
+              "x": 830,
+              "y": 406.15346783343676
+            }
+          ]
         },
         {
           "id": "e15",

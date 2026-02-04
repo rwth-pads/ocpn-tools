@@ -246,6 +246,92 @@ Each event records which objects were involved, with qualifiers indicating the o
 - For object-centric modeling, always include an `id` field in your record types
 - Use meaningful names for transitions—they become event types in OCEL exports
 
+## Random Distribution Functions
+
+OCPN Tools supports all 14 random distribution functions from CPN Tools for stochastic simulations. These can be used in time delay inscriptions, arc inscriptions, and guards.
+
+### Available Distributions
+
+| Function | Parameters | Description |
+|----------|------------|-------------|
+| `bernoulli(p)` | p: probability (0-1) | Returns 1 with probability p, 0 otherwise |
+| `beta(a, b)` | a, b: shape parameters (> 0) | Beta distribution on (0, 1) |
+| `binomial(n, p)` | n: trials (≥ 1), p: probability | Number of successes in n independent trials |
+| `chisq(n)` | n: degrees of freedom (≥ 1) | Chi-squared distribution |
+| `discrete(a, b)` | a, b: integers (a ≤ b) | Random integer uniformly in [a, b] |
+| `erlang(n, r)` | n: shape (≥ 1), r: rate (> 0) | Erlang distribution (sum of n exponentials) |
+| `exponential(r)` | r: rate (> 0) | Exponential distribution with mean 1/r |
+| `gamma(l, k)` | l: scale (> 0), k: shape (> 0) | Gamma distribution |
+| `normal(m, v)` | m: mean, v: variance (≥ 0) | Gaussian/normal distribution |
+| `poisson(m)` | m: mean (> 0) | Poisson distribution |
+| `rayleigh(s)` | s: scale (≥ 0) | Rayleigh distribution |
+| `student(n)` | n: degrees of freedom (≥ 1) | Student's t-distribution |
+| `uniform(a, b)` | a, b: bounds (a ≤ b) | Continuous uniform on [a, b] |
+| `weibull(lambda, k)` | lambda: scale (> 0), k: shape (> 0) | Weibull distribution |
+
+### Using Distributions in Time Delays
+
+Time delays can use random distributions for realistic process modeling. Combine delay functions with distributions:
+
+```rhai
+// Exponential service time with mean 10 minutes (rate = 1/10 = 0.1)
+delay_min(exponential(0.1))
+
+// Normal processing time: mean 30 min, variance 25 (std dev = 5 min)
+delay_min(normal(30.0, 25.0))
+
+// Uniform delay between 5 and 15 seconds
+delay_sec(uniform(5.0, 15.0))
+
+// Erlang distribution for multi-phase service (k=3 phases, rate=0.2)
+delay_min(erlang(3, 0.2))
+```
+
+### Practical Examples
+
+**Airport Ground Handling:**
+
+```rhai
+// Landing takes 4-6 minutes (uniform)
+delay_min(uniform(4.0, 6.0))
+
+// Fueling time: exponential with mean 20 min (rate = 0.05)
+delay_min(exponential(0.05))
+
+// Passenger boarding: normal, mean 25 min, variance 25
+delay_min(normal(25.0, 25.0))
+```
+
+**Manufacturing Process:**
+
+```rhai
+// Machine processing with Weibull distribution
+delay_min(weibull(100.0, 2.5))
+
+// Random batch size between 1 and 10
+discrete(1, 10)
+```
+
+### Using Distributions in Arc Inscriptions
+
+```rhai
+// Produce a token with random quantity
+{ id: nextId(), quantity: discrete(1, 10) }
+
+// Random sensor reading
+{ sensor: s.id, value: normal(20.0, 4.0) }
+```
+
+### Using Distributions in Guards
+
+```rhai
+// 80% chance of taking this path
+bernoulli(0.8) == 1
+
+// Only process if random value exceeds threshold
+uniform(0.0, 1.0) > 0.3
+```
+
 ## Migration Guide
 
 After importing a CPN in the .cpn format of CPN Tools, some manual adjustments are necessary. Here are the most common ones:

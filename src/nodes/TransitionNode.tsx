@@ -22,10 +22,9 @@ export interface TransitionNodeProps {
   selected: boolean;
 }
 
-// Draggable inscription component with dynamic alignment
+// Draggable inscription component
 // Positions are relative to the center of the node
-// Text alignment adjusts based on position: left of center = right-aligned, right of center = left-aligned
-// When crossing the threshold, the offset is adjusted to compensate for text width so position doesn't jump
+// Always anchors from the center of the text (no alignment switching)
 function DraggableInscription({
   children,
   offset,
@@ -39,56 +38,25 @@ function DraggableInscription({
   className?: string;
   style?: React.CSSProperties;
 }) {
-  // Thresholds for alignment zones with hysteresis
-  // To LEAVE current zone, you need to cross a larger threshold than to ENTER
-  const enterThreshold = 25;  // Threshold to enter left/right zone from center
-  const exitThreshold = 15;   // Threshold to exit left/right zone back to center
-
-  // Get initial alignment (without hysteresis, since there's no previous state)
-  const getInitialAlignment = (x: number): 'left' | 'right' | 'center' => {
-    if (x < -enterThreshold) return 'right';
-    if (x > enterThreshold) return 'left';
-    return 'center';
-  };
-
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(offset);
-  const [alignment, setAlignment] = useState<'left' | 'right' | 'center'>(() => getInitialAlignment(offset.x));
   const currentOffsetRef = useRef(dragOffset);
   const dragStartRef = useRef<{ x: number; y: number; offsetX: number; offsetY: number } | null>(null);
-  const elementRef = useRef<HTMLDivElement>(null);
-  const prevAlignmentRef = useRef<'left' | 'right' | 'center'>(alignment);
   const { getZoom } = useReactFlow();
-
-  // Determine alignment based on x offset with hysteresis
-  const getAlignmentWithHysteresis = (
-    x: number, 
-    prevAlignment: 'left' | 'right' | 'center'
-  ): 'left' | 'right' | 'center' => {
-    if (prevAlignment === 'center') {
-      // Currently center - need to cross enterThreshold to change
-      if (x < -enterThreshold) return 'right';
-      if (x > enterThreshold) return 'left';
-      return 'center';
-    } else if (prevAlignment === 'right') {
-      // Currently right-aligned (left side) - need to cross exitThreshold toward center
-      if (x > -exitThreshold) return 'center';
-      return 'right';
-    } else {
-      // Currently left-aligned (right side) - need to cross exitThreshold toward center
-      if (x < exitThreshold) return 'center';
-      return 'left';
-    }
-  };
 
   // Keep ref in sync
   currentOffsetRef.current = dragOffset;
-  prevAlignmentRef.current = alignment;
+
+  // Track previous offset to detect actual changes
+  const prevOffsetRef = useRef(offset);
 
   React.useEffect(() => {
+    // Only reset if offset actually changed (not just re-render)
+    if (prevOffsetRef.current.x === offset.x && prevOffsetRef.current.y === offset.y) {
+      return;
+    }
+    prevOffsetRef.current = offset;
     setDragOffset(offset);
-    const newAlignment = getInitialAlignment(offset.x);
-    setAlignment(newAlignment);
   }, [offset]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -106,54 +74,8 @@ function DraggableInscription({
       const zoom = getZoom();
       const dx = (moveEvent.clientX - dragStartRef.current.x) / zoom;
       const dy = (moveEvent.clientY - dragStartRef.current.y) / zoom;
-      let newX = dragStartRef.current.offsetX + dx;
+      const newX = dragStartRef.current.offsetX + dx;
       const newY = dragStartRef.current.offsetY + dy;
-
-      // Check if alignment is changing and compensate for text width
-      const prevAlignment = prevAlignmentRef.current;
-      const newAlignment = getAlignmentWithHysteresis(newX, prevAlignment);
-      
-      if (elementRef.current && newAlignment !== prevAlignment) {
-        const textWidth = elementRef.current.offsetWidth;
-        
-        // Compensate x offset when crossing alignment boundaries
-        // When alignment changes, the CSS translateX changes:
-        // - 'right' (left side): translateX(-100%) - anchored from right edge
-        // - 'center': translateX(-50%) - anchored from center
-        // - 'left' (right side): translateX(0%) - anchored from left edge
-        // We need to adjust offset to keep visual position stable
-        
-        if (prevAlignment === 'right' && newAlignment === 'left') {
-          // translateX goes from -100% to 0%, element shifts right by textWidth
-          // Compensate by reducing offset
-          dragStartRef.current.offsetX -= textWidth;
-          newX -= textWidth;
-        } else if (prevAlignment === 'left' && newAlignment === 'right') {
-          // translateX goes from 0% to -100%, element shifts left by textWidth
-          // Compensate by increasing offset
-          dragStartRef.current.offsetX += textWidth;
-          newX += textWidth;
-        } else if (prevAlignment === 'center' && newAlignment === 'left') {
-          // translateX goes from -50% to 0%, element shifts right by textWidth/2
-          dragStartRef.current.offsetX -= textWidth / 2;
-          newX -= textWidth / 2;
-        } else if (prevAlignment === 'center' && newAlignment === 'right') {
-          // translateX goes from -50% to -100%, element shifts left by textWidth/2
-          dragStartRef.current.offsetX += textWidth / 2;
-          newX += textWidth / 2;
-        } else if (prevAlignment === 'left' && newAlignment === 'center') {
-          // translateX goes from 0% to -50%, element shifts left by textWidth/2
-          dragStartRef.current.offsetX += textWidth / 2;
-          newX += textWidth / 2;
-        } else if (prevAlignment === 'right' && newAlignment === 'center') {
-          // translateX goes from -100% to -50%, element shifts right by textWidth/2
-          dragStartRef.current.offsetX -= textWidth / 2;
-          newX -= textWidth / 2;
-        }
-        
-        prevAlignmentRef.current = newAlignment;
-        setAlignment(newAlignment);
-      }
 
       const newOffset = { x: newX, y: newY };
       setDragOffset(newOffset);
@@ -174,25 +96,16 @@ function DraggableInscription({
     document.addEventListener('mouseup', handleMouseUp);
   }, [getZoom, onDragEnd]);
 
-  // Calculate transform based on current alignment
-  let translateXPercent = '-50%';
-  if (alignment === 'right') {
-    translateXPercent = '-100%';
-  } else if (alignment === 'left') {
-    translateXPercent = '0%';
-  }
-
   return (
     <div
-      ref={elementRef}
       style={{
         position: 'absolute',
         left: '50%',
         top: 0,
-        transform: `translate(calc(${translateXPercent} + ${dragOffset.x}px), ${dragOffset.y}px)`,
+        transform: `translate(calc(-50% + ${dragOffset.x}px), ${dragOffset.y}px)`,
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',
-        textAlign: alignment,
+        whiteSpace: 'nowrap',
         ...style,
       }}
       className={`nodrag ${className || ''}`}

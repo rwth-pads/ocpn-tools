@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useContext } from 'react'; // Added useContext
+import React, { useCallback, useState, useContext, useRef, useEffect } from 'react';
 import useStore from '@/stores/store';
 import { usePetriNetHandlers } from '@/hooks/usePetriNetHandlers';
 
@@ -106,6 +106,13 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
 
   const [isDialOpen, setIsDialOpen] = useState(false);
   const [dialPosition, setDialPosition] = useState({ x: 0, y: 0 });
+  
+  // Track snapped positions during node drag - these override React Flow's positions
+  const nodeDragRef = useRef<{
+    snappedPositions: Map<string, { x: number; y: number }>;
+    isDragging: boolean;
+    isSnapping: boolean;
+  }>({ snappedPositions: new Map(), isDragging: false, isSnapping: false });
 
   const simulationContext = useContext(SimulationContext); // Get simulation context
   
@@ -142,6 +149,77 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
 
   const { fitView, screenToFlowPosition } = useReactFlow();
   const [type] = useDnD();
+
+  // Keyboard shortcuts for simulation controls
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in inputs, textareas, or contenteditable
+      const target = event.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      // Check if simulation context is available
+      if (!simulationContext) return;
+
+      const { isRunning, runStep, runMultipleStepsAnimated, runMultipleStepsFast, reset: resetSimulation, stop, simulationConfig } = simulationContext;
+      const isMeta = event.metaKey || event.ctrlKey;
+
+      // Space: Play animated simulation
+      if (event.code === 'Space' && !event.shiftKey && !isMeta) {
+        event.preventDefault();
+        if (isRunning) {
+          stop();
+        } else {
+          runMultipleStepsAnimated(simulationConfig.stepsPerRun, simulationConfig.animationDelayMs);
+        }
+        return;
+      }
+
+      // Ctrl/Cmd + ArrowRight: Step forward
+      if (event.code === 'ArrowRight' && isMeta && !event.shiftKey) {
+        event.preventDefault();
+        if (!isRunning) {
+          runStep();
+        }
+        return;
+      }
+
+      // Ctrl/Cmd + Shift + ArrowRight: Fast forward (run multiple steps without animation)
+      if (event.code === 'ArrowRight' && isMeta && event.shiftKey) {
+        event.preventDefault();
+        if (!isRunning) {
+          runMultipleStepsFast(simulationConfig.stepsPerRun);
+        }
+        return;
+      }
+
+      // Ctrl/Cmd + ArrowLeft: Reset simulation
+      if (event.code === 'ArrowLeft' && isMeta && !event.shiftKey) {
+        event.preventDefault();
+        if (!isRunning) {
+          resetSimulation();
+        }
+        return;
+      }
+
+      // Escape: Stop running simulation
+      if (event.code === 'Escape') {
+        if (isRunning) {
+          event.preventDefault();
+          stop();
+        }
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [simulationContext]);
 
   const slices = [
     { key: 'bottom', label: [''], angle: 90 },
@@ -337,6 +415,162 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       console.error("Cannot set selected element: activePetriNetId is null.");
     }
   }, [activePetriNetId]);
+
+  // Handle node drag start
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const onNodeDragStart = useCallback((_event: React.MouseEvent, _node: Node, _nodes: Node[]) => {
+    nodeDragRef.current.isDragging = true;
+    nodeDragRef.current.isSnapping = false;
+    nodeDragRef.current.snappedPositions.clear();
+  }, []);
+
+  // Handle node drag - apply shift-snap to align with connected edges
+  // When snapping, we find the snap offset for ONE node and apply it to ALL nodes in the group
+  const onNodeDrag = useCallback((event: React.MouseEvent, _node: Node, nodes: Node[]) => {
+    if (!activePetriNetId || nodes.length === 0) return;
+    
+    const petriNet = useStore.getState().petriNetsById[activePetriNetId];
+    if (!petriNet) return;
+    
+    // Clear snapped positions if shift is not pressed
+    if (!event.shiftKey) {
+      nodeDragRef.current.isSnapping = false;
+      nodeDragRef.current.snappedPositions.clear();
+      return;
+    }
+    
+    const SNAP_THRESHOLD = 20;
+    
+    // Find a snap offset by checking all dragged nodes against their connected edges
+    let snapDeltaX: number | null = null;
+    let snapDeltaY: number | null = null;
+    
+    // Get the set of dragged node IDs for quick lookup
+    const draggedNodeIds = new Set(nodes.map(n => n.id));
+    
+    // Check each dragged node for snap opportunities
+    for (const draggedNode of nodes) {
+      if (snapDeltaX !== null && snapDeltaY !== null) break; // Already found both snaps
+      
+      const nodeCenter = {
+        x: draggedNode.position.x + (draggedNode.measured?.width || 50) / 2,
+        y: draggedNode.position.y + (draggedNode.measured?.height || 30) / 2,
+      };
+      
+      // Find all connected edges to nodes NOT in the dragged group
+      const connectedEdges = petriNet.edges.filter(
+        (edge) => {
+          const isConnected = edge.source === draggedNode.id || edge.target === draggedNode.id;
+          if (!isConnected) return false;
+          // Only consider edges to nodes outside the dragged group
+          const otherNodeId = edge.source === draggedNode.id ? edge.target : edge.source;
+          return !draggedNodeIds.has(otherNodeId);
+        }
+      );
+      
+      for (const edge of connectedEdges) {
+        if (snapDeltaX !== null && snapDeltaY !== null) break;
+        
+        // Find the other node (which is NOT being dragged)
+        const otherNodeId = edge.source === draggedNode.id ? edge.target : edge.source;
+        const otherNode = petriNet.nodes.find((n) => n.id === otherNodeId);
+        if (!otherNode) continue;
+        
+        const otherCenter = {
+          x: otherNode.position.x + (otherNode.measured?.width || 50) / 2,
+          y: otherNode.position.y + (otherNode.measured?.height || 30) / 2,
+        };
+        
+        // Check if we have bendpoints - if so, use the first/last bendpoint as reference
+        const bendpoints = edge.data?.bendpoints as { x: number; y: number }[] | undefined;
+        let referencePoint = otherCenter;
+        
+        if (bendpoints && bendpoints.length > 0) {
+          // Use the bendpoint closest to the dragged node
+          if (edge.source === draggedNode.id) {
+            referencePoint = bendpoints[0]; // First bendpoint for outgoing edge
+          } else {
+            referencePoint = bendpoints[bendpoints.length - 1]; // Last bendpoint for incoming edge
+          }
+        }
+        
+        // Check for horizontal alignment (same Y) - snap the center
+        if (snapDeltaY === null && Math.abs(nodeCenter.y - referencePoint.y) < SNAP_THRESHOLD) {
+          snapDeltaY = referencePoint.y - nodeCenter.y;
+        }
+        
+        // Check for vertical alignment (same X) - snap the center
+        if (snapDeltaX === null && Math.abs(nodeCenter.x - referencePoint.x) < SNAP_THRESHOLD) {
+          snapDeltaX = referencePoint.x - nodeCenter.x;
+        }
+      }
+    }
+    
+    // If we found a snap, store the snapped positions
+    if (snapDeltaX !== null || snapDeltaY !== null) {
+      nodeDragRef.current.isSnapping = true;
+      nodeDragRef.current.snappedPositions.clear();
+      
+      // Calculate and store snapped positions for all dragged nodes
+      nodes.forEach((draggedNode) => {
+        const snappedPos = {
+          x: draggedNode.position.x + (snapDeltaX ?? 0),
+          y: draggedNode.position.y + (snapDeltaY ?? 0),
+        };
+        nodeDragRef.current.snappedPositions.set(draggedNode.id, snappedPos);
+      });
+      
+      // Apply snapped positions to store
+      const updatedNodes = petriNet.nodes.map((node) => {
+        const snappedPos = nodeDragRef.current.snappedPositions.get(node.id);
+        if (snappedPos) {
+          return { ...node, position: snappedPos };
+        }
+        return node;
+      });
+      
+      setNodes(activePetriNetId, updatedNodes);
+    } else {
+      nodeDragRef.current.isSnapping = false;
+      nodeDragRef.current.snappedPositions.clear();
+    }
+  }, [activePetriNetId, setNodes]);
+  
+  // Handle node drag stop
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const onNodeDragStop = useCallback((_event: React.MouseEvent, _node: Node, _nodes: Node[]) => {
+    // Keep snapped positions for one more cycle to override React Flow's final position
+    // The onNodesChange handler will use these
+    setTimeout(() => {
+      nodeDragRef.current.isDragging = false;
+      nodeDragRef.current.isSnapping = false;
+      nodeDragRef.current.snappedPositions.clear();
+    }, 50);
+  }, []);
+  
+  // Custom onNodesChange that respects snapped positions
+  const customOnNodesChange = useCallback((changes: import('@xyflow/react').NodeChange[]) => {
+    if (!activePetriNetId) return;
+    
+    // If we're snapping, override position changes with our snapped positions
+    if (nodeDragRef.current.isSnapping && nodeDragRef.current.snappedPositions.size > 0) {
+      const modifiedChanges = changes.map((change) => {
+        if (change.type === 'position' && 'id' in change && change.position) {
+          const snappedPos = nodeDragRef.current.snappedPositions.get(change.id);
+          if (snappedPos) {
+            return {
+              ...change,
+              position: snappedPos,
+            };
+          }
+        }
+        return change;
+      });
+      onNodesChange(modifiedChanges);
+    } else {
+      onNodesChange(changes);
+    }
+  }, [activePetriNetId, onNodesChange]);
 
   // Handle edge selection
   const onEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
@@ -620,9 +854,14 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
             nodeTypes={nodeTypes}
             edges={petriNet?.edges || []}
             edgeTypes={edgeTypes}
-            onNodesChange={onNodesChange}
+            onNodesChange={customOnNodesChange}
             onEdgesChange={onEdgesChange}
-            onNodeDragStart={onNodeClick}
+            onNodeDragStart={(event, node, nodes) => {
+              onNodeClick(event, node);
+              onNodeDragStart(event, node, nodes);
+            }}
+            onNodeDrag={onNodeDrag}
+            onNodeDragStop={onNodeDragStop}
             onNodeClick={onNodeClick}
             onEdgeClick={onEdgeClick}
             onPaneClick={onPaneClick}
@@ -634,6 +873,9 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
             defaultEdgeOptions={defaultEdgeOptions}
             connectionLineComponent={CustomConnectionLine}
             maxZoom={4}
+            selectionOnDrag
+            selectionKeyCode="Shift"
+            multiSelectionKeyCode={['Meta', 'Control']}
             onInit={(instance) => {
               // Using requestAnimationFrame to ensure layout is stable
               requestAnimationFrame(() => {

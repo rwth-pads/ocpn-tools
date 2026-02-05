@@ -172,6 +172,18 @@ You can even use a ternary expression like this:
 3. Click **Run** to execute multiple steps automatically
 4. Use **Reset** to return to the initial marking
 
+### Keyboard Shortcuts
+
+Control simulation with keyboard shortcuts (similar to media players):
+
+| Shortcut | Action |
+|----------|--------|
+| `Space` | Play/Stop animated simulation |
+| `Ctrl/Cmd + →` | Execute one step |
+| `Ctrl/Cmd + Shift + →` | Fast forward (run multiple steps without animation) |
+| `Ctrl/Cmd + ←` | Reset simulation |
+| `Escape` | Stop running simulation |
+
 ### Event Log
 
 The simulation records all transition firings in the Event Log:

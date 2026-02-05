@@ -130,6 +130,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     createPetriNet,
     setActivePetriNet,
     setNodes,
+    setEdges,
     setColorSets,
     setVariables,
     setPriorities,
@@ -643,6 +644,16 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     async (options: LayoutOptions, currentNodes: Node[], currentEdges: Edge[]) => {
       if (!currentNodes.length) return;
 
+      // Clear bendpoints from all edges before applying layout
+      const edgesWithoutBendpoints = currentEdges.map((edge) => ({
+        ...edge,
+        data: edge.data ? { ...edge.data, bendpoints: undefined } : edge.data,
+      }));
+      
+      if (activePetriNetId) {
+        setEdges(activePetriNetId, edgesWithoutBendpoints);
+      }
+
       try {
         if (options.algorithm === "dagre") {
           // Dynamically import dagre
@@ -743,7 +754,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
         console.error("Error applying layout:", error);
       }
     },
-    [setNodes, fitView, activePetriNetId], // Keep fitView dependency if layout calls it
+    [setNodes, setEdges, fitView, activePetriNetId], // Keep fitView dependency if layout calls it
   );
 
   const handleAddPetriNet = (e: React.FormEvent) => {

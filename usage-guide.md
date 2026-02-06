@@ -172,6 +172,18 @@ You can even use a ternary expression like this:
 3. Click **Run** to execute multiple steps automatically
 4. Use **Reset** to return to the initial marking
 
+### Keyboard Shortcuts
+
+Control simulation with keyboard shortcuts (similar to media players):
+
+| Shortcut | Action |
+|----------|--------|
+| `Space` | Play/Stop animated simulation |
+| `Ctrl/Cmd + →` | Execute one step |
+| `Ctrl/Cmd + Shift + →` | Fast forward (run multiple steps without animation) |
+| `Ctrl/Cmd + ←` | Reset simulation |
+| `Escape` | Stop running simulation |
+
 ### Event Log
 
 The simulation records all transition firings in the Event Log:
@@ -245,6 +257,68 @@ Each event records which objects were involved, with qualifiers indicating the o
 - Use the AI Assistant for help with specific modeling questions
 - For object-centric modeling, always include an `id` field in your record types
 - Use meaningful names for transitions—they become event types in OCEL exports
+
+## Calendar & Time Functions
+
+OCPN Tools provides calendar-aware functions for modeling time-dependent behavior. These require a **Simulation Epoch** to be set (in Simulation Settings), which defines the real-world start time of the simulation.
+
+### Current Time
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `current_time()` | `INT` (ms) | Current simulation time in milliseconds since simulation start |
+
+### Calendar Decomposition
+
+These functions take a simulation time (e.g., from `current_time()`) and return calendar information based on the simulation epoch.
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `hour_of_day(t)` | 0–23 | Hour of the day |
+| `minute_of_hour(t)` | 0–59 | Minute of the hour |
+| `second_of_minute(t)` | 0–59 | Second of the minute |
+| `day_of_week(t)` | 0–6 | Day of week (0=Sunday, 1=Monday, ..., 6=Saturday) |
+| `day_of_month(t)` | 1–31 | Day of the month |
+| `month(t)` | 1–12 | Month of the year |
+| `year(t)` | e.g., 2026 | Year |
+| `is_weekend(t)` | `BOOL` | True if Saturday or Sunday |
+| `is_workday(t)` | `BOOL` | True if Monday through Friday |
+
+### Scheduling Functions
+
+These return absolute simulation times (in ms) for scheduling future events.
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `next_weekday(dow)` | `INT` (ms) | Next occurrence of weekday `dow` at midnight |
+| `next_weekday_at(dow, h, m)` | `INT` (ms) | Next occurrence of weekday `dow` at `h:m` |
+| `next_monday()` ... `next_sunday()` | `INT` (ms) | Next occurrence of that day at midnight |
+| `next_monday_at(h, m)` ... `next_sunday_at(h, m)` | `INT` (ms) | Next occurrence of that day at `h:m` |
+| `next_hour(h)` | `INT` (ms) | Next occurrence of hour `h:00` |
+| `time_until(t)` | `INT` (ms) | Milliseconds between now and time `t` |
+
+### Examples
+
+**Guard: only fire during business hours (Mon–Fri, 8:00–17:00)**
+```rhai
+let t = current_time();
+is_workday(t) && hour_of_day(t) >= 8 && hour_of_day(t) < 17
+```
+
+**Time delay: wait until next Monday at 8am**
+```rhai
+time_until(next_monday_at(8, 0))
+```
+
+**Time delay: wait until next morning**
+```rhai
+time_until(next_hour(8))
+```
+
+**Guard: only fire on weekends**
+```rhai
+is_weekend(current_time())
+```
 
 ## Random Distribution Functions
 

@@ -1,14 +1,15 @@
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { PlusCircle, Trash2, Upload, Download } from "lucide-react"
+import { PlusCircle, Trash2, Upload, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 // Define the type for values within a record (can be anything JSON-serializable)
 type RecordValue = string | number | boolean | unknown[] | Record<string, unknown>
@@ -44,6 +45,8 @@ export function RecordMarkingDialog({
   const [multisetEntries, setMultisetEntries] = useState<MultisetEntry[]>([])
   const [jsonText, setJsonText] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   // Determine if we're in record mode (named attributes) or multiset mode (generic entries)
   const isRecordMode = attributes.length > 0
@@ -62,7 +65,22 @@ export function RecordMarkingDialog({
       setMultisetEntries([])
       setJsonText("[]")
     }
+    setCurrentPage(1)
   }, [initialData, isRecordMode])
+
+  // Pagination
+  const dataLength = isRecordMode ? records.length : multisetEntries.length
+  const totalPages = Math.max(1, Math.ceil(dataLength / pageSize))
+  const paginatedRecords = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return records.slice(start, start + pageSize)
+  }, [records, currentPage, pageSize])
+  const paginatedMultisetEntries = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return multisetEntries.slice(start, start + pageSize)
+  }, [multisetEntries, currentPage, pageSize])
+  const globalIndex = (pageIndex: number) => (currentPage - 1) * pageSize + pageIndex
+  const handlePageSizeChange = (newSize: number) => { setPageSize(newSize); setCurrentPage(1) }
 
   // Update JSON text when data changes
   useEffect(() => {
@@ -76,7 +94,9 @@ export function RecordMarkingDialog({
   
   // Add a new multiset entry (default to empty string, user will edit)
   const addMultisetEntry = () => {
-    setMultisetEntries([...multisetEntries, ""])
+    const newEntries = [...multisetEntries, ""]
+    setMultisetEntries(newEntries)
+    setCurrentPage(Math.ceil(newEntries.length / pageSize))
   }
 
   // Delete a multiset entry
@@ -84,6 +104,8 @@ export function RecordMarkingDialog({
     const newEntries = [...multisetEntries]
     newEntries.splice(index, 1)
     setMultisetEntries(newEntries)
+    const newTotal = Math.max(1, Math.ceil(newEntries.length / pageSize))
+    if (currentPage > newTotal) setCurrentPage(newTotal)
   }
 
   // Update a multiset entry - try to parse as JSON if it looks like an array/object
@@ -139,7 +161,9 @@ export function RecordMarkingDialog({
         newRecord[attr.name] = ""
       }
     })
-    setRecords([...records, newRecord])
+    const newRecords = [...records, newRecord]
+    setRecords(newRecords)
+    setCurrentPage(Math.ceil(newRecords.length / pageSize))
   }
 
   // Delete a record
@@ -147,6 +171,8 @@ export function RecordMarkingDialog({
     const newRecords = [...records]
     newRecords.splice(index, 1)
     setRecords(newRecords)
+    const newTotal = Math.max(1, Math.ceil(newRecords.length / pageSize))
+    if (currentPage > newTotal) setCurrentPage(newTotal)
   }
 
   // Update a record field
@@ -308,7 +334,7 @@ export function RecordMarkingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>Edit Initial Marking for {colorSetName}</DialogTitle>
         </DialogHeader>
@@ -364,56 +390,99 @@ export function RecordMarkingDialog({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {records.length === 0 ? (
+                    {paginatedRecords.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={attributes.length + 1} className="text-center">
                           No records. Click "Add Record" to create one.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      records.map((record, index) => (
-                        <TableRow key={index}>
-                          {attributes.map((attr) => (
-                            <TableCell key={`${index}-${attr.name}`}>
-                              <Input
-                                value={record[attr.name]?.toString() ?? ""}
-                                onChange={(e) => updateRecord(index, attr.name, parseValue(e.target.value, attr.type))}
-                              />
+                      paginatedRecords.map((record, pageIdx) => {
+                        const idx = globalIndex(pageIdx)
+                        return (
+                          <TableRow key={idx}>
+                            {attributes.map((attr) => (
+                              <TableCell key={`${idx}-${attr.name}`}>
+                                <Input
+                                  value={record[attr.name]?.toString() ?? ""}
+                                  onChange={(e) => updateRecord(idx, attr.name, parseValue(e.target.value, attr.type))}
+                                />
+                              </TableCell>
+                            ))}
+                            <TableCell>
+                              <Button variant="ghost" size="icon" onClick={() => deleteRecord(idx)} className="h-8 w-8">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </TableCell>
-                          ))}
-                          <TableCell>
-                            <Button variant="ghost" size="icon" onClick={() => deleteRecord(index)} className="h-8 w-8">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                          </TableRow>
+                        )
+                      })
                     )}
                   </TableBody>
                 </Table>
               ) : (
                 // Multiset mode: simple list of entries
                 <div className="space-y-2">
-                  {multisetEntries.length === 0 ? (
+                  {paginatedMultisetEntries.length === 0 ? (
                     <div className="text-center text-muted-foreground py-4">
                       No entries. Click "Add Entry" to create one.
                     </div>
                   ) : (
-                    multisetEntries.map((entry, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground w-8 text-right">{index + 1}.</span>
-                        <Input
-                          className="flex-1 font-mono"
-                          value={formatMultisetEntry(entry)}
-                          onChange={(e) => updateMultisetEntry(index, e.target.value)}
-                          placeholder="e.g., [1, &quot;Modellin&quot;] or 42 or &quot;text&quot;"
-                        />
-                        <Button variant="ghost" size="icon" onClick={() => deleteMultisetEntry(index)} className="h-8 w-8">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))
+                    paginatedMultisetEntries.map((entry, pageIdx) => {
+                      const idx = globalIndex(pageIdx)
+                      return (
+                        <div key={idx} className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground w-8 text-right">{idx + 1}.</span>
+                          <Input
+                            className="flex-1 font-mono"
+                            value={formatMultisetEntry(entry)}
+                            onChange={(e) => updateMultisetEntry(idx, e.target.value)}
+                            placeholder="e.g., [1, &quot;Modellin&quot;] or 42 or &quot;text&quot;"
+                          />
+                          <Button variant="ghost" size="icon" onClick={() => deleteMultisetEntry(idx)} className="h-8 w-8">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )
+                    })
                   )}
+                </div>
+              )}
+              {dataLength > 10 && (
+                <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>{dataLength === 0 ? 0 : (currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, dataLength)} of {dataLength}</span>
+                    <Select value={String(pageSize)} onValueChange={(v) => handlePageSizeChange(Number(v))}>
+                      <SelectTrigger className="h-7 w-[70px] text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[10, 25, 50, 100].map((size) => (
+                          <SelectItem key={size} value={String(size)}>{size}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span className="text-xs">per page</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button variant="outline" size="icon" className="h-7 w-7"
+                      onClick={() => setCurrentPage(1)} disabled={currentPage <= 1}>
+                      <ChevronsLeft className="h-3 w-3" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="h-7 w-7"
+                      onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage <= 1}>
+                      <ChevronLeft className="h-3 w-3" />
+                    </Button>
+                    <span className="text-sm px-2">{currentPage} / {totalPages}</span>
+                    <Button variant="outline" size="icon" className="h-7 w-7"
+                      onClick={() => setCurrentPage(currentPage + 1)} disabled={currentPage >= totalPages}>
+                      <ChevronRight className="h-3 w-3" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="h-7 w-7"
+                      onClick={() => setCurrentPage(totalPages)} disabled={currentPage >= totalPages}>
+                      <ChevronsRight className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               )}
             </TabsContent>

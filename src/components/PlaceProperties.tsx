@@ -423,6 +423,7 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
             onOpenChange={setIsTimedMarkingDialogOpen}
             colorSetName={selectedPlace.data?.colorSet || ""}
             colorSetType={getColorSetBaseType()}
+            recordAttributes={getRecordAttributes(selectedPlace.data?.colorSet || "")}
             initialData={parseTimedMarking(selectedPlace.data?.initialMarking || "")}
             onSave={(tokens) => {
               const formattedMarking = formatTimedMarking(tokens);

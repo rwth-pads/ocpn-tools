@@ -276,7 +276,7 @@ export function SimulationPanel() {
   const [tempConfig, setTempConfig] = useState<SimulationConfig>(simulationConfig);
 
   // Convert stored epoch (UTC ISO string) to local datetime string for the input
-  const epochToLocal = (epoch: string | null): string => {
+  const epochToLocal = (epoch: string | null | undefined): string => {
     if (!epoch) return '';
     const d = new Date(epoch);
     if (isNaN(d.getTime())) return epoch;

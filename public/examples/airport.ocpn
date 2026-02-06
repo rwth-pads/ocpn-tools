@@ -163,12 +163,12 @@
             }
           ],
           "position": {
-            "x": 2575.9833098566933,
-            "y": 225.3599541856954
+            "x": 2555.3067276038637,
+            "y": 317.7224536790802
           },
           "size": {
-            "width": 50,
-            "height": 35
+            "width": 66,
+            "height": 45
           },
           "markingOffset": {
             "x": 46.11241804679068,
@@ -188,21 +188,10 @@
           "size": {
             "width": 60,
             "height": 40
-          }
-        },
-        {
-          "id": "p-tug-busy",
-          "name": "Tug\nBusy",
-          "colorSet": "Tug",
-          "initialMarking": "",
-          "marking": [],
-          "position": {
-            "x": 2585.3747268226357,
-            "y": 283.3870355984805
           },
-          "size": {
-            "width": 50,
-            "height": 35
+          "markingOffset": {
+            "x": -8.456608842583698,
+            "y": -91.32207051102313
           }
         },
         {
@@ -247,6 +236,10 @@
           "size": {
             "width": 60,
             "height": 40
+          },
+          "markingOffset": {
+            "x": 29.091695661874112,
+            "y": -124.66633529286732
           }
         },
         {
@@ -278,8 +271,8 @@
             }
           ],
           "position": {
-            "x": 1278.468556003538,
-            "y": 212.12782819653702
+            "x": 1280.4107937989888,
+            "y": 273.25118609758727
           },
           "size": {
             "width": 73,
@@ -293,35 +286,24 @@
         {
           "id": "p-aircraft-fueling",
           "name": "Aircraft\nFueling",
-          "colorSet": "Aircraft",
+          "colorSet": "AircraftxFuelTruck",
           "initialMarking": "",
           "marking": [],
           "position": {
-            "x": 1285.830900020502,
-            "y": 119.58298571721454
+            "x": 1292.0177320202927,
+            "y": 156.70397771595808
           },
           "size": {
             "width": 60,
             "height": 40
-          }
-        },
-        {
-          "id": "p-fuel-truck-busy",
-          "name": "Fuel Truck\nBusy",
-          "colorSet": "FuelTruck",
-          "initialMarking": "",
-          "marking": [],
-          "position": {
-            "x": 1282.5,
-            "y": 286.25
-          },
-          "size": {
-            "width": 74,
-            "height": 40
           },
           "colorSetOffset": {
-            "x": 9.87702192194636,
-            "y": 25.882748995126434
+            "x": -37.399900587860195,
+            "y": 35.77916459558042
+          },
+          "markingOffset": {
+            "x": 75.30256660767277,
+            "y": -101.03426054774593
           }
         },
         {
@@ -331,8 +313,8 @@
           "initialMarking": "",
           "marking": [],
           "position": {
-            "x": 1601.005053812967,
-            "y": 170.7348385610989
+            "x": 1597.9116378130716,
+            "y": 229.6215850099258
           },
           "size": {
             "width": 60,
@@ -349,8 +331,8 @@
             null
           ],
           "position": {
-            "x": 1914.0650089393177,
-            "y": 71.77734335633484
+            "x": 1916.1202596569194,
+            "y": 107.55513334829453
           },
           "size": {
             "width": 69,
@@ -361,38 +343,27 @@
             "y": -4.20396204794764
           },
           "markingOffset": {
-            "x": 40.00000000000001,
-            "y": 16.716796993099553
+            "x": 33.836515121001774,
+            "y": 20.414887920498494
           }
         },
         {
           "id": "p-aircraft-cleaning",
           "name": "Aircraft\nCleaning",
-          "colorSet": "Aircraft",
+          "colorSet": "AircraftxUnit",
           "initialMarking": "",
           "marking": [],
           "position": {
-            "x": 1920,
-            "y": -3
+            "x": 1915.0646775491884,
+            "y": -1.3548925163961396
           },
           "size": {
             "width": 68,
             "height": 43
-          }
-        },
-        {
-          "id": "p-cleaning-crew-busy",
-          "name": "Cleaning\nCrew Busy",
-          "colorSet": "UNIT",
-          "initialMarking": "",
-          "marking": [],
-          "position": {
-            "x": 1918.4207521960545,
-            "y": 129.9604069004946
           },
-          "size": {
-            "width": 67,
-            "height": 52
+          "markingOffset": {
+            "x": 56.007263759146625,
+            "y": -99.41353281996322
           }
         },
         {
@@ -402,27 +373,35 @@
           "initialMarking": "",
           "marking": [],
           "position": {
-            "x": 2240,
-            "y": 212.5
+            "x": 2254.7923637095955,
+            "y": 229.6215850099258
           },
           "size": {
             "width": 60,
             "height": 40
+          },
+          "markingOffset": {
+            "x": 21.41849718659653,
+            "y": -148.65202250722777
           }
         },
         {
           "id": "p-aircraft-taxiing-out",
           "name": "Aircraft\nTaxiing Out",
-          "colorSet": "Aircraft",
+          "colorSet": "AircraftxTug",
           "initialMarking": "",
           "marking": [],
           "position": {
-            "x": 2560,
-            "y": 152.75
+            "x": 2550.646835494341,
+            "y": 193.6700947122591
           },
           "size": {
             "width": 76,
             "height": 46
+          },
+          "markingOffset": {
+            "x": 53.5138202279298,
+            "y": -147.80740874298218
           }
         },
         {
@@ -432,16 +411,16 @@
           "initialMarking": "",
           "marking": [],
           "position": {
-            "x": 2942.4739287910916,
-            "y": 181.66805713114178
+            "x": 2924.9367453429804,
+            "y": 262.93496809150355
           },
           "size": {
             "width": 60,
             "height": 40
           },
           "markingOffset": {
-            "x": 54.99374290986199,
-            "y": -154.10235768469263
+            "x": 66.993742909862,
+            "y": -74.10235768469263
           }
         }
       ],
@@ -513,8 +492,8 @@
           "time": "delay_min(discrete(15,25))",
           "priority": "NONE",
           "position": {
-            "x": 1441.6659714344291,
-            "y": 207.08298571721457
+            "x": 1438.0425402657097,
+            "y": 229.6215850099258
           },
           "size": {
             "width": 60,
@@ -543,8 +522,8 @@
           "time": "delay_min(30)",
           "priority": "",
           "position": {
-            "x": 2080,
-            "y": 43.75
+            "x": 2061.5095453630056,
+            "y": 71.25
           },
           "size": {
             "width": 60,
@@ -558,8 +537,8 @@
           "time": "delay_min(1)",
           "priority": "",
           "position": {
-            "x": 2080,
-            "y": 212.5
+            "x": 2044.25178770181,
+            "y": 229.6215850099258
           },
           "size": {
             "width": 60,
@@ -588,8 +567,8 @@
           "time": "delay_min(10)",
           "priority": "",
           "position": {
-            "x": 2720,
-            "y": 215
+            "x": 2707.1393988047184,
+            "y": 262.93496809150355
           },
           "size": {
             "width": 60,
@@ -702,28 +681,14 @@
           "id": "e17",
           "source": "t-fuel-start",
           "target": "p-aircraft-fueling",
-          "inscription": "ac",
-          "isBidirectional": false
-        },
-        {
-          "id": "e18",
-          "source": "t-fuel-start",
-          "target": "p-fuel-truck-busy",
-          "inscription": "ft",
+          "inscription": "[ac, ft]",
           "isBidirectional": false
         },
         {
           "id": "e19",
           "source": "p-aircraft-fueling",
           "target": "t-fuel-end",
-          "inscription": "ac",
-          "isBidirectional": false
-        },
-        {
-          "id": "e20",
-          "source": "p-fuel-truck-busy",
-          "target": "t-fuel-end",
-          "inscription": "ft",
+          "inscription": "[ac, ft]",
           "isBidirectional": false
         },
         {
@@ -758,28 +723,14 @@
           "id": "e25",
           "source": "t-clean-start",
           "target": "p-aircraft-cleaning",
-          "inscription": "ac",
-          "isBidirectional": false
-        },
-        {
-          "id": "e26",
-          "source": "t-clean-start",
-          "target": "p-cleaning-crew-busy",
-          "inscription": "crew",
+          "inscription": "[ac, crew]",
           "isBidirectional": false
         },
         {
           "id": "e27",
           "source": "p-aircraft-cleaning",
           "target": "t-clean-end",
-          "inscription": "ac",
-          "isBidirectional": false
-        },
-        {
-          "id": "e28",
-          "source": "p-cleaning-crew-busy",
-          "target": "t-clean-end",
-          "inscription": "crew",
+          "inscription": "[ac, crew]",
           "isBidirectional": false
         },
         {
@@ -839,7 +790,7 @@
           "id": "e36",
           "source": "t-off-block",
           "target": "p-aircraft-taxiing-out",
-          "inscription": "ac",
+          "inscription": "[ac, tug]",
           "isBidirectional": false
         },
         {
@@ -854,28 +805,10 @@
           }
         },
         {
-          "id": "e38",
-          "source": "t-off-block",
-          "target": "p-tug-busy",
-          "inscription": "tug",
-          "isBidirectional": false,
-          "labelOffset": {
-            "x": 17.492700061505648,
-            "y": 24.156585799222086
-          }
-        },
-        {
           "id": "e39",
           "source": "p-aircraft-taxiing-out",
           "target": "t-takeoff",
-          "inscription": "ac",
-          "isBidirectional": false
-        },
-        {
-          "id": "e40",
-          "source": "p-tug-busy",
-          "target": "t-takeoff",
-          "inscription": "tug",
+          "inscription": "[ac, tug]",
           "isBidirectional": false
         },
         {
@@ -920,7 +853,7 @@
       "type": "basic",
       "definition": "colset UNIT = unit;",
       "color": "#6b7280",
-      "timed": true
+      "timed": false
     },
     {
       "id": "cs-int",
@@ -964,6 +897,30 @@
       "type": "record",
       "definition": "colset Gate = record id: INT;",
       "color": "#06b6d4"
+    },
+    {
+      "name": "AircraftxFuelTruck",
+      "type": "product",
+      "definition": "colset AircraftxFuelTruck = product Aircraft * FuelTruck timed;",
+      "color": "#3b82f6",
+      "timed": true,
+      "id": "b4c64c0b-cc0b-41ce-9571-28bd9db40990"
+    },
+    {
+      "name": "AircraftxTug",
+      "type": "product",
+      "definition": "colset AircraftxTug = product Aircraft * Tug timed;",
+      "color": "#3b82f6",
+      "timed": true,
+      "id": "1cde1d20-b703-4908-8bb0-0cdc6ff1e5a7"
+    },
+    {
+      "name": "AircraftxUnit",
+      "type": "product",
+      "definition": "colset AircraftxUnit = product Aircraft * UNIT timed;",
+      "color": "#3b82f6",
+      "timed": true,
+      "id": "348b98a8-45fd-49ad-80bd-2d3b97eeb534"
     }
   ],
   "variables": [
@@ -1002,8 +959,9 @@
   "functions": [],
   "uses": [],
   "simulationSettings": {
-    "stepsPerRun": 50,
+    "stepsPerRun": 90,
     "animationDelayMs": 250,
-    "simulationEpoch": "2026-01-15T12:00:00+01:00"
-  }
+    "simulationEpoch": "2026-01-15T11:00:00.000Z"
+  },
+  "simulationEpoch": "2026-01-15T11:00:00.000Z"
 }

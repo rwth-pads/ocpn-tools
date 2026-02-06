@@ -276,6 +276,7 @@ export function convertToJSON(data: PetriNetData): string {
     functions: data.functions,
     uses: data.uses, // Include uses in JSON
     simulationSettings: data.simulationSettings || undefined, // Include simulation settings if present
+    simulationEpoch: data.simulationSettings?.simulationEpoch || undefined, // Top-level for WASM simulator
   };
 
   return JSON.stringify(transformedData, null, 2);

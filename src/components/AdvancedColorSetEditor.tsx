@@ -35,6 +35,7 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
   const [definition, setDefinition] = useState(colorSet?.definition || "")
   const [color, setColor] = useState(colorSet?.color || "#3b82f6") // Default to blue
   const [timed, setTimed] = useState(colorSet?.timed || false) // Whether this is a timed color set
+  const [activeTab, setActiveTab] = useState("visual")
 
   // For basic color sets
   const [basicType, setBasicType] = useState("int")
@@ -195,8 +196,9 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
   }
 
   const handleSave = () => {
-    // Generate the definition if in visual mode
-    const finalDefinition = definition || generateDefinition()
+    // In visual mode, always regenerate definition to reflect current field values (name, type, etc.)
+    // In text mode, use the raw definition text the user typed
+    const finalDefinition = activeTab === "text" ? definition : generateDefinition()
 
     onSave({
       name,
@@ -261,7 +263,7 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
         </span>
       </div>
 
-      <Tabs defaultValue="visual" className="w-full">
+      <Tabs defaultValue="visual" className="w-full" onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="visual">Visual Editor</TabsTrigger>
           <TabsTrigger value="text">Text Editor</TabsTrigger>

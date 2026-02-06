@@ -274,13 +274,23 @@ export function SimulationPanel() {
   const [ocelDialogOpen, setOcelDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tempConfig, setTempConfig] = useState<SimulationConfig>(simulationConfig);
-  const [tempEpoch, setTempEpoch] = useState<string>(simulationEpoch || '');
+
+  // Convert stored epoch (UTC ISO string) to local datetime string for the input
+  const epochToLocal = (epoch: string | null): string => {
+    if (!epoch) return '';
+    const d = new Date(epoch);
+    if (isNaN(d.getTime())) return epoch;
+    const pad = (n: number, len = 2) => String(n).padStart(len, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
+  };
+
+  const [tempEpoch, setTempEpoch] = useState<string>(epochToLocal(simulationEpoch));
 
   // Reset temp config when dialog opens
   const handleSettingsOpen = (open: boolean) => {
     if (open) {
       setTempConfig(simulationConfig);
-      setTempEpoch(simulationEpoch || '');
+      setTempEpoch(epochToLocal(simulationEpoch));
     }
     setSettingsOpen(open);
   };
@@ -288,7 +298,18 @@ export function SimulationPanel() {
   // Save settings
   const handleSaveSettings = () => {
     setSimulationConfig(tempConfig);
-    setSimulationEpoch(tempEpoch || null);
+    // Convert naive local datetime to ISO string with timezone offset
+    // so the Rust simulator interprets it correctly
+    if (tempEpoch) {
+      const localDate = new Date(tempEpoch);
+      if (!isNaN(localDate.getTime())) {
+        setSimulationEpoch(localDate.toISOString()); // Stores as UTC with Z suffix
+      } else {
+        setSimulationEpoch(tempEpoch); // Fallback: store as-is
+      }
+    } else {
+      setSimulationEpoch(null);
+    }
     setSettingsOpen(false);
   };
 
@@ -513,19 +534,28 @@ ${evt.relationships.map(r => `      <relationship objectId="${r.objectId}" quali
                 onChange={(e) => setTempEpoch(e.target.value)}
                 className="col-span-2"
               />
-              <div className="col-span-2 col-start-3">
+              <div className="col-span-2 col-start-3 flex gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => {
                     const now = new Date();
-                    // Format as YYYY-MM-DDTHH:MM:SS.mmm for datetime-local input with step
-                    const formatted = now.toISOString().slice(0, 23);
+                    // Format as YYYY-MM-DDTHH:MM:SS.mmm in local timezone for datetime-local input
+                    const pad = (n: number, len = 2) => String(n).padStart(len, '0');
+                    const formatted = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}.${pad(now.getMilliseconds(), 3)}`;
                     setTempEpoch(formatted);
                   }}
                 >
                   Now
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTempEpoch('')}
+                >
+                  Reset
                 </Button>
               </div>
             </div>

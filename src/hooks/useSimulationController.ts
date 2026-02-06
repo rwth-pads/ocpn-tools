@@ -293,6 +293,7 @@ export function useSimulationController() {
         const currentPriorities = useStore.getState().priorities;
         const currentFunctions = useStore.getState().functions;
         const currentUses = useStore.getState().uses;
+        const currentSimulationEpoch = useStore.getState().simulationEpoch;
 
         // Prepare the data structure for the WASM simulator
         const petriNetData: PetriNetData = {
@@ -303,6 +304,9 @@ export function useSimulationController() {
           priorities: currentPriorities,
           functions: currentFunctions,
           uses: currentUses,
+          simulationSettings: {
+            simulationEpoch: currentSimulationEpoch,
+          },
         }
 
         // --- Preprocessing Petri Net Data for WASM ---

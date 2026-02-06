@@ -403,7 +403,7 @@ export function useSimulationController() {
 
   // Core logic to execute a single WASM step
   // Assumes WASM is already initialized
-  const _executeWasmStep = () => {
+  const _executeWasmStep = (): unknown => {
     if (wasmSimulatorRef.current) { // Check the ref directly
         try {
             // Step counter is now incremented reactively in handleWasmEvent
@@ -412,14 +412,16 @@ export function useSimulationController() {
             const result = wasmSimulatorRef.current.run_step();
             console.log(`Simulation step result:`, result);
             // Event handling (including state updates and step increment) happens in handleWasmEvent callback
+            return result;
         } catch (error) {
             console.error("Error running simulation step:", error);
-            // Consider re-throwing or setting an error state if needed
+            return null;
         }
     } else {
         // This should ideally not happen if ensureInitialized succeeded without errors,
         // but keep the warning as a safeguard.
         console.warn("WASM Simulator ref is null after initialization attempt, cannot run step.");
+        return null;
     }
   };
 
@@ -443,7 +445,11 @@ export function useSimulationController() {
           console.log("Simulation stopped by user");
           break;
         }
-        _executeWasmStep();
+        const result = _executeWasmStep();
+        if (result == null) {
+          console.log("No transitions enabled, stopping animation.");
+          break;
+        }
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     } finally {
@@ -488,7 +494,11 @@ export function useSimulationController() {
           // Fallback: run steps one by one without delay
           for (let i = 0; i < steps; i++) {
             if (stopRequestedRef.current) break;
-            _executeWasmStep();
+            const result = _executeWasmStep();
+            if (result == null) {
+              console.log("No transitions enabled, stopping fast run.");
+              break;
+            }
           }
         }
       }

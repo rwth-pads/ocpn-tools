@@ -288,14 +288,42 @@ These functions take a simulation time (e.g., from `current_time()`) and return 
 
 These return absolute simulation times (in ms) for scheduling future events.
 
+#### Specific Weekday Scheduling
+
 | Function | Returns | Description |
 |----------|---------|-------------|
 | `next_weekday(dow)` | `INT` (ms) | Next occurrence of weekday `dow` at midnight |
 | `next_weekday_at(dow, h, m)` | `INT` (ms) | Next occurrence of weekday `dow` at `h:m` |
-| `next_monday()` ... `next_sunday()` | `INT` (ms) | Next occurrence of that day at midnight |
-| `next_monday_at(h, m)` ... `next_sunday_at(h, m)` | `INT` (ms) | Next occurrence of that day at `h:m` |
+| `next_monday()` … `next_sunday()` | `INT` (ms) | Next occurrence of that day at midnight |
+| `next_monday_at(h, m)` … `next_sunday_at(h, m)` | `INT` (ms) | Next occurrence of that day at `h:m` |
 | `next_hour(h)` | `INT` (ms) | Next occurrence of hour `h:00` |
-| `time_until(t)` | `INT` (ms) | Milliseconds between now and time `t` |
+
+#### High-Level Scheduling
+
+These functions provide a more natural, composable API for scheduling.
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `at(h)` | `INT` (ms) | Time-of-day value for hour `h` (shorthand for `at(h, 0)`) |
+| `at(h, m)` | `INT` (ms) | Time-of-day value for `h:m` |
+| `at(h, m, s)` | `INT` (ms) | Time-of-day value for `h:m:s` |
+| `next_day_at(h, m)` | `INT` (ms) | Next occurrence of `h:m` on any day |
+| `next_workday_at(h, m)` | `INT` (ms) | Next Mon–Fri at `h:m` |
+| `next_weekend_at(h, m)` | `INT` (ms) | Next Sat/Sun at `h:m` |
+| `next_workday_between(from, to)` | `INT` (ms) | Next Mon–Fri moment in daily window `[from, to)` |
+| `next_day_between(from, to)` | `INT` (ms) | Next moment in daily window `[from, to)` on any day |
+| `next_weekend_between(from, to)` | `INT` (ms) | Next Sat/Sun moment in daily window `[from, to)` |
+| `earliest(a, b, ...)` | `INT` (ms) | Minimum of 2–4 timestamps, or an array |
+| `latest(a, b, ...)` | `INT` (ms) | Maximum of 2–3 timestamps, or an array |
+
+> **Note:** The `from` and `to` parameters for `*_between` functions are time-of-day values produced by `at()`.
+> If the current simulation time already falls inside the window on a matching day, the current time is returned (i.e., no delay).
+
+#### Utility
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `time_until(t)` | `INT` (ms) | Milliseconds between current simulation time and absolute time `t` |
 
 ### Examples
 
@@ -318,6 +346,37 @@ time_until(next_hour(8))
 **Guard: only fire on weekends**
 ```rhai
 is_weekend(current_time())
+```
+
+**Time delay: wait until the next available work slot (9–12 or 13–17, Mon–Fri)**
+```rhai
+time_until(earliest(
+  next_workday_between(at(9), at(12)),
+  next_workday_between(at(13), at(17))
+))
+```
+
+**Time delay: wait until the next workday at 9:00**
+```rhai
+time_until(next_workday_at(9, 0))
+```
+
+**Time delay: wait until the next weekend morning at 10:30**
+```rhai
+time_until(next_weekend_at(10, 30))
+```
+
+**Time delay: wait until 8am tomorrow (any day)**
+```rhai
+time_until(next_day_at(8, 0))
+```
+
+**Time delay: pick the earliest of two options**
+```rhai
+time_until(earliest(
+  next_workday_at(9, 0),
+  next_weekend_at(12, 0)
+))
 ```
 
 ## Random Distribution Functions

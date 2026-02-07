@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import useStore from '@/stores/store';
 
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { UndoableInput as Input, UndoableTextarea as Textarea } from "@/components/ui/undoable-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

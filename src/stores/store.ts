@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { temporal } from 'zundo';
 import { Node, Edge } from '@xyflow/react';
 import { AppState, AppActions, PetriNet, SelectedElement } from '@/types';
 
@@ -42,8 +43,42 @@ const initialPetriNet: PetriNet = {
   selectedElement: null,
 };
 
+// --- Undo batching state (module-level, used by handleSet) ---
+let _undoBatchDepth = 0;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _undoBatchFirstState: any = undefined;
+let _undoBatchReplace: boolean | undefined;
+// Reference to the real handleSet so endBatch can flush
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _realHandleSet: ((state: any, replace: any) => void) | undefined;
+
+// Helper to strip transient fields from petri nets for undo tracking
+const stripTransientPetriNetFields = (petriNetsById: Record<string, PetriNet>) => {
+  const result: Record<string, { id: string; name: string; nodes: { id: string; type?: string; position: { x: number; y: number }; data: Record<string, unknown> }[]; edges: { id: string; source: string; target: string; label?: unknown; data?: Record<string, unknown> }[] }> = {};
+  for (const [id, pn] of Object.entries(petriNetsById)) {
+    result[id] = {
+      id: pn.id,
+      name: pn.name,
+      nodes: pn.nodes.map(n => ({
+        id: n.id,
+        type: n.type,
+        position: n.position,
+        data: n.data as Record<string, unknown>,
+      })),
+      edges: pn.edges.map(e => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        label: e.label,
+        data: e.data as Record<string, unknown> | undefined,
+      })),
+    };
+  }
+  return result;
+};
+
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
-const useStore = create<StoreState>((set) => ({
+const useStore = create<StoreState>()(temporal((set) => ({
   petriNetsById: {
     [initialPetriNetId]: initialPetriNet,
   },
@@ -611,6 +646,85 @@ const useStore = create<StoreState>((set) => ({
     set(emptyState);
   },
 
-}));
+}),
+  {
+    handleSet: (handleSet) => {
+      // Capture the real handleSet so endBatch can flush
+      _realHandleSet = handleSet;
+      // Flag-based batching: when _undoBatchDepth > 0, we hold the
+      // first pastState and only push it when the batch ends.
+      return (pastState, replace) => {
+        if (_undoBatchDepth > 0) {
+          // Inside a batch — capture the first "before" state only
+          if (!_undoBatchFirstState) {
+            _undoBatchFirstState = pastState;
+            _undoBatchReplace = replace;
+          }
+          // Discard intermediate states
+          return;
+        }
+        // Not in a batch — record normally
+        handleSet(pastState, replace);
+      };
+    },
+    partialize: (state) => ({
+      petriNetsById: state.petriNetsById,
+      petriNetOrder: state.petriNetOrder,
+      activePetriNetId: state.activePetriNetId,
+      colorSets: state.colorSets,
+      variables: state.variables,
+      priorities: state.priorities,
+      functions: state.functions,
+      uses: state.uses,
+    }),
+    equality: (pastState, currentState) => {
+      // Compare serialized snapshots to avoid recording no-op changes
+      // (e.g. selection changes, node measured events)
+      return JSON.stringify({
+        petriNetsById: stripTransientPetriNetFields(pastState.petriNetsById as Record<string, PetriNet>),
+        petriNetOrder: pastState.petriNetOrder,
+        activePetriNetId: pastState.activePetriNetId,
+        colorSets: pastState.colorSets,
+        variables: pastState.variables,
+        priorities: pastState.priorities,
+        functions: pastState.functions,
+        uses: pastState.uses,
+      }) === JSON.stringify({
+        petriNetsById: stripTransientPetriNetFields(currentState.petriNetsById as Record<string, PetriNet>),
+        petriNetOrder: currentState.petriNetOrder,
+        activePetriNetId: currentState.activePetriNetId,
+        colorSets: currentState.colorSets,
+        variables: currentState.variables,
+        priorities: currentState.priorities,
+        functions: currentState.functions,
+        uses: currentState.uses,
+      });
+    },
+    limit: 100,
+  },
+));
 
 export default useStore;
+
+/**
+ * Begin an undo batch. All state changes until the matching `resumeUndo()`
+ * are collapsed into a single undo entry. Nestable (e.g., dialog inside drag).
+ */
+export const pauseUndo = () => {
+  _undoBatchDepth++;
+};
+
+/**
+ * End an undo batch. When the outermost batch closes, the state from
+ * before the first `pauseUndo()` is pushed as a single undo entry.
+ */
+export const resumeUndo = () => {
+  if (_undoBatchDepth <= 0) return;
+  _undoBatchDepth--;
+  if (_undoBatchDepth === 0 && _undoBatchFirstState !== undefined && _realHandleSet) {
+    // Flush: push the pre-batch state onto the undo stack
+    _realHandleSet(_undoBatchFirstState, _undoBatchReplace as Parameters<typeof _realHandleSet>[1]);
+    _undoBatchFirstState = undefined;
+    _undoBatchReplace = undefined;
+  }
+};

@@ -1,5 +1,5 @@
-import React, { useCallback, useState, useContext, useRef, useEffect } from 'react';
-import useStore from '@/stores/store';
+import React, { useCallback, useState, useContext, useRef, useEffect, useSyncExternalStore } from 'react';
+import useStore, { pauseUndo, resumeUndo } from '@/stores/store';
 import { usePetriNetHandlers } from '@/hooks/usePetriNetHandlers';
 
 import {
@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 
 import { BoomerDial, type Slice } from "@/components/BoomerDial";
 
-import { Save, FolderOpen } from "lucide-react";
+import { Save, FolderOpen, Undo2, Redo2 } from "lucide-react";
 
 import CustomConnectionLine from '../edges/CustomConnectionLine';
 import { useDnD } from '../utils/DnDContext';
@@ -156,6 +156,17 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
   const nodesInitialized = useNodesInitialized();
   const [type] = useDnD();
 
+  // Subscribe to temporal store for undo/redo
+  const { undo, redo } = useStore.temporal.getState();
+  const canUndo = useSyncExternalStore(
+    useStore.temporal.subscribe,
+    () => useStore.temporal.getState().pastStates.length > 0,
+  );
+  const canRedo = useSyncExternalStore(
+    useStore.temporal.subscribe,
+    () => useStore.temporal.getState().futureStates.length > 0,
+  );
+
   // Fit view once nodes have been measured (have actual width/height)
   useEffect(() => {
     if (nodesInitialized) {
@@ -176,11 +187,26 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
         return;
       }
 
+      const isMeta = event.metaKey || event.ctrlKey;
+
+      // Ctrl/Cmd + Z: Undo
+      if (event.code === 'KeyZ' && isMeta && !event.shiftKey) {
+        event.preventDefault();
+        undo();
+        return;
+      }
+
+      // Ctrl/Cmd + Shift + Z: Redo
+      if (event.code === 'KeyZ' && isMeta && event.shiftKey) {
+        event.preventDefault();
+        redo();
+        return;
+      }
+
       // Check if simulation context is available
       if (!simulationContext) return;
 
       const { isRunning, runStep, runMultipleStepsAnimated, runMultipleStepsFast, reset: resetSimulation, stop, simulationConfig } = simulationContext;
-      const isMeta = event.metaKey || event.ctrlKey;
 
       // Space: Play animated simulation
       if (event.code === 'Space' && !event.shiftKey && !isMeta) {
@@ -232,7 +258,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [simulationContext]);
+  }, [simulationContext, undo, redo]);
 
   const slices = [
     { key: 'bottom', label: [''], angle: 90 },
@@ -432,6 +458,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
   // Handle node drag start
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const onNodeDragStart = useCallback((_event: React.MouseEvent, _node: Node, _nodes: Node[]) => {
+    pauseUndo();
     nodeDragRef.current.isDragging = true;
     nodeDragRef.current.isSnapping = false;
     nodeDragRef.current.snappedPositions.clear();
@@ -552,6 +579,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
   // Handle node drag stop
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const onNodeDragStop = useCallback((_event: React.MouseEvent, _node: Node, _nodes: Node[]) => {
+    resumeUndo();
     // Keep snapped positions for one more cycle to override React Flow's final position
     // The onNodesChange handler will use these
     setTimeout(() => {
@@ -831,6 +859,50 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Save Petri Net</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Undo"
+                      onClick={() => undo()}
+                      disabled={!canUndo}
+                    >
+                      <Undo2 className="h-5 w-5" />
+                      <span className="sr-only">Undo</span>
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Undo</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Redo"
+                      onClick={() => redo()}
+                      disabled={!canRedo}
+                    >
+                      <Redo2 className="h-5 w-5" />
+                      <span className="sr-only">Redo</span>
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Redo</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

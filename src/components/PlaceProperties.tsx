@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import useStore from '@/stores/store';
+import { pauseUndo, resumeUndo } from '@/stores/store';
 
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { UndoableInput as Input } from "@/components/ui/undoable-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 
@@ -400,7 +401,11 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
         <>
           <RecordMarkingDialog
             open={isRecordMarkingDialogOpen}
-            onOpenChange={setIsRecordMarkingDialogOpen}
+            onOpenChange={(open) => {
+              if (open) pauseUndo();
+              else resumeUndo();
+              setIsRecordMarkingDialogOpen(open);
+            }}
             colorSetName={selectedPlace.data?.colorSet || ""}
             attributes={getRecordAttributes(selectedPlace.data?.colorSet || "")}
             initialData={parseInitialMarking(selectedPlace.data?.initialMarking || "")}
@@ -420,7 +425,11 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
           />
           <TimedMarkingDialog
             open={isTimedMarkingDialogOpen}
-            onOpenChange={setIsTimedMarkingDialogOpen}
+            onOpenChange={(open) => {
+              if (open) pauseUndo();
+              else resumeUndo();
+              setIsTimedMarkingDialogOpen(open);
+            }}
             colorSetName={selectedPlace.data?.colorSet || ""}
             colorSetType={getColorSetBaseType()}
             recordAttributes={getRecordAttributes(selectedPlace.data?.colorSet || "")}

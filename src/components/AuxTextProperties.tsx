@@ -1,7 +1,7 @@
 import useStore from '@/stores/store';
 
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { UndoableTextarea as Textarea } from "@/components/ui/undoable-input";
 
 const AuxTextProperties = () => {
   const activePetriNetId = useStore((state) => state.activePetriNetId);

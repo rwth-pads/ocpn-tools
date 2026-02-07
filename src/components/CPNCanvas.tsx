@@ -10,6 +10,7 @@ import {
   Panel,
   MarkerType,
   useReactFlow,
+  useNodesInitialized,
   Node,
   Edge,
 } from '@xyflow/react';
@@ -149,7 +150,15 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     : { onNodesChange: () => {}, onEdgesChange: () => {}, onConnect: () => {} };
 
   const { fitView, screenToFlowPosition } = useReactFlow();
+  const nodesInitialized = useNodesInitialized();
   const [type] = useDnD();
+
+  // Fit view once nodes have been measured (have actual width/height)
+  useEffect(() => {
+    if (nodesInitialized) {
+      fitView({ padding: 0.35, maxZoom: 4 });
+    }
+  }, [nodesInitialized, fitView]);
 
   // Keyboard shortcuts for simulation controls
   useEffect(() => {
@@ -286,7 +295,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       } else {
         // For other formats (OCPN, CPN), fit the view immediately after loading
         window.requestAnimationFrame(() => {
-          fitView({ padding: 0.2, maxZoom: 4 });
+          fitView({ padding: 0.35, maxZoom: 4 });
         });
       }
     }
@@ -748,7 +757,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
 
         // After layout is applied, fit the view using requestAnimationFrame
         window.requestAnimationFrame(() => {
-          fitView({ padding: 0.2 }); // Keep fitView here for layout adjustments
+          fitView({ padding: 0.35 }); // Keep fitView here for layout adjustments
         });
       } catch (error) {
         console.error("Error applying layout:", error);
@@ -880,19 +889,12 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
             onConnect={onConnect}
             onDrop={onDrop}
             onDragOver={onDragOver}
-            fitView
             defaultEdgeOptions={defaultEdgeOptions}
             connectionLineComponent={CustomConnectionLine}
             maxZoom={4}
             selectionOnDrag
             selectionKeyCode="Shift"
             multiSelectionKeyCode={['Meta', 'Control']}
-            onInit={(instance) => {
-              // Using requestAnimationFrame to ensure layout is stable
-              requestAnimationFrame(() => {
-                instance.fitView({ maxZoom: 4, padding: 0.1 });
-              });
-            }}
           >
             <Background />
             <MiniMap />

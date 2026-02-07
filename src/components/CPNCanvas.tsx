@@ -104,6 +104,9 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
   const [openDialogOpen, setOpenDialogOpen] = useState(false);
   const [newPetriNetDialogOpen, setNewPetriNetDialogOpen] = useState(false);
   const [newPetriNetName, setNewPetriNetName] = useState('');
+  const [renamePetriNetDialogOpen, setRenamePetriNetDialogOpen] = useState(false);
+  const [renamePetriNetId, setRenamePetriNetId] = useState<string | null>(null);
+  const [renamePetriNetValue, setRenamePetriNetValue] = useState('');
 
   const [isDialOpen, setIsDialOpen] = useState(false);
   const [dialPosition, setDialPosition] = useState({ x: 0, y: 0 });
@@ -775,6 +778,25 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     setNewPetriNetName(''); // Clear the input field
   };
 
+  const handleRenamePetriNet = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (renamePetriNetId && renamePetriNetValue.trim()) {
+      useStore.getState().renamePetriNet(renamePetriNetId, renamePetriNetValue);
+      setRenamePetriNetDialogOpen(false);
+      setRenamePetriNetId(null);
+      setRenamePetriNetValue('');
+    }
+  };
+
+  const handleTabClick = (id: string) => {
+    const petriNet = petriNetsById[id];
+    if (petriNet) {
+      setRenamePetriNetId(id);
+      setRenamePetriNetValue(petriNet.name);
+      setRenamePetriNetDialogOpen(true);
+    }
+  };
+
   return (
     <div className="dndflow flex flex-col grow"> {/* Ensure this container allows growth */}
       <div className="flex flex-col grow" style={{ height: 100 }}> {/* Ensure this container allows growth */}
@@ -836,11 +858,21 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
           >
             <TabsList className="flex gap-4 items-center">
               {petriNetOrder.map((id) => (
-                <TabsTrigger key={id} value={id}>
+                <TabsTrigger 
+                  key={id} 
+                  value={id}
+                  onClick={(e) => {
+                    // Prevent tab switching when clicking on the active tab
+                    if (id === activePetriNetId) {
+                      e.preventDefault();
+                      handleTabClick(id);
+                    }
+                  }}
+                >
                   {petriNetsById[id].name}
                 </TabsTrigger>
               ))}
-              <Button variant="ghost" onClick={() => setNewPetriNetDialogOpen(true)}>New Subnet</Button>
+                {/* <Button variant="ghost" onClick={() => setNewPetriNetDialogOpen(true)}>New Subnet</Button> */}
               <Dialog open={newPetriNetDialogOpen} onOpenChange={setNewPetriNetDialogOpen}>
                 <DialogContent className="p-4">
                   <DialogHeader>
@@ -858,6 +890,28 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
                     </div>
                     <Button type="submit" className="w-full">
                       Add Petri Net
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+              <Dialog open={renamePetriNetDialogOpen} onOpenChange={setRenamePetriNetDialogOpen}>
+                <DialogContent className="p-4">
+                  <DialogHeader>
+                    <DialogTitle>Rename Petri Net</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleRenamePetriNet} className="space-y-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="rename-petri-net-name">New Name</Label>
+                      <Input
+                        id="rename-petri-net-name"
+                        placeholder="Enter new name"
+                        value={renamePetriNetValue}
+                        onChange={(e) => setRenamePetriNetValue(e.target.value)}
+                        autoFocus
+                      />
+                    </div>
+                    <Button type="submit" className="w-full">
+                      Rename
                     </Button>
                   </form>
                 </DialogContent>

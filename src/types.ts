@@ -63,6 +63,7 @@ export type AppActions = {
   createPetriNet: (name: string) => void;
   addPetriNet: (newPetriNet: PetriNet) => void;
   setActivePetriNet: (id: string) => void;
+  renamePetriNet: (id: string, newName: string) => void;
   addNode: (petriNetId: string, newNode: Node) => void;
   addEdge: (petriNetId: string, edge: Edge) => void;
   updateNode: (petriNetId: string, node: Node) => void;

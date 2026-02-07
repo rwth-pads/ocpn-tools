@@ -126,6 +126,17 @@ const useStore = create<StoreState>((set) => ({
       },
     }));
   },
+  renamePetriNet: (id: string, newName: string) => {
+    set((state) => ({
+      petriNetsById: {
+        ...state.petriNetsById,
+        [id]: {
+          ...state.petriNetsById[id],
+          name: newName,
+        },
+      },
+    }));
+  },
 
   // Add a new node to a petri net
   addNode: (petriNetId: string, newNode: Node) => {

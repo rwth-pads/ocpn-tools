@@ -11,6 +11,9 @@ importers:
       '@dagrejs/dagre':
         specifier: ^1.1.8
         version: 1.1.8
+      '@hcaptcha/react-hcaptcha':
+        specifier: ^2.0.2
+        version: 2.0.2
       '@mathigon/euclid':
         specifier: ^1.2.4
         version: 1.2.4
@@ -488,6 +491,9 @@ packages:
 
   '@floating-ui/utils@0.2.10':
     resolution: {integrity: sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ==}
+
+  '@hcaptcha/react-hcaptcha@2.0.2':
+    resolution: {integrity: sha512-VbuH6VJ6m3BHmVBHs0fL9t+suZd7PQEqCzqL2BiUbBvbHI3XfvSgdiug2QiEPN8zskbPTIV/FfGPF53JCckrow==}
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -3005,6 +3011,8 @@ snapshots:
       react-dom: 18.3.1(react@18.3.1)
 
   '@floating-ui/utils@0.2.10': {}
+
+  '@hcaptcha/react-hcaptcha@2.0.2': {}
 
   '@humanfs/core@0.19.1': {}
 

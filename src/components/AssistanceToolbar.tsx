@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { HelpCircle, Sparkles } from 'lucide-react';
+import { HelpCircle, MessageSquarePlus, Sparkles } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -9,9 +9,11 @@ import {
 } from '@/components/ui/tooltip';
 
 import { HelpDialog } from '@/components/dialogs/HelpDialog';
+import { FeedbackDialog } from '@/components/dialogs/FeedbackDialog';
 
 export function AssistanceToolbar({ onToggleAIAssistant }: { onToggleAIAssistant: () => void }) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
   return (
     <div className="flex items-center gap-1">
@@ -34,6 +36,21 @@ export function AssistanceToolbar({ onToggleAIAssistant }: { onToggleAIAssistant
         <Tooltip>
           <TooltipTrigger asChild>
             <span>
+              <Button variant="ghost" size="icon" onClick={() => setIsFeedbackOpen(true)}>
+                <MessageSquarePlus className="h-5 w-5" />
+                <span className="sr-only">Send Feedback</span>
+              </Button>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Send Feedback</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span>
               <Button variant="ghost" size="icon" onClick={onToggleAIAssistant}>
                 <Sparkles className="h-5 w-5" />
                 <span className="sr-only">Toggle AI Assistant</span>
@@ -47,6 +64,7 @@ export function AssistanceToolbar({ onToggleAIAssistant }: { onToggleAIAssistant
       </TooltipProvider>
 
       <HelpDialog open={isHelpOpen} onOpenChange={setIsHelpOpen} />
+      <FeedbackDialog open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen} />
     </div>
   );
 };

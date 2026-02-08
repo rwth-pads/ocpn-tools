@@ -83,12 +83,12 @@ export function BoomerDial({
             return (
               <g
                 key={index}
-                onClick={() => onSliceClick(index, slice)}
-                onMouseEnter={() => setHoverSlice(index)}
+                onClick={() => !slice.disabled && onSliceClick(index, slice)}
+                onMouseEnter={() => !slice.disabled && setHoverSlice(index)}
                 onMouseLeave={() => setHoverSlice(null)}
-                style={{ cursor: "pointer" }}
+                style={{ cursor: slice.disabled ? "default" : "pointer" }}
               >
-                <path d={path} fill={isActive ? "#6b9ac4" : "transparent"} stroke="#e2e8f0" strokeWidth="0.5" />
+                <path d={path} fill={isActive && !slice.disabled ? "#6b9ac4" : "transparent"} stroke="#e2e8f0" strokeWidth="0.5" />
 
                 {/* Text labels */}
                 <g transform={`translate(${textX}, ${textY}) rotate(${slice.angle})`}>

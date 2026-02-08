@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import useStore from '@/stores/store';
+import useStore, { pauseUndo, resumeUndo } from '@/stores/store';
 import init, { WasmSimulator, type InitOutput } from '@rwth-pads/cpnsim';
 import { PetriNetData, convertToJSON } from '@/utils/FileOperations';
 import type { SimulationEvent } from '@/components/EventLog'; // Import SimulationEvent
@@ -428,7 +428,12 @@ export function useSimulationController() {
   // Function to run a single simulation step (ensures init first)
   const runStep = async () => {
     await ensureInitialized(); // Make sure WASM is ready
-    _executeWasmStep(); // Execute the core step logic
+    pauseUndo();
+    try {
+      _executeWasmStep(); // Execute the core step logic
+    } finally {
+      resumeUndo();
+    }
   };
 
   // Function to run multiple steps with intermediate markings (animated)
@@ -437,6 +442,7 @@ export function useSimulationController() {
     
     setIsRunning(true);
     stopRequestedRef.current = false;
+    pauseUndo();
     
     try {
       await ensureInitialized();
@@ -454,6 +460,7 @@ export function useSimulationController() {
       }
     } finally {
       setIsRunning(false);
+      resumeUndo();
     }
   };
 
@@ -463,6 +470,7 @@ export function useSimulationController() {
     
     setIsRunning(true);
     stopRequestedRef.current = false;
+    pauseUndo();
     
     try {
       await ensureInitialized();
@@ -504,6 +512,7 @@ export function useSimulationController() {
       }
     } finally {
       setIsRunning(false);
+      resumeUndo();
     }
   };
 
@@ -522,12 +531,15 @@ export function useSimulationController() {
       };
       
       if (typeof simulator.fireTransition === 'function') {
+        pauseUndo();
         try {
           const result = simulator.fireTransition(transitionId);
           console.log(`Fire transition ${transitionId} result:`, result);
           // Event handling happens via the event listener callback
         } catch (error) {
           console.error(`Error firing transition ${transitionId}:`, error);
+        } finally {
+          resumeUndo();
         }
       } else {
         console.warn("fireTransition method not available in WASM simulator");

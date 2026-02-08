@@ -262,8 +262,8 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
 
   const slices = [
     { key: 'bottom', label: [''], angle: 90 },
-    { key: 'undo', label: ['Undo'], angle: 150, disabled: true },
-    { key: 'redo', label: ['Redo'], angle: 30, disabled: true },
+    { key: 'undo', label: ['Undo'], angle: 150, disabled: !canUndo },
+    { key: 'redo', label: ['Redo'], angle: 30, disabled: !canRedo },
     { key: 'new-place', label: ['New', 'Place'], angle: 210 },
     { key: 'create-aux', label: ['Create aux', 'text'], angle: 270, disabled: true },
     { key: 'new-transition', label: ['New', 'Transition'], angle: 330 },
@@ -648,6 +648,18 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
   , []);
 
   const handleSliceClick = (_: number, slice: Slice) => {
+    if (slice.disabled) return;
+    // Handle undo/redo slices
+    if (slice.key === 'undo') {
+      undo();
+      setIsDialOpen(false);
+      return;
+    }
+    if (slice.key === 'redo') {
+      redo();
+      setIsDialOpen(false);
+      return;
+    }
     // Perform action based on slice.id
     const nodeWidth = slice.key === 'new-place' ? 50 : 60; // Adjust width based on node type
     const nodeHeight = slice.key === 'new-place' ? 50 : 40; // Adjust height based on node type

@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { AutoExpandingInput } from "@/components/ui/auto-expanding-input";
 import { pauseUndo, resumeUndo } from "@/stores/store";
 
 /**
@@ -53,4 +54,28 @@ const UndoableTextarea = React.forwardRef<
 });
 UndoableTextarea.displayName = "UndoableTextarea";
 
-export { UndoableInput, UndoableTextarea };
+/**
+ * AutoExpandingInput wrapper that pauses undo tracking while the user is typing.
+ */
+const UndoableAutoExpandingInput = React.forwardRef<
+  HTMLTextAreaElement,
+  React.ComponentProps<typeof AutoExpandingInput>
+>(({ onFocus, onBlur, ...props }, ref) => {
+  return (
+    <AutoExpandingInput
+      ref={ref}
+      onFocus={(e) => {
+        pauseUndo();
+        onFocus?.(e);
+      }}
+      onBlur={(e) => {
+        resumeUndo();
+        onBlur?.(e);
+      }}
+      {...props}
+    />
+  );
+});
+UndoableAutoExpandingInput.displayName = "UndoableAutoExpandingInput";
+
+export { UndoableInput, UndoableTextarea, UndoableAutoExpandingInput };

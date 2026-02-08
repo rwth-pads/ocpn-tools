@@ -3,7 +3,7 @@ import useStore from '@/stores/store';
 import { pauseUndo, resumeUndo } from '@/stores/store';
 
 import { Label } from "@/components/ui/label";
-import { UndoableInput as Input } from "@/components/ui/undoable-input";
+import { UndoableInput as Input, UndoableAutoExpandingInput } from "@/components/ui/undoable-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 
@@ -265,7 +265,7 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
     <div className="space-y-4">
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="label">Label</Label>
-        <Input
+        <UndoableAutoExpandingInput
           id="label"
           value={data.label || ""}
           onChange={(e) => {

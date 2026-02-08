@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import useStore from '@/stores/store';
 
 import { Label } from "@/components/ui/label";
-import { UndoableInput as Input, UndoableTextarea as Textarea } from "@/components/ui/undoable-input";
+import { UndoableInput as Input, UndoableTextarea as Textarea, UndoableAutoExpandingInput } from "@/components/ui/undoable-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -131,7 +131,7 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
     <div className="space-y-4">
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="label">Label</Label>
-        <Input
+        <UndoableAutoExpandingInput
           id="label"
           value={data.label ?? ""}
           onChange={(e) => {

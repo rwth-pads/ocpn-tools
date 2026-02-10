@@ -77,6 +77,84 @@ function formatTokensForDisplay(tokens: unknown[], isUnitType: boolean): string 
   return JSON.stringify(tokens);
 }
 
+/**
+ * Desugars CPN Tools multiset arc expression notation into Rhai array syntax.
+ * 
+ * CPN Tools uses the notation:
+ *   N`expr          — N copies of expr in a multiset
+ *   expr1 ++ expr2  — multiset union
+ * 
+ * This function converts to Rhai arrays:
+ *   "var1"              → "[var1]"         (bare variable = 1 copy)
+ *   "2`var1"            → "[var1, var1]"   (2 copies)
+ *   "1`var1++1`var2"    → "[var1, var2]"   (union of two singletons)
+ *   "1`x++2`y"          → "[x, y, y]"     (union: 1 of x, 2 of y)
+ *   "3`(a, b)"          → "[(a, b), (a, b), (a, b)]" (3 product tokens)
+ */
+function desugarMultisetExpression(inscription: string): string {
+    const trimmed = inscription.trim();
+
+    // Split on "++" (multiset union operator)
+    // We need to be careful with "++" inside parentheses/brackets (e.g., function calls)
+    const parts = splitOnMultisetUnion(trimmed);
+
+    const allElements: string[] = [];
+
+    for (const part of parts) {
+        const trimmedPart = part.trim();
+        if (!trimmedPart) continue;
+
+        // Match coefficient`expression pattern: "N`expr"
+        // The backtick separates the count from the expression
+        // The expression can be a variable, a parenthesized tuple, etc.
+        const coeffMatch = trimmedPart.match(/^(\d+)`(.+)$/s);
+
+        if (coeffMatch) {
+            const count = parseInt(coeffMatch[1], 10);
+            const expr = coeffMatch[2].trim();
+            for (let i = 0; i < count; i++) {
+                allElements.push(expr);
+            }
+        } else {
+            // No coefficient — treat as a single element
+            // This handles bare variables like "x" or expressions like "(a, b)"
+            allElements.push(trimmedPart);
+        }
+    }
+
+    return `[${allElements.join(', ')}]`;
+}
+
+/**
+ * Splits an inscription string on "++" operators, respecting nesting.
+ * Does not split on "++" inside parentheses, brackets, or braces.
+ */
+function splitOnMultisetUnion(s: string): string[] {
+    const parts: string[] = [];
+    let depth = 0; // Track () [] {} nesting
+    let current = '';
+
+    for (let i = 0; i < s.length; i++) {
+        const ch = s[i];
+        if (ch === '(' || ch === '[' || ch === '{') {
+            depth++;
+            current += ch;
+        } else if (ch === ')' || ch === ']' || ch === '}') {
+            depth--;
+            current += ch;
+        } else if (depth === 0 && ch === '+' && i + 1 < s.length && s[i + 1] === '+') {
+            // Found "++" at top level
+            parts.push(current);
+            current = '';
+            i++; // Skip the second '+'
+        } else {
+            current += ch;
+        }
+    }
+    parts.push(current);
+    return parts;
+}
+
 export function useSimulationController() {
   const wasmRef = useRef<InitOutput | null>(null); // Initialize as null
   const wasmSimulatorRef = useRef<WasmSimulator | null>(null);
@@ -350,16 +428,26 @@ export function useSimulationController() {
                 }
             });
 
-            // Preprocess arc inscriptions like "2`var" into "[var,var]"
+            // Preprocess arc inscriptions: desugar CPN Tools multiset notation to Rhai arrays
+            // Examples:
+            //   "var1"              → "[var1]"
+            //   "2`var1"            → "[var1, var1]"
+            //   "1`var1++1`var2"    → "[var1, var2]"
+            //   "1`x++2`y"         → "[x, y, y]"
+            //   "(a, b)"           → "[(a, b)]"  (product token — single element array)
+            //   "[x, y]"           → "[x, y]"    (already an array — keep as-is)
             petriNet.edges.forEach((arc) => {
                 if (arc.label && typeof arc.label === 'string') {
-                    const match = arc.label.match(/(\d+)\`(\w+)/); // Match "N`var"
-                    if (match) {
-                        const count = parseInt(match[1], 10);
-                        const variableName = match[2];
-                        if (!isNaN(count) && count > 0) {
-                            const newInscription = `[${Array(count).fill(variableName).join(',')}]`;
-                            console.log(`Converted arc inscription "${arc.label}" to "${newInscription}"`);
+                    const inscription = arc.label.trim();
+                    // Skip empty inscriptions or those already in array form
+                    if (!inscription || (inscription.startsWith('[') && inscription.endsWith(']'))) {
+                        return;
+                    }
+                    // Check if it uses CPN Tools multiset notation (contains ` backtick or ++)
+                    if (inscription.includes('`') || inscription.includes('++')) {
+                        const newInscription = desugarMultisetExpression(inscription);
+                        if (newInscription !== inscription) {
+                            console.log(`Desugared arc inscription "${inscription}" → "${newInscription}"`);
                             arc.label = newInscription;
                         }
                     }

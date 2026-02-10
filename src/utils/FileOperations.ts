@@ -265,6 +265,7 @@ export function convertToJSON(data: PetriNetData): string {
           target: arc.target,
           inscription: arc.label || "", // Use "inscription" instead of "label"
           isBidirectional: arc.data?.isBidirectional || false, // Include bidirectional flag
+          arcType: arc.data?.arcType || undefined, // Include arc type if not normal
           labelOffset: arc.data?.labelOffset || undefined, // Include label offset if set
           bendpoints: arc.data?.bendpoints || undefined, // Include bendpoints if set
         })),
@@ -324,6 +325,7 @@ export function parseJSON(content: string): PetriNetData {
       target: string;
       inscription?: string;
       isBidirectional?: boolean;
+      arcType?: string;
       labelOffset?: { x: number; y: number };
       bendpoints?: { x: number; y: number }[];
     }[];
@@ -366,6 +368,7 @@ export function parseJSON(content: string): PetriNetData {
       label: arc.inscription || "", // Map 'inscription' back to 'label'
       data: {
         isBidirectional: arc.isBidirectional || false,
+        arcType: arc.arcType || undefined,
         labelOffset: arc.labelOffset || undefined,
         bendpoints: arc.bendpoints || undefined,
       },

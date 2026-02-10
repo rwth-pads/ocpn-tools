@@ -16,6 +16,7 @@ import { initialFunctions } from '@/declarations';
 import type { PlaceNodeData } from '@/nodes/PlaceNode';
 import { TransitionNodeData } from '@/nodes/TransitionNode';
 import { AuxTextNodeData } from '@/nodes/AuxTextNode';
+import type { ArcType } from '@/types';
 
 // define the initial state
 const emptyState: AppState = {
@@ -29,6 +30,8 @@ const emptyState: AppState = {
   uses: [],
   simulationEpoch: null,
   showMarkingDisplay: true,
+  isArcMode: false,
+  activeArcType: 'normal' as ArcType,
 }
 
 export type StoreState = AppState & AppActions;
@@ -91,6 +94,8 @@ const useStore = create<StoreState>()(temporal((set) => ({
   uses: [],
   simulationEpoch: null,
   showMarkingDisplay: true,
+  isArcMode: false,
+  activeArcType: 'normal' as ArcType,
 
   // Actions
   setNodes: (petriNetId: string, nodes: Node[]) => {
@@ -616,8 +621,10 @@ const useStore = create<StoreState>()(temporal((set) => ({
     uses: state.uses.filter((use) => use.id !== id),
   })),
 
-  toggleArcMode: (state: boolean) =>
+  toggleArcMode: (state: boolean, arcType?: ArcType) =>
   set((store) => ({
+    isArcMode: state,
+    activeArcType: arcType || store.activeArcType,
     petriNetsById: Object.fromEntries(
       Object.entries(store.petriNetsById).map(([petriNetId, petriNet]) => [
         petriNetId,
@@ -630,6 +637,11 @@ const useStore = create<StoreState>()(temporal((set) => ({
         },
       ])
     ),
+  })),
+
+  setActiveArcType: (arcType: ArcType) =>
+  set(() => ({
+    activeArcType: arcType,
   })),
 
   setSimulationEpoch: (epoch: string | null) =>

@@ -27,6 +27,8 @@ export function isTimedToken(token: unknown): token is TimedToken {
   );
 }
 
+export type ArcType = 'normal' | 'reset' | 'inhibitor';
+
 export type PetriNet = {
   id: string;
   name: string;
@@ -54,6 +56,8 @@ export type AppState = {
   uses: Use[];
   simulationEpoch?: string | null; // ISO 8601 date string for simulation epoch
   showMarkingDisplay: boolean; // Toggle for showing/hiding marking rectangles
+  isArcMode: boolean; // Whether arc connection mode is active
+  activeArcType: ArcType; // The type of arc to create when connecting nodes
 };
 
 export type AppActions = {
@@ -94,7 +98,8 @@ export type AppActions = {
   updateUse: (id: string, newUse: Use) => void;
   deleteUse: (id: string) => void;
 
-  toggleArcMode: (state: boolean) => void;
+  toggleArcMode: (state: boolean, arcType?: ArcType) => void;
+  setActiveArcType: (arcType: ArcType) => void;
   setSimulationEpoch: (epoch: string | null) => void;
   setShowMarkingDisplay: (show: boolean) => void;
   reset: () => void;

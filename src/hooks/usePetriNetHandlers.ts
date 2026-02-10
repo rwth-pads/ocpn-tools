@@ -29,14 +29,17 @@ export function usePetriNetHandlers(petriNetId: string) {
   }, [petriNetId, setEdges]);
 
   const onConnect: OnConnect = useCallback((connection: Connection) => {
+    const state = useStore.getState();
+    const arcType = state.activeArcType;
     const newEdge = {
       ...connection,
       id: uuidv4(),
       type: 'floating', // or your custom edge type like 'floating', 'bezier', etc.
       label: '',
       animated: false,
+      data: arcType !== 'normal' ? { arcType } : undefined,
     };
-    const currentEdges = useStore.getState().petriNetsById[petriNetId]?.edges || [];
+    const currentEdges = state.petriNetsById[petriNetId]?.edges || [];
     setEdges(petriNetId, [...currentEdges, newEdge]);
   }, [petriNetId, setEdges]);
 

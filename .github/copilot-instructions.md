@@ -62,10 +62,10 @@ const currentState = useStore.getState();
 
 ## Developer Commands
 ```bash
-pnpm dev          # Start dev server at localhost:5173
-pnpm build        # TypeScript check + Vite build
-pnpm lint         # ESLint with zero-warning policy
-pnpm deploy       # Build and deploy to GitHub Pages
+npm run dev          # Start dev server at localhost:5173
+npm run build        # TypeScript check + Vite build
+npm run lint         # ESLint with zero-warning policy
+npm run deploy       # Build and deploy to GitHub Pages
 ```
 
 ## CPN Tools XML Parsing

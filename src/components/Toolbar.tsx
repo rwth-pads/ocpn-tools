@@ -16,9 +16,10 @@ import { LayoutPopover, LayoutOptions } from "@/components/LayoutPopover";
 
 import { useDnD } from '@/utils/DnDContext';
 import useStore from '@/stores/store';
+import type { ArcType } from '@/types';
 
 interface ToolbarProps {
-  toggleArcMode: (pressed: boolean) => void;
+  toggleArcMode: (pressed: boolean, arcType?: ArcType) => void;
   onApplyLayout: (options: LayoutOptions) => void;
 }
 
@@ -26,6 +27,38 @@ export function Toolbar({ toggleArcMode, onApplyLayout }: ToolbarProps) {
   const [, setType] = useDnD();
   const showMarkingDisplay = useStore((state) => state.showMarkingDisplay);
   const setShowMarkingDisplay = useStore((state) => state.setShowMarkingDisplay);
+  const activeArcType = useStore((state) => state.activeArcType);
+  const isArcMode = useStore((state) => state.isArcMode);
+
+  const handleArcToggle = (arcType: ArcType) => {
+    if (isArcMode && activeArcType === arcType) {
+      // Same type already active → turn off
+      toggleArcMode(false);
+    } else {
+      // Activate this arc type
+      toggleArcMode(true, arcType);
+    }
+  };
+
+  const ArcTypeIcon = ({ type, className }: { type: ArcType; className?: string }) => {
+    if (type === 'inhibitor') {
+      return (
+        <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <line x1="3" y1="12" x2="16" y2="12" />
+          <circle cx="19" cy="12" r="3" fill="none" />
+        </svg>
+      );
+    }
+    if (type === 'reset') {
+      return (
+        <svg viewBox="0 0 24 24" className={className} fill="currentColor" stroke="none">
+          <polygon points="12,6 20,12 12,18" />
+          <polygon points="6,6 14,12 6,18" />
+        </svg>
+      );
+    }
+    return <ArrowRight className={className} />;
+  };
 
   const onDragStart = (event: React.DragEvent<HTMLElement>, nodeType: string) => {
       //event.dataTransfer.setData("application/reactflow", nodeType);
@@ -94,18 +127,53 @@ export function Toolbar({ toggleArcMode, onApplyLayout }: ToolbarProps) {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span>
-                  <Toggle
-                    aria-label="Toggle Arc"
-                    onPressedChange={toggleArcMode}
-                  >
-                    <ArrowRight className="h-4 w-4" />
-                    <span className="sr-only">Toggle Arc Mode</span>
-                  </Toggle>
-                </span>
+                <Toggle
+                  aria-label="Toggle Arc Mode"
+                  pressed={isArcMode && activeArcType === 'normal'}
+                  onPressedChange={() => handleArcToggle('normal')}
+                >
+                  <ArrowRight className="h-4 w-4" />
+                  <span className="sr-only">Toggle Arc Mode</span>
+                </Toggle>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Toggle Arc Mode</p>
+                <p>Arc</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Toggle
+                  aria-label="Toggle Inhibitor Arc Mode"
+                  pressed={isArcMode && activeArcType === 'inhibitor'}
+                  onPressedChange={() => handleArcToggle('inhibitor')}
+                >
+                  <ArcTypeIcon type="inhibitor" className="h-4 w-4" />
+                  <span className="sr-only">Toggle Inhibitor Arc Mode</span>
+                </Toggle>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Inhibitor Arc</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Toggle
+                  aria-label="Toggle Reset Arc Mode"
+                  pressed={isArcMode && activeArcType === 'reset'}
+                  onPressedChange={() => handleArcToggle('reset')}
+                >
+                  <ArcTypeIcon type="reset" className="h-4 w-4" />
+                  <span className="sr-only">Toggle Reset Arc Mode</span>
+                </Toggle>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Reset Arc</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

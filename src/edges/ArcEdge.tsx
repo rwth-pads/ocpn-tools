@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useInternalNode, EdgeLabelRenderer, useReactFlow } from '@xyflow/react';
 import { getEdgeParams, getNodeIntersectionToPoint } from '../utils.js';
 import useStore from '@/stores/store'; // Import Zustand store
+import type { ArcType } from '@/types';
 
 /**
  * Calculate the distance from a point to a line segment
@@ -41,6 +42,7 @@ interface FloatingEdgeProps {
     isBidirectional?: boolean;
     order?: number; // Order index for offsetting parallel arcs
     labelOffset?: { x: number; y: number }; // Custom offset for the label position
+    arcType?: ArcType; // Type of arc: normal, reset, or inhibitor
   };
 }
 
@@ -605,6 +607,7 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
   const bendpoints = data?.bendpoints;
   const labelOffset = data?.labelOffset ?? { x: 0, y: 0 };
   const isBidirectional = data?.isBidirectional ?? false;
+  const arcType: ArcType = data?.arcType ?? 'normal';
   
   // Calculate offset for parallel arcs
   // Center the group of arcs: offset from -(n-1)/2 to +(n-1)/2
@@ -723,6 +726,7 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
         edgePath, 
         colorSetColor, 
         isBidirectional, 
+        arcType,
         style,
         handleArcPathMouseDown,
       )}
@@ -785,14 +789,18 @@ function renderArcPath(
   edgePath: string,
   colorSetColor: string,
   isBidirectional: boolean,
+  arcType: ArcType,
   style?: React.CSSProperties,
   onPathMouseDown?: (e: React.MouseEvent) => void,
 ) {
+  const isInhibitor = arcType === 'inhibitor';
+  const isReset = arcType === 'reset';
+
   return (
     <g>
       {/* Define custom arrow markers */}
       <defs>
-        {/* Arrow pointing forward (at end of arc) */}
+        {/* Arrow pointing forward (at end of arc) — normal arcs */}
         <marker
           id={`arrow-end-${id}`}
           markerWidth="10"
@@ -822,6 +830,44 @@ function renderArcPath(
             fill={colorSetColor}
           />
         </marker>
+        {/* Inhibitor arc marker: small circle at end */}
+        <marker
+          id={`inhibitor-end-${id}`}
+          markerWidth="10"
+          markerHeight="10"
+          refX="8"
+          refY="5"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <circle
+            cx="5"
+            cy="5"
+            r="4"
+            fill="white"
+            stroke={colorSetColor}
+            strokeWidth="1.5"
+          />
+        </marker>
+        {/* Reset arc marker: double arrowhead at end */}
+        <marker
+          id={`reset-end-${id}`}
+          markerWidth="16"
+          markerHeight="10"
+          refX="16"
+          refY="5"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <polygon
+            points="0,0 10,5 0,10"
+            fill={colorSetColor}
+          />
+          <polygon
+            points="6,0 16,5 6,10"
+            fill={colorSetColor}
+          />
+        </marker>
       </defs>
       {/* Invisible wider path for easier clicking/dragging to add bendpoints or select arc */}
       {onPathMouseDown && (
@@ -841,8 +887,12 @@ function renderArcPath(
         fill="none"
         className="stroke-[currentColor]"
         style={{ stroke: colorSetColor, ...style }}
-        markerEnd={`url(#arrow-end-${id})`}
-        markerStart={isBidirectional ? `url(#arrow-start-${id})` : undefined}
+        markerEnd={
+          isInhibitor ? `url(#inhibitor-end-${id})`
+          : isReset ? `url(#reset-end-${id})`
+          : `url(#arrow-end-${id})`
+        }
+        markerStart={isBidirectional && !isInhibitor && !isReset ? `url(#arrow-start-${id})` : undefined}
       />
     </g>
   );

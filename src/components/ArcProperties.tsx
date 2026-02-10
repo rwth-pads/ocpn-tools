@@ -1,4 +1,5 @@
 import useStore from '@/stores/store';
+import type { ArcType } from '@/types';
 
 import { Label } from "@/components/ui/label";
 import { UndoableTextarea as Textarea } from "@/components/ui/undoable-input";
@@ -34,6 +35,7 @@ const ArcProperties = () => {
 
   const { id, label, source, target, data } = selectedElement.element;
   const isBidirectional = (data as { isBidirectional?: boolean })?.isBidirectional ?? false;
+  const arcType: ArcType = (data as { arcType?: ArcType })?.arcType ?? 'normal';
 
   // Get node names for display
   const getNodeName = (nodeId: string): string => {
@@ -87,45 +89,87 @@ const ArcProperties = () => {
     }
   };
 
+  const handleArcTypeChange = (newType: ArcType) => {
+    if (!activePetriNetId) return;
+    const newData: Record<string, unknown> = { arcType: newType };
+    // Reset bidirectional when switching to inhibitor/reset (they only go P→T)
+    if (newType !== 'normal' && isBidirectional) {
+      newData.isBidirectional = false;
+    }
+    updateEdgeData(activePetriNetId, id, newData);
+    // Clear inscription for inhibitor/reset arcs
+    if (newType !== 'normal') {
+      updateEdgeLabel(activePetriNetId, id, '');
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid w-full items-center gap-1.5">
-        <Label htmlFor="direction">Direction</Label>
-        <Select value={getCurrentDirection()} onValueChange={(value) => handleDirectionChange(value as ArcDirection)}>
-          <SelectTrigger id="direction">
+        <Label htmlFor="arcType">Arc Type</Label>
+        <Select value={arcType} onValueChange={(value) => handleArcTypeChange(value as ArcType)}>
+          <SelectTrigger id="arcType">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="source-to-target">
-              {sourceName} → {targetName}
-            </SelectItem>
-            <SelectItem value="target-to-source">
-              {targetName} → {sourceName}
-            </SelectItem>
-            <SelectItem value="bidirectional">
-              Bidirectional
-            </SelectItem>
+            <SelectItem value="normal">Normal</SelectItem>
+            <SelectItem value="inhibitor">Inhibitor</SelectItem>
+            <SelectItem value="reset">Reset</SelectItem>
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground">
-          {sourceType === 'place' ? 'Place → Transition' : 'Transition → Place'}
-        </p>
+        {arcType === 'inhibitor' && (
+          <p className="text-xs text-muted-foreground">
+            Transition enabled only when place is empty
+          </p>
+        )}
+        {arcType === 'reset' && (
+          <p className="text-xs text-muted-foreground">
+            Removes all tokens from place when transition fires
+          </p>
+        )}
       </div>
 
-      <div className="grid w-full items-center gap-1.5">
-        <Label htmlFor="inscription">Inscription</Label>
-        <Textarea
-          id="inscription"
-          value={label as string ?? ""}
-          rows={3}
-          className="font-mono text-sm"
-          onChange={(e) => {
-            if (activePetriNetId) {
-              updateEdgeLabel(activePetriNetId, id, e.target.value)
-            }
-          }}
-        />
-      </div>
+      {arcType === 'normal' && (
+        <div className="grid w-full items-center gap-1.5">
+          <Label htmlFor="direction">Direction</Label>
+          <Select value={getCurrentDirection()} onValueChange={(value) => handleDirectionChange(value as ArcDirection)}>
+            <SelectTrigger id="direction">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="source-to-target">
+                {sourceName} → {targetName}
+              </SelectItem>
+              <SelectItem value="target-to-source">
+                {targetName} → {sourceName}
+              </SelectItem>
+              <SelectItem value="bidirectional">
+                Bidirectional
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {sourceType === 'place' ? 'Place → Transition' : 'Transition → Place'}
+          </p>
+        </div>
+      )}
+
+      {arcType === 'normal' && (
+        <div className="grid w-full items-center gap-1.5">
+          <Label htmlFor="inscription">Inscription</Label>
+          <Textarea
+            id="inscription"
+            value={label as string ?? ""}
+            rows={3}
+            className="font-mono text-sm"
+            onChange={(e) => {
+              if (activePetriNetId) {
+                updateEdgeLabel(activePetriNetId, id, e.target.value)
+              }
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

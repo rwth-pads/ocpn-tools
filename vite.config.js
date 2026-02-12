@@ -23,6 +23,6 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    exclude: ['@rwth-pads/cpnsim']
-  }
+    exclude: ['@rwth-pads/cpnsim'],
+  },
 });

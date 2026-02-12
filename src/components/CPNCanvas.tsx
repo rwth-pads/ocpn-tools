@@ -57,6 +57,7 @@ import {
 
 import { nodeTypes } from '../nodes';
 import { edgeTypes } from '../edges';
+import { applySugiyamaLayout } from '@/utils/sugiyamaAdapter';
 
 import { type StoreState } from '@/stores/store'; // Ensure these types are defined in your store
 
@@ -315,6 +316,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
           direction: 'TB',
           nodeSeparation: 150,
           rankSeparation: 50,
+          objectAttraction: 0.5,
         };
 
         // Apply layout to all Petri nets (applyLayout will call fitView after completion)
@@ -795,6 +797,22 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
             if (activePetriNetId) {
               setNodes(activePetriNetId, [...layoutedNodes]);
             } 
+          }
+        } else if (options.algorithm === "oc-sugiyama") {
+          // OC-Sugiyama layout using ocpn-viz library
+          const layoutedNodes = await applySugiyamaLayout(
+            currentNodes,
+            currentEdges,
+            {
+              direction: options.direction,
+              nodeSeparation: options.nodeSeparation,
+              rankSeparation: options.rankSeparation,
+              objectAttraction: options.objectAttraction ?? 0.5,
+            },
+          );
+
+          if (activePetriNetId) {
+            setNodes(activePetriNetId, [...layoutedNodes]);
           }
         }
 

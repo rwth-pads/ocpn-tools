@@ -10,10 +10,12 @@ import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 export interface LayoutOptions {
-  algorithm: "dagre" | "elk"
+  algorithm: "dagre" | "elk" | "oc-sugiyama"
   direction: "TB" | "LR"
   nodeSeparation: number
   rankSeparation: number
+  /** OC-Sugiyama specific: how strongly same-type places cluster together (0–1) */
+  objectAttraction: number
 }
 
 interface LayoutPopoverProps {
@@ -26,6 +28,7 @@ export function LayoutPopover({ onApplyLayout }: LayoutPopoverProps) {
     direction: "TB",
     nodeSeparation: 50,
     rankSeparation: 100,
+    objectAttraction: 0.5,
   })
 
   const [open, setOpen] = useState(false)
@@ -62,7 +65,7 @@ export function LayoutPopover({ onApplyLayout }: LayoutPopoverProps) {
             <Label htmlFor="algorithm">Algorithm</Label>
             <Select
               value={options.algorithm}
-              onValueChange={(value: "dagre" | "elk") => setOptions({ ...options, algorithm: value })}
+              onValueChange={(value: "dagre" | "elk" | "oc-sugiyama") => setOptions({ ...options, algorithm: value })}
             >
               <SelectTrigger id="algorithm">
                 <SelectValue placeholder="Select algorithm" />
@@ -70,6 +73,7 @@ export function LayoutPopover({ onApplyLayout }: LayoutPopoverProps) {
               <SelectContent>
                 <SelectItem value="dagre">Dagre</SelectItem>
                 <SelectItem value="elk">ELK</SelectItem>
+                <SelectItem value="oc-sugiyama">OC-Sugiyama</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -95,72 +99,54 @@ export function LayoutPopover({ onApplyLayout }: LayoutPopoverProps) {
 
           <Separator />
 
-          {options.algorithm === "dagre" && (
-            <>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <Label htmlFor="nodeSeparation">Node Separation</Label>
-                  <span className="text-xs text-muted-foreground">{options.nodeSeparation}px</span>
-                </div>
-                <Slider
-                  id="nodeSeparation"
-                  min={20}
-                  max={200}
-                  step={5}
-                  value={[options.nodeSeparation]}
-                  onValueChange={(value) => setOptions({ ...options, nodeSeparation: value[0] })}
-                />
-              </div>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <Label htmlFor="nodeSeparation">Node Spacing</Label>
+              <span className="text-xs text-muted-foreground">{options.nodeSeparation}px</span>
+            </div>
+            <Slider
+              id="nodeSeparation"
+              min={10}
+              max={200}
+              step={5}
+              value={[options.nodeSeparation]}
+              onValueChange={(value) => setOptions({ ...options, nodeSeparation: value[0] })}
+            />
+          </div>
 
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <Label htmlFor="rankSeparation">Rank Separation</Label>
-                  <span className="text-xs text-muted-foreground">{options.rankSeparation}px</span>
-                </div>
-                <Slider
-                  id="rankSeparation"
-                  min={20}
-                  max={300}
-                  step={10}
-                  value={[options.rankSeparation]}
-                  onValueChange={(value) => setOptions({ ...options, rankSeparation: value[0] })}
-                />
-              </div>
-            </>
-          )}
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <Label htmlFor="rankSeparation">Layer Spacing</Label>
+              <span className="text-xs text-muted-foreground">{options.rankSeparation}px</span>
+            </div>
+            <Slider
+              id="rankSeparation"
+              min={20}
+              max={300}
+              step={10}
+              value={[options.rankSeparation]}
+              onValueChange={(value) => setOptions({ ...options, rankSeparation: value[0] })}
+            />
+          </div>
 
-          {options.algorithm === "elk" && (
-            <>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <Label htmlFor="nodeNodeSpacing">Node-Node Spacing</Label>
-                  <span className="text-xs text-muted-foreground">{options.nodeSeparation}px</span>
-                </div>
-                <Slider
-                  id="nodeNodeSpacing"
-                  min={10}
-                  max={100}
-                  step={5}
-                  value={[options.nodeSeparation]}
-                  onValueChange={(value) => setOptions({ ...options, nodeSeparation: value[0] })}
-                />
+          {options.algorithm === "oc-sugiyama" && (
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Label htmlFor="objectAttraction">Object Attraction</Label>
+                <span className="text-xs text-muted-foreground">{options.objectAttraction.toFixed(2)}</span>
               </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <Label htmlFor="layerSpacing">Layer Spacing</Label>
-                  <span className="text-xs text-muted-foreground">{options.rankSeparation}px</span>
-                </div>
-                <Slider
-                  id="layerSpacing"
-                  min={20}
-                  max={200}
-                  step={10}
-                  value={[options.rankSeparation]}
-                  onValueChange={(value) => setOptions({ ...options, rankSeparation: value[0] })}
-                />
-              </div>
-            </>
+              <Slider
+                id="objectAttraction"
+                min={0}
+                max={1}
+                step={0.05}
+                value={[options.objectAttraction]}
+                onValueChange={(value) => setOptions({ ...options, objectAttraction: value[0] })}
+              />
+              <p className="text-xs text-muted-foreground">
+                How strongly places of the same type cluster together
+              </p>
+            </div>
           )}
 
           <Button className="w-full" onClick={handleApplyLayout}>

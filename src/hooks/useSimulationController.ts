@@ -438,7 +438,23 @@ export function useSimulationController() {
             //   "[x, y]"           → "[x, y]"    (already an array — keep as-is)
             petriNet.edges.forEach((arc) => {
                 if (arc.label && typeof arc.label === 'string') {
-                    const inscription = arc.label.trim();
+                    let inscription = arc.label.trim();
+
+                    // Handle @+ arc delay syntax: split "expr @+ delay" into inscription + delay
+                    // This handles the case where users type the inscription with delay inline
+                    const atPlusIndex = inscription.indexOf('@+');
+                    if (atPlusIndex !== -1) {
+                        const delayPart = inscription.substring(atPlusIndex + 2).trim();
+                        inscription = inscription.substring(0, atPlusIndex).trim();
+                        arc.label = inscription;
+                        // Store the delay in arc data (will be serialized as separate field)
+                        if (delayPart) {
+                            const arcData = arc.data as Record<string, unknown> || {};
+                            arcData.delay = delayPart;
+                            arc.data = arcData;
+                        }
+                    }
+
                     // Skip empty inscriptions or those already in array form
                     if (!inscription || (inscription.startsWith('[') && inscription.endsWith(']'))) {
                         return;

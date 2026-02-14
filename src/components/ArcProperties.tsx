@@ -1,8 +1,9 @@
+import { useState, useEffect } from 'react';
 import useStore from '@/stores/store';
 import type { ArcType } from '@/types';
 
 import { Label } from "@/components/ui/label";
-import { UndoableTextarea as Textarea } from "@/components/ui/undoable-input";
+import { UndoableInput as Input, UndoableTextarea as Textarea } from "@/components/ui/undoable-input";
 import {
   Select,
   SelectContent,
@@ -10,8 +11,62 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type ArcDirection = 'source-to-target' | 'target-to-source' | 'bidirectional';
+
+// Parse relative time from milliseconds
+function msToRelativeTime(totalMs: number): { ms: number; s: number; m: number; h: number; d: number } {
+  let remaining = Math.abs(totalMs);
+  const d = Math.floor(remaining / (24 * 60 * 60 * 1000));
+  remaining %= 24 * 60 * 60 * 1000;
+  const h = Math.floor(remaining / (60 * 60 * 1000));
+  remaining %= 60 * 60 * 1000;
+  const m = Math.floor(remaining / (60 * 1000));
+  remaining %= 60 * 1000;
+  const s = Math.floor(remaining / 1000);
+  const ms = remaining % 1000;
+  return { ms, s, m, h, d };
+}
+
+// Convert relative time to Rhai delay expression
+function relativeTimeToExpression(rel: { ms: number; s: number; m: number; h: number; d: number }): string {
+  const parts: string[] = [];
+  if (rel.d > 0) parts.push(`delay_days(${rel.d})`);
+  if (rel.h > 0) parts.push(`delay_hours(${rel.h})`);
+  if (rel.m > 0) parts.push(`delay_min(${rel.m})`);
+  if (rel.s > 0) parts.push(`delay_sec(${rel.s})`);
+  if (rel.ms > 0) parts.push(`delay_ms(${rel.ms})`);
+  return parts.length > 0 ? parts.join(' + ') : '';
+}
+
+// Try to parse a time expression back to relative time
+function parseTimeExpression(expr: string): { ms: number; s: number; m: number; h: number; d: number } | null {
+  if (!expr || expr.trim() === '') {
+    return { ms: 0, s: 0, m: 0, h: 0, d: 0 };
+  }
+  const delayPattern = /delay_(days|hours|min|sec|ms)\s*\(\s*(\d+)\s*\)/g;
+  let totalMs = 0;
+  let hasMatch = false;
+  let match;
+  const cleaned = expr.replace(delayPattern, '').replace(/\+/g, '').trim();
+  if (cleaned !== '') return null;
+  delayPattern.lastIndex = 0;
+  while ((match = delayPattern.exec(expr)) !== null) {
+    hasMatch = true;
+    const unit = match[1];
+    const value = parseInt(match[2], 10);
+    switch (unit) {
+      case 'days': totalMs += value * 24 * 60 * 60 * 1000; break;
+      case 'hours': totalMs += value * 60 * 60 * 1000; break;
+      case 'min': totalMs += value * 60 * 1000; break;
+      case 'sec': totalMs += value * 1000; break;
+      case 'ms': totalMs += value; break;
+    }
+  }
+  if (!hasMatch && expr.trim() !== '') return null;
+  return msToRelativeTime(totalMs);
+}
 
 const ArcProperties = () => {
   const activePetriNetId = useStore((state) => state.activePetriNetId);
@@ -23,6 +78,35 @@ const ArcProperties = () => {
   const updateEdgeLabel = useStore((state) => state.updateEdgeLabel);
   const updateEdgeData = useStore((state) => state.updateEdgeData);
   const swapEdgeDirection = useStore((state) => state.swapEdgeDirection);
+
+  // State for arc delay input mode
+  const [delayMode, setDelayMode] = useState<'relative' | 'expression'>('relative');
+  const [relativeDelay, setRelativeDelay] = useState({ ms: 0, s: 0, m: 0, h: 0, d: 0 });
+  const [delayExpression, setDelayExpression] = useState('');
+  const [lastEdgeId, setLastEdgeId] = useState<string | null>(null);
+
+  // Extract edge data safely (before early returns, for useEffect)
+  const isValidEdge = selectedElement?.type === 'edge' && selectedElement.element;
+  const edgeId = isValidEdge ? selectedElement.element.id : null;
+  const edgeData = isValidEdge ? selectedElement.element.data as Record<string, unknown> : null;
+
+  // Initialize delay state when edge changes
+  useEffect(() => {
+    if (edgeId && edgeId !== lastEdgeId && edgeData) {
+      setLastEdgeId(edgeId);
+      const delayValue = (edgeData.delay as string) || '';
+      const parsed = parseTimeExpression(delayValue);
+      if (parsed !== null) {
+        setDelayMode('relative');
+        setRelativeDelay(parsed);
+        setDelayExpression(delayValue);
+      } else {
+        setDelayMode('expression');
+        setDelayExpression(delayValue);
+        setRelativeDelay({ ms: 0, s: 0, m: 0, h: 0, d: 0 });
+      }
+    }
+  }, [edgeId, lastEdgeId, edgeData]);
 
   if (!selectedElement) {
     return null;
@@ -103,6 +187,12 @@ const ArcProperties = () => {
     }
   };
 
+  const updateDelay = (expr: string) => {
+    if (activePetriNetId) {
+      updateEdgeData(activePetriNetId, id, { delay: expr });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid w-full items-center gap-1.5">
@@ -168,6 +258,63 @@ const ArcProperties = () => {
               }
             }}
           />
+        </div>
+      )}
+
+      {arcType === 'normal' && (
+        <div className="grid w-full items-center gap-1.5">
+          <Label>Arc Delay</Label>
+          <Tabs value={delayMode} onValueChange={(v) => setDelayMode(v as 'relative' | 'expression')} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="relative">Relative</TabsTrigger>
+              <TabsTrigger value="expression">Expression</TabsTrigger>
+            </TabsList>
+            <TabsContent value="relative" className="mt-2">
+              <div className="flex flex-wrap gap-2">
+                {(['d', 'h', 'm', 's', 'ms'] as const).map((unit) => {
+                  const max = unit === 'd' ? undefined : unit === 'h' ? 23 : unit === 'ms' ? 999 : 59;
+                  const width = unit === 'ms' ? 'w-16' : 'w-14';
+                  return (
+                    <div key={unit} className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        min="0"
+                        max={max}
+                        value={relativeDelay[unit]}
+                        onChange={(e) => {
+                          const newRel = { ...relativeDelay, [unit]: parseInt(e.target.value, 10) || 0 };
+                          setRelativeDelay(newRel);
+                          const expr = relativeTimeToExpression(newRel);
+                          setDelayExpression(expr);
+                          updateDelay(expr);
+                        }}
+                        className={`${width} h-8 text-sm`}
+                      />
+                      <span className="text-xs text-muted-foreground">{unit}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </TabsContent>
+            <TabsContent value="expression" className="mt-2">
+              <Textarea
+                placeholder="e.g.: delay_hours(2) + delay_min(30)"
+                value={delayExpression}
+                onChange={(e) => {
+                  const newExpr = e.target.value;
+                  setDelayExpression(newExpr);
+                  updateDelay(newExpr);
+                }}
+                className="min-h-[80px] font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Available: delay_ms(), delay_sec(), delay_min(), delay_hours(), delay_days()
+              </p>
+            </TabsContent>
+          </Tabs>
+          <p className="text-xs text-muted-foreground">
+            Per-token delay added when tokens are produced on this arc
+          </p>
         </div>
       )}
     </div>

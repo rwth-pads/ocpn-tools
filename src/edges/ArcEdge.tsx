@@ -43,6 +43,7 @@ interface FloatingEdgeProps {
     order?: number; // Order index for offsetting parallel arcs
     labelOffset?: { x: number; y: number }; // Custom offset for the label position
     arcType?: ArcType; // Type of arc: normal, reset, or inhibitor
+    delay?: string; // Per-arc time delay expression
   };
 }
 
@@ -709,7 +710,19 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
   // Hide default unit token inscription "1`()" - CPN Tools doesn't display this by default
   const isDefaultUnitInscription = typeof label === 'string' && 
     (label.trim() === '1`()' || label.trim() === '()');
-  const formattedLabel = isDefaultUnitInscription ? null : label;
+  
+  // Append @+delay suffix to label when arc has a delay expression
+  const arcDelay = (data as Record<string, unknown>)?.delay as string | undefined;
+  const hasDelay = arcDelay && arcDelay.trim() !== '';
+  let formattedLabel: React.ReactNode;
+  if (isDefaultUnitInscription && !hasDelay) {
+    formattedLabel = null;
+  } else if (hasDelay) {
+    const baseLabel = isDefaultUnitInscription ? '' : (label || '');
+    formattedLabel = baseLabel ? `${baseLabel}@+${arcDelay}` : `@+${arcDelay}`;
+  } else {
+    formattedLabel = label;
+  }
 
   // Compute the actual bendpoints positions for rendering (with offset)
   const displayBendpoints = bendpoints && offsetAmount !== 0

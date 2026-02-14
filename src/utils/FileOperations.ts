@@ -264,6 +264,7 @@ export function convertToJSON(data: PetriNetData): string {
           source: arc.source,
           target: arc.target,
           inscription: arc.label || "", // Use "inscription" instead of "label"
+          delay: (arc.data as Record<string, unknown>)?.delay || "", // Per-arc time delay expression
           isBidirectional: arc.data?.isBidirectional || false, // Include bidirectional flag
           arcType: arc.data?.arcType || undefined, // Include arc type if not normal
           labelOffset: arc.data?.labelOffset || undefined, // Include label offset if set
@@ -324,6 +325,7 @@ export function parseJSON(content: string): PetriNetData {
       source: string;
       target: string;
       inscription?: string;
+      delay?: string;
       isBidirectional?: boolean;
       arcType?: string;
       labelOffset?: { x: number; y: number };
@@ -369,6 +371,7 @@ export function parseJSON(content: string): PetriNetData {
       data: {
         isBidirectional: arc.isBidirectional || false,
         arcType: arc.arcType || undefined,
+        delay: arc.delay || "",
         labelOffset: arc.labelOffset || undefined,
         bendpoints: arc.bendpoints || undefined,
       },
@@ -802,7 +805,16 @@ function parseCPNToolsXML(content: string): PetriNetData {
       const order = parseInt(arc.getAttribute('order') || '0', 10); // Parse order for parallel arc offset
       const placeEndRef = arc.querySelector('placeend')?.getAttribute('idref') || '';
       const transEndRef = arc.querySelector('transend')?.getAttribute('idref') || '';
-      const label = arc.querySelector('annot text')?.textContent || '';
+      const rawLabel = arc.querySelector('annot text')?.textContent || '';
+      
+      // Split @+ arc delay from inscription (CPN Tools format: "expr @+ delay")
+      let label = rawLabel;
+      let arcDelay = '';
+      const atPlusIndex = rawLabel.indexOf('@+');
+      if (atPlusIndex !== -1) {
+        label = rawLabel.substring(0, atPlusIndex).trim();
+        arcDelay = rawLabel.substring(atPlusIndex + 2).trim();
+      }
       
       // Parse bendpoints for curved/bent arcs
       const bendpoints = Array.from(arc.querySelectorAll('bendpoint')).map((bp) => ({
@@ -818,7 +830,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
           source: placeEndRef,
           target: transEndRef,
           label,
-          data: { bendpoints, isBidirectional: true, order },
+          data: { bendpoints, isBidirectional: true, order, ...(arcDelay ? { delay: arcDelay } : {}) },
         }];
       }
 
@@ -844,7 +856,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
         source,
         target,
         label,
-        data: { bendpoints, order },
+        data: { bendpoints, order, ...(arcDelay ? { delay: arcDelay } : {}) },
       }];
     });
 

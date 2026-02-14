@@ -122,8 +122,8 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
   const id = nodeId!;
   const data = nodeData;
 
-  // Type guard to ensure data is of type TransitionNodeData
-  if (!('guard' in data)) {
+  // Ensure data has transition-specific fields (guard may be absent on loaded nodes)
+  if (data.type === 'place' || data.type === 'auxText') {
     return <div>Invalid node type</div>;
   }
 
@@ -145,9 +145,11 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
 
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="guard">Guard</Label>
-        <Input
+        <Textarea
           id="guard"
           value={data.guard || ""}
+          placeholder="Boolean expression, e.g.: x > 0 && y != z"
+          className="min-h-[60px] font-mono text-sm"
           onChange={(e) => {
             if (activePetriNetId) {
               updateNodeData(activePetriNetId, id, {

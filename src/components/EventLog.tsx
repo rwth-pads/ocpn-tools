@@ -14,6 +14,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import useStore from "@/stores/store"
+import { formatDateTimeFull } from "@/utils/timeFormat"
 
 export interface SimulationEvent {
   id: string
@@ -119,18 +120,7 @@ export function EventLog({ events, onClearLog, onExport, canExport, exportDisabl
     if (epoch) {
       // Absolute time: epoch + simulation time
       const absoluteDate = new Date(epoch.getTime() + timeMs)
-      const datePart = absoluteDate.toLocaleDateString([], {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })
-      const timePart = absoluteDate.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      })
-      const ms = absoluteDate.getMilliseconds().toString().padStart(3, '0')
-      return { date: datePart, time: `${timePart}.${ms}` }
+      return { time: formatDateTimeFull(absoluteDate) }
     }
     // Relative time display
     if (timeMs === 0) return { time: '0' }

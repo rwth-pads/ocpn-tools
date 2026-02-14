@@ -96,7 +96,9 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
       } else if (colorSet.type === "record") {
         const recordMatch = colorSet.definition.match(/record\s+([\w\s\:\*]+)/);
         if (recordMatch) {
-          const fields = recordMatch[1]
+          // Strip trailing "timed" suffix(es) to avoid them being parsed as part of the last field's type
+          const fieldsStr = recordMatch[1].replace(/(\s+timed)+\s*$/, '').trim();
+          const fields = fieldsStr
             .split("*")
             .map((field) => {
               const [name, type] = field.split(":").map((s) => s.trim());

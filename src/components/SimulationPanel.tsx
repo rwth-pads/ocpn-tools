@@ -15,6 +15,7 @@ import {
 // Correct the import path for SimulationContext
 import { SimulationContext, type SimulationConfig } from '@/context/useSimulationContextHook';
 import useStore from '@/stores/store';
+import { formatDateShort, formatTimeHMS } from '@/utils/timeFormat';
 
 // OCEL 2.0 Types
 interface OCEL2ObjectType {
@@ -458,8 +459,8 @@ ${evt.relationships.map(r => `      <relationship objectId="${r.objectId}" quali
     if (epoch) {
       const absoluteDate = new Date(epoch.getTime() + time);
       // Format as short date + time with milliseconds
-      const dateStr = absoluteDate.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
-      const timeStr = absoluteDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const dateStr = formatDateShort(absoluteDate);
+      const timeStr = formatTimeHMS(absoluteDate);
       const ms = absoluteDate.getMilliseconds().toString().padStart(3, '0');
       return `${dateStr}, ${timeStr}.${ms}`;
     }

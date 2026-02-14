@@ -2,6 +2,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { Handle, Position, NodeResizer, useConnection, useReactFlow } from '@xyflow/react';
 import useStore from '@/stores/store'; // Import Zustand store
 import { isTimedToken } from '@/types';
+import { formatDateTimeFull } from '@/utils/timeFormat';
 
 // Export the interface so it can be imported elsewhere
 export interface PlaceNodeData {
@@ -138,13 +139,7 @@ function formatTimeDisplay(timestampMs: number, epoch: Date | null): string {
   if (epoch) {
     // Absolute time display
     const date = new Date(epoch.getTime() + timestampMs);
-    return date.toLocaleString(undefined, { 
-      month: 'short', 
-      day: 'numeric',
-      hour: '2-digit', 
-      minute: '2-digit',
-      second: '2-digit'
-    });
+    return formatDateTimeFull(date);
   }
   // Relative time display
   if (timestampMs === 0) return '@0';

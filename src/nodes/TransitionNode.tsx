@@ -124,16 +124,8 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
   const isTarget = connection.inProgress && connection.fromNode.id !== id && connection.fromNode.type === 'place';
 
   // Default offsets for inscriptions (relative to node center)
-  // Guard on top-left: negative x (left of center), negative y (above top edge)
   // Time on top-right: positive x (right of center), negative y (above top edge)
-  const guardOffset = data.guardOffset ?? { x: -45, y: -15 };
   const timeOffset = data.timeOffset ?? { x: 45, y: -15 };
-
-  const handleGuardDragEnd = useCallback((newOffset: { x: number; y: number }) => {
-    if (activePetriNetId) {
-      updateNodeData(activePetriNetId, id, { ...data, guardOffset: newOffset });
-    }
-  }, [activePetriNetId, id, data, updateNodeData]);
 
   const handleTimeDragEnd = useCallback((newOffset: { x: number; y: number }) => {
     if (activePetriNetId) {
@@ -155,16 +147,7 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
         {data.label}
       </div>
 
-      {/* Guard inscription - displayed on top-left like CPN Tools */}
-      {data.guard && (
-        <DraggableInscription
-          offset={guardOffset}
-          onDragEnd={handleGuardDragEnd}
-          className="text-[9px] font-mono whitespace-nowrap text-[#006400]"
-        >
-          {data.guard}
-        </DraggableInscription>
-      )}
+      {/* Guard inscription removed - shown only as badge icon */}
 
       {/* Time inscription - displayed on top-right like CPN Tools */}
       {data.time && (
@@ -175,6 +158,25 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
         >
           @+{data.time}
         </DraggableInscription>
+      )}
+
+      {/* Guard badge - shield icon at top-left corner */}
+      {data.guard && data.guard.trim() && (
+        <div
+          style={{
+            position: 'absolute',
+            top: -2,
+            left: -2,
+            transform: 'translate(-50%, -50%)',
+          }}
+          className="pointer-events-none"
+          title={`Guard: ${data.guard}`}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="11.5" fill="white" stroke="#006400" strokeWidth="1" />
+            <path d="M12 4L6 7v4c0 3.5 2.5 6.7 6 8 3.5-1.3 6-4.5 6-8V7l-6-3z" fill="#006400" fillOpacity="0.15" stroke="#006400" strokeWidth="1.5" strokeLinejoin="round" />
+          </svg>
+        </div>
       )}
 
       {/* Code segment badge - small icon at bottom-right corner */}

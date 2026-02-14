@@ -1,10 +1,18 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
-import { Search, Trash, Clock, Database } from "lucide-react"
+import { Search, Trash, Clock, Database, Filter } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import useStore from "@/stores/store"
 
 export interface SimulationEvent {
@@ -20,17 +28,28 @@ export interface SimulationEvent {
   timestamp: Date
 }
 
+export interface TransitionFilterItem {
+  id: string
+  name: string
+  involvesRecordType: boolean
+}
+
 interface EventLogProps {
   events: SimulationEvent[]
   onClearLog: () => void
   onExport?: () => void
   canExport?: boolean
   exportDisabledReason?: string
+  transitions?: TransitionFilterItem[]
+  filteredTransitionIds?: Set<string>
+  onFilterChange?: (ids: Set<string>) => void
 }
 
-export function EventLog({ events, onClearLog, onExport, canExport, exportDisabledReason }: EventLogProps) {
+export function EventLog({ events, onClearLog, onExport, canExport, exportDisabledReason, transitions, filteredTransitionIds, onFilterChange }: EventLogProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set())
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false)
+  const [tempFilterIds, setTempFilterIds] = useState<Set<string>>(new Set())
   const simulationEpoch = useStore((state) => state.simulationEpoch)
   const epoch = simulationEpoch ? new Date(simulationEpoch) : null
 
@@ -44,12 +63,56 @@ export function EventLog({ events, onClearLog, onExport, canExport, exportDisabl
     setExpandedEvents(newExpanded)
   }
 
-  const filteredEvents = events.filter(
-    (event) =>
-      event.transitionName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.tokens.consumed.some((t) => t.placeName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      event.tokens.produced.some((t) => t.placeName.toLowerCase().includes(searchTerm.toLowerCase())),
-  )
+  const handleOpenFilterDialog = () => {
+    setTempFilterIds(new Set(filteredTransitionIds ?? []))
+    setFilterDialogOpen(true)
+  }
+
+  const handleSaveFilter = () => {
+    onFilterChange?.(tempFilterIds)
+    setFilterDialogOpen(false)
+  }
+
+  const toggleTempFilter = (id: string, checked: boolean) => {
+    const next = new Set(tempFilterIds)
+    if (checked) {
+      next.add(id)
+    } else {
+      next.delete(id)
+    }
+    setTempFilterIds(next)
+  }
+
+  const selectAll = () => {
+    if (transitions) {
+      setTempFilterIds(new Set(transitions.map(t => t.id)))
+    }
+  }
+
+  const selectNone = () => {
+    setTempFilterIds(new Set())
+  }
+
+  // Apply transition filter, then text search
+  const visibleEvents = useMemo(() => {
+    let result = events
+    if (filteredTransitionIds && filteredTransitionIds.size > 0) {
+      result = result.filter(e => filteredTransitionIds.has(e.transitionId))
+    } else if (filteredTransitionIds && filteredTransitionIds.size === 0) {
+      result = [] // explicit empty selection means show nothing
+    }
+    if (searchTerm) {
+      result = result.filter(
+        (event) =>
+          event.transitionName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          event.tokens.consumed.some((t) => t.placeName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          event.tokens.produced.some((t) => t.placeName.toLowerCase().includes(searchTerm.toLowerCase())),
+      )
+    }
+    return result
+  }, [events, filteredTransitionIds, searchTerm])
+
+  const isFilterActive = transitions && filteredTransitionIds && filteredTransitionIds.size < transitions.length
 
   // Format simulation time - show as absolute datetime if epoch is set, otherwise relative
   const formatSimTime = (timeMs: number): { date?: string; time: string } => {
@@ -87,6 +150,17 @@ export function EventLog({ events, onClearLog, onExport, canExport, exportDisabl
         <div className="flex justify-between items-center">
           <span className="text-sm font-semibold leading-none tracking-tight">Event Log</span>
           <div className="flex items-center space-x-1">
+            {transitions && transitions.length > 0 && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleOpenFilterDialog}
+                title="Filter Transitions"
+                className={isFilterActive ? "border-primary text-primary" : ""}
+              >
+                <Filter className="h-4 w-4" />
+              </Button>
+            )}
             <Button variant="outline" size="icon" onClick={onClearLog} title="Clear Log">
               <Trash className="h-4 w-4" />
             </Button>
@@ -116,13 +190,13 @@ export function EventLog({ events, onClearLog, onExport, canExport, exportDisabl
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden min-h-0">
         <ScrollArea className="h-full">
-          {filteredEvents.length === 0 ? (
+          {visibleEvents.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {events.length === 0 ? "No events recorded yet" : "No events match your search"}
+              {events.length === 0 ? "No events recorded yet" : "No events match your filter or search"}
             </div>
           ) : (
             <div className="space-y-2">
-              {filteredEvents.map((event) => (
+              {visibleEvents.map((event) => (
                 <div
                   key={event.id}
                   className="border rounded-md p-3 cursor-pointer hover:bg-muted/50 transition-colors"
@@ -189,6 +263,42 @@ export function EventLog({ events, onClearLog, onExport, canExport, exportDisabl
           )}
         </ScrollArea>
       </CardContent>
+
+      {/* Transition Filter Dialog */}
+      <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Filter Transitions</DialogTitle>
+          </DialogHeader>
+          <div className="flex gap-2 mb-2">
+            <Button variant="outline" size="sm" onClick={selectAll}>Select All</Button>
+            <Button variant="outline" size="sm" onClick={selectNone}>Select None</Button>
+          </div>
+          <ScrollArea className="max-h-[300px]">
+            <div className="space-y-2 py-1">
+              {transitions?.map(t => (
+                <label key={t.id} className="flex items-center gap-2 cursor-pointer px-1 py-1 rounded hover:bg-muted/50">
+                  <Checkbox
+                    checked={tempFilterIds.has(t.id)}
+                    onCheckedChange={(checked) => toggleTempFilter(t.id, !!checked)}
+                  />
+                  <span className="text-sm">{t.name}</span>
+                  {t.involvesRecordType && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">OCEL</Badge>
+                  )}
+                </label>
+              ))}
+            </div>
+          </ScrollArea>
+          <p className="text-xs text-muted-foreground">
+            Transitions marked OCEL involve record-typed color sets and are selected by default.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFilterDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveFilter}>Apply</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }

@@ -256,6 +256,7 @@ export function convertToJSON(data: PetriNetData): string {
             guard: transition.data.guard || "",
             time: transition.data.time || "",
             priority: transition.data.priority || "",
+            codeSegment: transition.data.codeSegment || "",
             position: transition.position,
             size: transition.measured || { width: 50, height: 30 }, // Replace "measured" with "size"
           })),
@@ -317,6 +318,7 @@ export function parseJSON(content: string): PetriNetData {
       guard?: string;
       time?: string;
       priority?: string;
+      codeSegment?: string;
       position?: { x: number; y: number };
       size?: { width: number; height: number };
     }[];
@@ -358,6 +360,7 @@ export function parseJSON(content: string): PetriNetData {
         guard: transition.guard || "",
         time: transition.time || "",
         priority: transition.priority || "",
+        codeSegment: transition.codeSegment || "",
       },
       width: transition.size?.width || 50,
       height: transition.size?.height || 30,

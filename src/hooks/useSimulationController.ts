@@ -163,6 +163,7 @@ export function useSimulationController() {
   const stopRequestedRef = useRef(false); // Flag to request stop
   const [events, setEvents] = useState<SimulationEvent[]>([]); // State for simulation events
   const [stepCounter, setStepCounter] = useState(0); // State for step counter
+  const stepCounterRef = useRef(0); // Synchronous source of truth for step counter
   const [simulationTime, setSimulationTime] = useState(0.0); // State for simulation time
   const [simulationConfig, setSimulationConfig] = useState<SimulationConfig>(DEFAULT_SIMULATION_CONFIG); // Simulation config
 
@@ -309,12 +310,10 @@ export function useSimulationController() {
         return movements;
     };
 
-    // Increment step counter *reactively* and get the new step number for this event
-    let eventStepNumber = 0;
-    setStepCounter(prev => {
-        eventStepNumber = prev + 1; // This event corresponds to step 'prev + 1'
-        return eventStepNumber;     // Update state to the new step number
-    });
+    // Increment step counter synchronously via ref, then sync to state
+    stepCounterRef.current += 1;
+    const eventStepNumber = stepCounterRef.current;
+    setStepCounter(eventStepNumber);
 
     // Extract simulation time - handle both bigint (new) and number (legacy) formats
     const simTime = eventData.simulationTime !== undefined 
@@ -349,6 +348,7 @@ export function useSimulationController() {
     // Reset state before initialization
     setEvents([]);
     setStepCounter(0);
+    stepCounterRef.current = 0;
     setSimulationTime(0.0);
     setIsInitialized(false); // Mark as not initialized until successful
     wasmRef.current = null; // Clear refs
@@ -676,6 +676,7 @@ export function useSimulationController() {
     stopRequestedRef.current = true; // Stop any ongoing simulation
     setIsRunning(false);
     setStepCounter(0); // Reset step counter state
+    stepCounterRef.current = 0; // Reset ref
     setSimulationTime(0.0); // Reset simulation time state
     setEvents([]); // Reset events state
     // Re-initializing effectively resets the simulation state in WASM

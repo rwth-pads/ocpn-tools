@@ -274,7 +274,12 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Basic Type</Label>
-                <Select value={basicType} onValueChange={setBasicType}>
+                <Select value={basicType} onValueChange={(val) => {
+                  setBasicType(val);
+                  if (val !== 'int' && val !== 'intinf') {
+                    setWithRange(false);
+                  }
+                }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
@@ -289,6 +294,7 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
                 </Select>
               </div>
 
+              {(basicType === 'int' || basicType === 'intinf') && (
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -299,6 +305,7 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
                 />
                 <Label htmlFor="withRange">With Range</Label>
               </div>
+              )}
 
               {withRange && (
                 <div className="grid grid-cols-2 gap-4">

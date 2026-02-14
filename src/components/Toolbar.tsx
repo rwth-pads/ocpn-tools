@@ -127,14 +127,16 @@ export function Toolbar({ toggleArcMode, onApplyLayout }: ToolbarProps) {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Toggle
-                  aria-label="Toggle Arc Mode"
-                  pressed={isArcMode && activeArcType === 'normal'}
-                  onPressedChange={() => handleArcToggle('normal')}
-                >
-                  <ArrowRight className="h-4 w-4" />
-                  <span className="sr-only">Toggle Arc Mode</span>
-                </Toggle>
+                <span>
+                  <Toggle
+                    aria-label="Toggle Arc Mode"
+                    pressed={isArcMode && activeArcType === 'normal'}
+                    onPressedChange={() => handleArcToggle('normal')}
+                  >
+                    <ArrowRight className="h-4 w-4" />
+                    <span className="sr-only">Toggle Arc Mode</span>
+                  </Toggle>
+                </span>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Arc</p>
@@ -145,14 +147,16 @@ export function Toolbar({ toggleArcMode, onApplyLayout }: ToolbarProps) {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Toggle
-                  aria-label="Toggle Inhibitor Arc Mode"
-                  pressed={isArcMode && activeArcType === 'inhibitor'}
-                  onPressedChange={() => handleArcToggle('inhibitor')}
-                >
-                  <ArcTypeIcon type="inhibitor" className="h-4 w-4" />
-                  <span className="sr-only">Toggle Inhibitor Arc Mode</span>
-                </Toggle>
+                <span>
+                  <Toggle
+                    aria-label="Toggle Inhibitor Arc Mode"
+                    pressed={isArcMode && activeArcType === 'inhibitor'}
+                    onPressedChange={() => handleArcToggle('inhibitor')}
+                  >
+                    <ArcTypeIcon type="inhibitor" className="h-4 w-4" />
+                    <span className="sr-only">Toggle Inhibitor Arc Mode</span>
+                  </Toggle>
+                </span>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Inhibitor Arc</p>
@@ -163,14 +167,16 @@ export function Toolbar({ toggleArcMode, onApplyLayout }: ToolbarProps) {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Toggle
-                  aria-label="Toggle Reset Arc Mode"
-                  pressed={isArcMode && activeArcType === 'reset'}
-                  onPressedChange={() => handleArcToggle('reset')}
-                >
-                  <ArcTypeIcon type="reset" className="h-4 w-4" />
-                  <span className="sr-only">Toggle Reset Arc Mode</span>
-                </Toggle>
+                <span>
+                  <Toggle
+                    aria-label="Toggle Reset Arc Mode"
+                    pressed={isArcMode && activeArcType === 'reset'}
+                    onPressedChange={() => handleArcToggle('reset')}
+                  >
+                    <ArcTypeIcon type="reset" className="h-4 w-4" />
+                    <span className="sr-only">Toggle Reset Arc Mode</span>
+                  </Toggle>
+                </span>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Reset Arc</p>

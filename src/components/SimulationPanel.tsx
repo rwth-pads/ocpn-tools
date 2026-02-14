@@ -1,6 +1,6 @@
-import { useState, useContext, useCallback } from 'react';
+import { useState, useContext, useCallback, useMemo, useEffect } from 'react';
 import { Clock, Hash, Settings } from 'lucide-react';
-import { EventLog, SimulationEvent } from '@/components/EventLog';
+import { EventLog, SimulationEvent, TransitionFilterItem } from '@/components/EventLog';
 import { OCELExportDialog } from '@/components/dialogs/OCELExportDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -274,6 +274,48 @@ export function SimulationPanel() {
   const [ocelDialogOpen, setOcelDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tempConfig, setTempConfig] = useState<SimulationConfig>(simulationConfig);
+  const [filteredTransitionIds, setFilteredTransitionIds] = useState<Set<string> | null>(null);
+
+  // Build transition filter items: list all transitions and mark which ones involve record-typed places
+  const transitionFilterItems: TransitionFilterItem[] = useMemo(() => {
+    if (!activePetriNetId) return [];
+    const petriNet = petriNetsById[activePetriNetId];
+    if (!petriNet) return [];
+
+    const recordColorSetNames = new Set(
+      colorSets.filter(cs => cs.type === 'record').map(cs => cs.name)
+    );
+
+    // Build a set of place IDs that use record color sets
+    const recordPlaceIds = new Set(
+      petriNet.nodes
+        .filter(n => n.type === 'place' && recordColorSetNames.has((n.data?.colorSet as string) || ''))
+        .map(n => n.id)
+    );
+
+    // For each transition, check if any connected arc touches a record-typed place
+    const transitions = petriNet.nodes.filter(n => n.type === 'transition');
+    return transitions.map(t => {
+      const involvesRecord = petriNet.edges.some(
+        e =>
+          (e.source === t.id && recordPlaceIds.has(e.target)) ||
+          (e.target === t.id && recordPlaceIds.has(e.source))
+      );
+      return {
+        id: t.id,
+        name: (t.data?.label as string) || t.id,
+        involvesRecordType: involvesRecord,
+      };
+    });
+  }, [activePetriNetId, petriNetsById, colorSets]);
+
+  // Initialize filter to record-involving transitions when they change (e.g. model reload)
+  useEffect(() => {
+    const defaultIds = new Set(
+      transitionFilterItems.filter(t => t.involvesRecordType).map(t => t.id)
+    );
+    setFilteredTransitionIds(defaultIds);
+  }, [transitionFilterItems]);
 
   // Convert stored epoch (UTC ISO string) to local datetime string for the input
   const epochToLocal = (epoch: string | null | undefined): string => {
@@ -340,7 +382,11 @@ export function SimulationPanel() {
 
   const handleExportOcel = (format: 'json' | 'xml' | 'sqlite') => {
     const { transitions, places } = getModelData();
-    const ocelData = convertToOCEL2(events, colorSets, transitions, places, simulationEpoch || null);
+    // Apply the transition filter to exported events
+    const exportEvents = filteredTransitionIds && filteredTransitionIds.size > 0
+      ? events.filter(e => filteredTransitionIds.has(e.transitionId))
+      : events;
+    const ocelData = convertToOCEL2(exportEvents, colorSets, transitions, places, simulationEpoch || null);
     
     let content = "";
     let filename = `simulation_ocel2_${stepCounter}_events`;
@@ -482,6 +528,9 @@ ${evt.relationships.map(r => `      <relationship objectId="${r.objectId}" quali
           onExport={() => setOcelDialogOpen(true)}
           canExport={canExport}
           exportDisabledReason={!isInitialized ? "Simulation not initialized" : events.length === 0 ? "No simulation events to export" : undefined}
+          transitions={transitionFilterItems}
+          filteredTransitionIds={filteredTransitionIds ?? undefined}
+          onFilterChange={setFilteredTransitionIds}
         />
       </div>
       <OCELExportDialog open={ocelDialogOpen} onOpenChange={setOcelDialogOpen} onExport={handleExportOcel} />

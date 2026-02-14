@@ -393,7 +393,6 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
       <Separator />
 
       <div className="grid w-full items-center gap-1.5">
-        <Label htmlFor="codeSegment">Code Segment</Label>
         <CodeSegmentEditor
           value={data.codeSegment || ""}
           onChange={(value) => {

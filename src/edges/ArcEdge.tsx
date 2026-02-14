@@ -612,7 +612,7 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
   
   // Calculate offset for parallel arcs
   // Center the group of arcs: offset from -(n-1)/2 to +(n-1)/2
-  const offsetSpacing = 20; // pixels between parallel arcs
+  const offsetSpacing = 60; // pixels between parallel arcs
   let offsetAmount = 0;
   
   if (totalParallelArcs > 1) {
@@ -680,8 +680,10 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
   } else {
     // No bendpoints
     if (offsetAmount !== 0) {
-      // Parallel straight arcs: rotate exit/entry angles at each node boundary
-      // so arcs are visually separated while remaining straight lines
+      // Parallel straight arcs: offset aim points perpendicularly so that
+      // each arc exits/enters on a different side of the baseline.
+      // perpX/perpY is already canonical (same for both arc directions),
+      // and offsetAmount differs in sign across arcs, producing separation.
       const sPos = (sourceNode as { internals: { positionAbsolute: { x: number; y: number } } }).internals.positionAbsolute;
       const tPos = (targetNode as { internals: { positionAbsolute: { x: number; y: number } } }).internals.positionAbsolute;
       const sCx = sPos.x + ((sourceNode.measured?.width ?? 0) / 2);
@@ -689,30 +691,18 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
       const tCx = tPos.x + ((targetNode.measured?.width ?? 0) / 2);
       const tCy = tPos.y + ((targetNode.measured?.height ?? 0) / 2);
 
-      const baseAngle = Math.atan2(tCy - sCy, tCx - sCx);
+      const offX = perpX * offsetAmount;
+      const offY = perpY * offsetAmount;
 
-      // Approximate boundary radii at the base intersection points
-      const sourceR = Math.sqrt((edgeParams.sx - sCx) ** 2 + (edgeParams.sy - sCy) ** 2) || 1;
-      const targetR = Math.sqrt((edgeParams.tx - tCx) ** 2 + (edgeParams.ty - tCy) ** 2) || 1;
-
-      // Angular offset to achieve ~offsetAmount pixel spacing at each boundary
-      // For non-canonical direction arcs, flip the angular sign for consistency
-      const angularSign = isCanonicalDirection ? 1 : -1;
-      const sourceAngular = angularSign * offsetAmount / sourceR;
-      const targetAngular = angularSign * offsetAmount / targetR;
-
-      // Source exit angle rotated by offset; target entry angle rotated oppositely
-      const srcExitAngle = baseAngle + sourceAngular;
-      const tgtEntryAngle = baseAngle + Math.PI - targetAngular;
-
-      // Get boundary points at the offset angles (using far aim points)
+      // Source aims toward an offset target center
       const srcInt = getNodeIntersectionToPoint(sourceNode, {
-        x: sCx + 1000 * Math.cos(srcExitAngle),
-        y: sCy + 1000 * Math.sin(srcExitAngle),
+        x: tCx + offX,
+        y: tCy + offY,
       });
+      // Target receives from an offset source center
       const tgtInt = getNodeIntersectionToPoint(targetNode, {
-        x: tCx + 1000 * Math.cos(tgtEntryAngle),
-        y: tCy + 1000 * Math.sin(tgtEntryAngle),
+        x: sCx + offX,
+        y: sCy + offY,
       });
 
       sx = srcInt.x;

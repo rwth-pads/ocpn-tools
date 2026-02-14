@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useCallback, useRef } from "react"
 
 import { UndoableTextarea as Textarea } from "@/components/ui/undoable-input"
 import { Label } from "@/components/ui/label"
@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { Maximize2 } from "lucide-react"
+import { Maximize2, GripVertical } from "lucide-react"
 
 interface CodeSegmentEditorProps {
   value: string
@@ -23,6 +23,8 @@ interface CodeSegmentEditorProps {
 export function CodeSegmentEditor({ value, onChange }: CodeSegmentEditorProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogValue, setDialogValue] = useState(value || "")
+  const [dialogWidth, setDialogWidth] = useState(900)
+  const dragRef = useRef<{ startX: number; startWidth: number } | null>(null)
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onChange(e.target.value)
@@ -37,6 +39,30 @@ export function CodeSegmentEditor({ value, onChange }: CodeSegmentEditorProps) {
     onChange(dialogValue)
     setDialogOpen(false)
   }
+
+  // Drag-to-resize handlers for right edge
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragRef.current = { startX: e.clientX, startWidth: dialogWidth }
+
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!dragRef.current) return
+      // Multiply delta by 2 because dialog is centered (translate -50%)
+      const delta = (ev.clientX - dragRef.current.startX) * 2
+      const newWidth = Math.max(400, Math.min(window.innerWidth - 32, dragRef.current.startWidth + delta))
+      setDialogWidth(newWidth)
+    }
+
+    const handleMouseUp = () => {
+      dragRef.current = null
+      document.removeEventListener("mousemove", handleMouseMove)
+      document.removeEventListener("mouseup", handleMouseUp)
+    }
+
+    document.addEventListener("mousemove", handleMouseMove)
+    document.addEventListener("mouseup", handleMouseUp)
+  }, [dialogWidth])
 
   return (
     <div className="space-y-2">
@@ -60,7 +86,17 @@ export function CodeSegmentEditor({ value, onChange }: CodeSegmentEditorProps) {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent
+          className="!max-w-none"
+          style={{ width: dialogWidth }}
+        >
+          {/* Right-edge resize handle */}
+          <div
+            className="absolute top-0 right-0 h-full w-3 cursor-col-resize flex items-center justify-center z-10 group"
+            onMouseDown={handleResizeMouseDown}
+          >
+            <GripVertical className="h-5 w-5 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+          </div>
           <DialogHeader>
             <DialogTitle>Edit Code Segment</DialogTitle>
           </DialogHeader>

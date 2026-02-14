@@ -24,7 +24,7 @@ Welcome to OCPN Tools! This tool allows you to create, edit, and simulate Object
   - Guard: Condition that must be true for the transition to fire
   - Time: Time delay for the transition
   - Priority: Execution priority
-  - Code Segment: ML code to execute when the transition fires
+  - Code Segment: Rhai code to execute when the transition fires
 
 ### Arcs
 - Click on a source node, then click on a target node to create an arc
@@ -162,6 +162,52 @@ You can even use a ternary expression like this:
 ```
 ✅ if y < 2 { 5 } else { 10 }
 ```
+
+## Code Segments
+
+Code segments let you run Rhai statements when a transition fires. They execute **after** input arc bindings are established but **before** output arc inscriptions are evaluated, so you can compute new values and use them in output arcs.
+
+### How They Work
+
+1. All variables bound by input arcs are available in the code segment
+2. Any variables you define in the code segment can be referenced by output arc inscriptions
+3. Code is written as bare Rhai statements (no `fn` wrapper needed)
+
+### Example: Spawning Dynamic Records
+
+Suppose you have an `Aircraft` record color set:
+
+```
+colset Aircraft = record flightNr: STRING * airline: STRING;
+```
+
+A transition's code segment can dynamically create aircraft tokens with random attributes:
+
+```rhai
+let airlines = ["SkyWing", "BlueTail", "NordJet", "SunHorizon"];
+let flight_nr = "FL" + to_string(discrete(100, 999));
+let idx = discrete(0, 3);
+let aircraft = #{flightNr: flight_nr, airline: airlines[idx]};
+```
+
+The output arc inscription then simply references `aircraft` to place the new token.
+
+### Example: Computing Derived Values
+
+```rhai
+// Input arc binds `order` from an Order place
+let total = order.quantity * order.price;
+let priority = if total > 1000 { "high" } else { "normal" };
+```
+
+Output arcs can then use `total` and `priority` as variables.
+
+### Tips
+
+- Use `#{key: value}` syntax to create record (object map) tokens
+- Use `to_string()` to convert numbers to strings
+- Random values are available via distribution functions like `discrete(a, b)` — see [Random Distribution Functions](#random-distribution-functions)
+- Code segments are compiled once and executed on every firing, so they are efficient for repeated use
 
 ## Simulation
 

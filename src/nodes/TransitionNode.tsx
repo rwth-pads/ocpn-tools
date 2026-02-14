@@ -176,6 +176,25 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
           @+{data.time}
         </DraggableInscription>
       )}
+
+      {/* Code segment badge - small icon at bottom-right corner */}
+      {data.codeSegment && data.codeSegment.trim() && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: -2,
+            right: -2,
+            transform: 'translate(50%, 50%)',
+          }}
+          className="pointer-events-none"
+          title="Has code segment"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7" cy="7" r="6.5" fill="white" stroke="#6b7280" strokeWidth="1" />
+            <text x="7" y="10" textAnchor="middle" fontSize="8" fontFamily="monospace" fontWeight="600" fill="#6b7280">{'{}'}</text>
+          </svg>
+        </div>
+      )}
       
       <Handle
         className="custom-handle"

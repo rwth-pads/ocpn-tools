@@ -1,6 +1,7 @@
-import React, { memo, useCallback, useRef, useState } from 'react';
+import React, { memo, useCallback } from 'react';
 import { Handle, Position, NodeResizer, useConnection, useReactFlow } from '@xyflow/react';
 import useStore from '@/stores/store';
+import type { Node } from '@xyflow/react';
 
 // Export the interface so it can be imported elsewhere
 export interface TransitionNodeData {
@@ -25,7 +26,8 @@ export interface TransitionNodeProps {
 // Draggable inscription component
 // Positions are relative to the center of the node
 // Always anchors from the center of the text (no alignment switching)
-function DraggableInscription({
+// Currently disabled - will be made configurable later
+/* function DraggableInscription({
   children,
   offset,
   onDragEnd,
@@ -115,23 +117,39 @@ function DraggableInscription({
     </div>
   );
 }
+*/
 
 export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, selected }) => {
   const connection = useConnection();
   const activePetriNetId = useStore((state) => state.activePetriNetId);
-  const updateNodeData = useStore((state) => state.updateNodeData);
+  // const updateNodeData = useStore((state) => state.updateNodeData);
+  const { getNode } = useReactFlow();
+
+  const handleBadgeClick = useCallback((fieldId: string) => {
+    if (!activePetriNetId) return;
+    const node = getNode(id) as Node | undefined;
+    if (node) {
+      useStore.getState().setSelectedElement(activePetriNetId, { type: 'node', element: node });
+    }
+    setTimeout(() => {
+      const el = document.getElementById(fieldId);
+      if (el) {
+        el.focus();
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }, 50);
+  }, [activePetriNetId, id, getNode]);
 
   const isTarget = connection.inProgress && connection.fromNode.id !== id && connection.fromNode.type === 'place';
 
   // Default offsets for inscriptions (relative to node center)
-  // Time on top-right: positive x (right of center), negative y (above top edge)
-  const timeOffset = data.timeOffset ?? { x: 45, y: -15 };
-
-  const handleTimeDragEnd = useCallback((newOffset: { x: number; y: number }) => {
-    if (activePetriNetId) {
-      updateNodeData(activePetriNetId, id, { ...data, timeOffset: newOffset });
-    }
-  }, [activePetriNetId, id, data, updateNodeData]);
+  // Disabled for now - will be made configurable later
+  // const timeOffset = data.timeOffset ?? { x: 45, y: -15 };
+  // const handleTimeDragEnd = useCallback((newOffset: { x: number; y: number }) => {
+  //   if (activePetriNetId) {
+  //     updateNodeData(activePetriNetId, id, { ...data, timeOffset: newOffset });
+  //   }
+  // }, [activePetriNetId, id, data, updateNodeData]);
 
   return (
     <div className="relative cpn-node transition-node">
@@ -149,7 +167,7 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
 
       {/* Guard inscription removed - shown only as badge icon */}
 
-      {/* Time inscription - displayed on top-right like CPN Tools */}
+      {/* Time inscription - disabled for now, shown only as badge icon
       {data.time && (
         <DraggableInscription
           offset={timeOffset}
@@ -159,6 +177,7 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
           @+{data.time}
         </DraggableInscription>
       )}
+      */}
 
       {/* Guard badge - shield icon at top-left corner */}
       {data.guard && data.guard.trim() && (
@@ -169,12 +188,35 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
             left: -2,
             transform: 'translate(-50%, -50%)',
           }}
-          className="pointer-events-none"
+          className="cursor-pointer nodrag"
           title={`Guard: ${data.guard}`}
+          onClick={(e) => { e.stopPropagation(); handleBadgeClick('guard'); }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="12" cy="12" r="11.5" fill="white" stroke="#006400" strokeWidth="1" />
             <path d="M12 4L6 7v4c0 3.5 2.5 6.7 6 8 3.5-1.3 6-4.5 6-8V7l-6-3z" fill="#006400" fillOpacity="0.15" stroke="#006400" strokeWidth="1.5" strokeLinejoin="round" />
+          </svg>
+        </div>
+      )}
+
+      {/* Time delay badge - clock icon at top-right corner */}
+      {data.time && data.time.trim() && (
+        <div
+          style={{
+            position: 'absolute',
+            top: -2,
+            right: -2,
+            transform: 'translate(50%, -50%)',
+          }}
+          className="cursor-pointer nodrag"
+          title={`Time: @+${data.time}`}
+          onClick={(e) => { e.stopPropagation(); handleBadgeClick('time-expression'); }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="11.5" fill="white" stroke="#8B4513" strokeWidth="1" />
+            <circle cx="12" cy="12" r="8" fill="#8B4513" fillOpacity="0.12" stroke="#8B4513" strokeWidth="1.2" />
+            <line x1="12" y1="7" x2="12" y2="12" stroke="#8B4513" strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="12" y1="12" x2="16" y2="12" stroke="#8B4513" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         </div>
       )}
@@ -188,8 +230,9 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
             right: -2,
             transform: 'translate(50%, 50%)',
           }}
-          className="pointer-events-none"
+          className="cursor-pointer nodrag"
           title="Has code segment"
+          onClick={(e) => { e.stopPropagation(); handleBadgeClick('code-segment'); }}
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="7" cy="7" r="6.5" fill="white" stroke="#6b7280" strokeWidth="1" />

@@ -466,6 +466,88 @@ export function DeclarationManager() {
         </Collapsible>
       </div>
 
+      {/* Priorities Section */}
+      <div className="space-y-3">
+        <Collapsible open={isPrioritiesOpen} onOpenChange={setIsPrioritiesOpen}>
+          <CollapsibleTrigger asChild>
+            <div className="flex items-center -ml-3 mb-2 cursor-pointer">
+              <Button variant="ghost" size="sm">
+                {isPrioritiesOpen ? (
+                  <ChevronDown className="h-4 w-4" strokeWidth={4} />
+                ) : (
+                  <ChevronRight className="h-4 w-4" strokeWidth={4} />
+                )}
+                <span className="sr-only">Toggle</span>
+              </Button>
+              <h2 className="font-bold flex-1">Priorities</h2>
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3 mb-8">
+            <div className="space-y-2">
+              {priorities
+                .slice()
+                .sort((a, b) => a.level - b.level) // Sort by level ascending
+                .map((p) => (
+                  <div
+                    key={p.id}
+                    className="border rounded-md p-3 bg-muted/20 transition-colors"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div className="font-mono text-sm">
+                          {p.name} = {p.level}
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditPriority(p)}>
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => p.id && onDeletePriority(p.id)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Name (e.g., P_MEDIUM)"
+                className="flex-1"
+                value={newPriority.name}
+                onChange={(e) => setNewPriority({ ...newPriority, name: e.target.value })}
+              />
+              <Input
+                type="number"
+                placeholder="Level (e.g., 250)"
+                className="w-[120px]"
+                value={newPriority.level || ""}
+                onChange={(e) => setNewPriority({ ...newPriority, level: Number.parseInt(e.target.value) || 0 })}
+              />
+            </div>
+
+            <Button size="sm" variant="outline" onClick={handleAddPriority}>
+              Add Priority
+            </Button>
+
+            <Dialog open={priorityEditorOpen} onOpenChange={setPriorityEditorOpen}>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>
+                    {selectedPriority ? `Edit Priority: ${selectedPriority.name}` : "Create New Priority"}
+                  </DialogTitle>
+                </DialogHeader>
+                <PriorityEditor
+                  priority={selectedPriority}
+                  onSave={handleSavePriority}
+                />
+              </DialogContent>
+            </Dialog>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+
       {/* Functions Section */}
       <div className="space-y-3">
         <Collapsible open={isFunctionsOpen} onOpenChange={setIsFunctionsOpen}>
@@ -605,88 +687,6 @@ export function DeclarationManager() {
                 <UseEditor
                   existingUse={selectedUse}
                   onSave={handleSaveUse} />
-              </DialogContent>
-            </Dialog>
-          </CollapsibleContent>
-        </Collapsible>
-      </div>
-
-    {/* Priorities Section */}
-    <div className="space-y-3">
-        <Collapsible open={isPrioritiesOpen} onOpenChange={setIsPrioritiesOpen}>
-          <CollapsibleTrigger asChild>
-            <div className="flex items-center -ml-3 mb-2 cursor-pointer">
-              <Button variant="ghost" size="sm">
-                {isPrioritiesOpen ? (
-                  <ChevronDown className="h-4 w-4" strokeWidth={4} />
-                ) : (
-                  <ChevronRight className="h-4 w-4" strokeWidth={4} />
-                )}
-                <span className="sr-only">Toggle</span>
-              </Button>
-              <h2 className="font-bold flex-1">Priorities</h2>
-            </div>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-3 mb-8">
-            <div className="space-y-2">
-              {priorities
-                .slice()
-                .sort((a, b) => a.level - b.level) // Sort by level ascending
-                .map((p) => (
-                  <div
-                    key={p.id}
-                    className="border rounded-md p-3 bg-muted/20 transition-colors"
-                  >
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <div className="font-mono text-sm">
-                          {p.name} = {p.level}
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditPriority(p)}>
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => p.id && onDeletePriority(p.id)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="Name (e.g., P_MEDIUM)"
-                className="flex-1"
-                value={newPriority.name}
-                onChange={(e) => setNewPriority({ ...newPriority, name: e.target.value })}
-              />
-              <Input
-                type="number"
-                placeholder="Level (e.g., 250)"
-                className="w-[120px]"
-                value={newPriority.level || ""}
-                onChange={(e) => setNewPriority({ ...newPriority, level: Number.parseInt(e.target.value) || 0 })}
-              />
-            </div>
-
-            <Button size="sm" variant="outline" onClick={handleAddPriority}>
-              Add Priority
-            </Button>
-
-            <Dialog open={priorityEditorOpen} onOpenChange={setPriorityEditorOpen}>
-              <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                  <DialogTitle>
-                    {selectedPriority ? `Edit Priority: ${selectedPriority.name}` : "Create New Priority"}
-                  </DialogTitle>
-                </DialogHeader>
-                <PriorityEditor
-                  priority={selectedPriority}
-                  onSave={handleSavePriority}
-                />
               </DialogContent>
             </Dialog>
           </CollapsibleContent>

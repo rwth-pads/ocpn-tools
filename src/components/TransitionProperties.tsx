@@ -328,6 +328,7 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
           </TabsContent>
           <TabsContent value="expression" className="mt-2">
             <Textarea
+              id="time-expression"
               placeholder="Rhai expression, e.g.: delay_hours(2) + delay_min(30)"
               value={expressionValue}
               onChange={(e) => {

@@ -197,6 +197,12 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
     
     return '#000';
   });
+
+  // Check if this edge is currently selected
+  const isSelected = useStore((state) => {
+    const petriNet = state.activePetriNetId ? state.petriNetsById[state.activePetriNetId] : null;
+    return petriNet?.selectedElement?.type === 'edge' && petriNet.selectedElement.element.id === id;
+  });
   
   // Handler for when label is dragged - must be before early return
   const handleLabelDragEnd = useCallback((newOffset: { x: number; y: number }) => {
@@ -772,6 +778,7 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
         colorSetColor, 
         isBidirectional, 
         arcType,
+        isSelected,
         style,
         handleArcPathMouseDown,
       )}
@@ -822,6 +829,8 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
           baseLabelY={baseLabelY}
           labelOffset={labelOffset}
           onLabelDragEnd={handleLabelDragEnd}
+          isSelected={isSelected}
+          colorSetColor={colorSetColor}
         />
       )}
     </>
@@ -835,6 +844,7 @@ function renderArcPath(
   colorSetColor: string,
   isBidirectional: boolean,
   arcType: ArcType,
+  isSelected: boolean,
   style?: React.CSSProperties,
   onPathMouseDown?: (e: React.MouseEvent) => void,
 ) {
@@ -925,6 +935,17 @@ function renderArcPath(
           onMouseDown={onPathMouseDown}
         />
       )}
+      {/* Selection highlight - thicker translucent stroke behind the main path */}
+      {isSelected && (
+        <path
+          d={edgePath}
+          fill="none"
+          stroke={colorSetColor}
+          strokeWidth="5"
+          strokeOpacity="0.3"
+          strokeLinecap="round"
+        />
+      )}
       {/* Edge Path */}
       <path
         id={id}
@@ -951,6 +972,8 @@ function DraggableArcLabel({
   baseLabelY,
   labelOffset,
   onLabelDragEnd,
+  isSelected,
+  colorSetColor,
 }: {
   id: string;
   label: React.ReactNode;
@@ -958,6 +981,8 @@ function DraggableArcLabel({
   baseLabelY: number;
   labelOffset: { x: number; y: number };
   onLabelDragEnd: (offset: { x: number; y: number }) => void;
+  isSelected?: boolean;
+  colorSetColor?: string;
 }) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(labelOffset);
@@ -1040,6 +1065,7 @@ function DraggableArcLabel({
           transform: `translate(-50%, -100%) translate(${finalX}px,${finalY}px)`,
           cursor: isDragging ? 'grabbing' : 'grab',
           pointerEvents: 'auto',
+          ...(isSelected && colorSetColor ? { backgroundColor: `${colorSetColor}1A`, outline: `1.5px solid ${colorSetColor}4D`, borderRadius: '3px' } : {}),
         }}
         className={`nodrag nopan edge-label-renderer__custom-edge text-[10px] font-mono whitespace-pre-wrap ${isDragging ? '' : 'hover:bg-accent/50'} px-1 rounded`}
         onMouseDown={handleMouseDown}

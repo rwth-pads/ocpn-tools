@@ -179,14 +179,15 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
       )}
       */}
 
-      {/* Guard badge - shield icon at top-left corner */}
+      {/* Guard badge - shield icon at top-left corner (moves out diagonally when selected) */}
       {data.guard && data.guard.trim() && (
         <div
           style={{
             position: 'absolute',
             top: -2,
             left: -2,
-            transform: 'translate(-50%, -50%)',
+            transform: selected ? 'translate(-100%, -100%)' : 'translate(-50%, -50%)',
+            transition: 'transform 0.15s ease-out',
           }}
           className="cursor-pointer nodrag"
           title={`Guard: ${data.guard}`}
@@ -199,14 +200,15 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
         </div>
       )}
 
-      {/* Time delay badge - clock icon at top-right corner */}
+      {/* Time delay badge - clock icon at top-right corner (moves out diagonally when selected) */}
       {data.time && data.time.trim() && (
         <div
           style={{
             position: 'absolute',
             top: -2,
             right: -2,
-            transform: 'translate(50%, -50%)',
+            transform: selected ? 'translate(100%, -100%)' : 'translate(50%, -50%)',
+            transition: 'transform 0.15s ease-out',
           }}
           className="cursor-pointer nodrag"
           title={`Time: @+${data.time}`}
@@ -221,14 +223,15 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
         </div>
       )}
 
-      {/* Code segment badge - small icon at bottom-right corner */}
+      {/* Code segment badge - small icon at bottom-right corner (moves out diagonally when selected) */}
       {data.codeSegment && data.codeSegment.trim() && (
         <div
           style={{
             position: 'absolute',
             bottom: -2,
             right: -2,
-            transform: 'translate(50%, 50%)',
+            transform: selected ? 'translate(100%, 100%)' : 'translate(50%, 50%)',
+            transition: 'transform 0.15s ease-out',
           }}
           className="cursor-pointer nodrag"
           title="Has code segment"

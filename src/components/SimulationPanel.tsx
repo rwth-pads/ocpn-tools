@@ -15,7 +15,7 @@ import {
 // Correct the import path for SimulationContext
 import { SimulationContext, type SimulationConfig } from '@/context/useSimulationContextHook';
 import useStore from '@/stores/store';
-import { formatDateShort, formatTimeHMS } from '@/utils/timeFormat';
+import { formatDateTimeFull } from '@/utils/timeFormat';
 
 // OCEL 2.0 Types
 interface OCEL2ObjectType {
@@ -458,11 +458,7 @@ ${evt.relationships.map(r => `      <relationship objectId="${r.objectId}" quali
     // If epoch is set, show absolute datetime
     if (epoch) {
       const absoluteDate = new Date(epoch.getTime() + time);
-      // Format as short date + time with milliseconds
-      const dateStr = formatDateShort(absoluteDate);
-      const timeStr = formatTimeHMS(absoluteDate);
-      const ms = absoluteDate.getMilliseconds().toString().padStart(3, '0');
-      return `${dateStr}, ${timeStr}.${ms}`;
+      return formatDateTimeFull(absoluteDate);
     }
     
     // No epoch - show relative time

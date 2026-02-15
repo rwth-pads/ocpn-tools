@@ -123,13 +123,15 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
   const connection = useConnection();
   const activePetriNetId = useStore((state) => state.activePetriNetId);
   // const updateNodeData = useStore((state) => state.updateNodeData);
-  const { getNode } = useReactFlow();
+  const { getNode, setNodes } = useReactFlow();
 
   const handleBadgeClick = useCallback((fieldId: string) => {
     if (!activePetriNetId) return;
     const node = getNode(id) as Node | undefined;
     if (node) {
       useStore.getState().setSelectedElement(activePetriNetId, { type: 'node', element: node });
+      // Also update React Flow's internal selection state
+      setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === id })));
     }
     setTimeout(() => {
       const el = document.getElementById(fieldId);
@@ -138,7 +140,7 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
         el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       }
     }, 50);
-  }, [activePetriNetId, id, getNode]);
+  }, [activePetriNetId, id, getNode, setNodes]);
 
   const isTarget = connection.inProgress && connection.fromNode.id !== id && connection.fromNode.type === 'place';
 
@@ -240,6 +242,27 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="7" cy="7" r="6.5" fill="white" stroke="#6b7280" strokeWidth="1" />
             <text x="7" y="10" textAnchor="middle" fontSize="8" fontFamily="monospace" fontWeight="600" fill="#6b7280">{'{}'}</text>
+          </svg>
+        </div>
+      )}
+
+      {/* Priority badge - flag icon at bottom-left corner (moves out diagonally when selected) */}
+      {data.priority && data.priority !== 'NONE' && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: -2,
+            left: -2,
+            transform: selected ? 'translate(-100%, 100%)' : 'translate(-50%, 50%)',
+            transition: 'transform 0.15s ease-out',
+          }}
+          className="cursor-pointer nodrag"
+          title={`Priority: ${data.priority}`}
+          onClick={(e) => { e.stopPropagation(); handleBadgeClick('priority'); }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="11.5" fill="white" stroke="#b45309" strokeWidth="1" />
+            <path d="M8 5v14M8 5h8l-3 4 3 4H8" fill="#b45309" fillOpacity="0.15" stroke="#b45309" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
       )}

@@ -301,7 +301,7 @@ export function DeclarationManager() {
               {colorSets.map((cs) => (
                 <div
                   key={cs.id}
-                  className="border rounded-md p-3 bg-muted/20 transition-colors"
+                  className="border rounded-md bg-muted/20 transition-colors overflow-hidden"
                   draggable
                   onDragStart={(e) => handleDragStart(e, cs, "colorSet")}
                   onDragOver={(e) => handleDragOver(e, cs)}
@@ -311,23 +311,23 @@ export function DeclarationManager() {
                 >
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <div className="cursor-grab active:cursor-grabbing">
+                      <div
+                        className="w-2.5 self-stretch flex-shrink-0"
+                        style={{ backgroundColor: cs.color || "#3b82f6" }}
+                      />
+                      <div className="cursor-grab active:cursor-grabbing py-3">
                         <GripVertical className="h-4 w-4 text-muted-foreground" />
                       </div>
-                      <div className="font-mono text-sm">
+                      <div className="font-mono text-sm py-3">
                         {cs.definition.replace(/^colset\s+/i, '').replace(/;$/, '')}
                       </div>
+                    </div>
+                    <div className="flex items-center pr-1">
                       {cs.timed && (
-                        <span title="Timed color set">
+                        <span title="Timed color set" className="mr-1">
                           <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                         </span>
                       )}
-                    </div>
-                    <div className="flex items-center">
-                      <div
-                        className="w-3 h-3 rounded-full mr-2"
-                        style={{ backgroundColor: cs.color || "#3b82f6" }}
-                      ></div>
                       <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditColorSet(cs)}>
                         <Edit className="h-3 w-3" />
                       </Button>
@@ -388,10 +388,12 @@ export function DeclarationManager() {
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-3">
             <div className="space-y-2">
-              {variables.map((v) => (
+              {variables.map((v) => {
+                const varColorSet = colorSets.find((cs) => cs.name === v.colorSet);
+                return (
                 <div
                   key={v.id}
-                  className="border rounded-md p-3 bg-muted/20 transition-colors"
+                  className="border rounded-md bg-muted/20 transition-colors overflow-hidden"
                   draggable
                   onDragStart={(e) => handleDragStart(e, v, "variable")}
                   onDragOver={(e) => handleDragOver(e, v)}
@@ -401,14 +403,18 @@ export function DeclarationManager() {
                 >
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <div className="cursor-grab active:cursor-grabbing">
+                      <div
+                        className="w-2.5 self-stretch flex-shrink-0"
+                        style={{ backgroundColor: varColorSet?.color || "#3b82f6" }}
+                      />
+                      <div className="cursor-grab active:cursor-grabbing py-3">
                         <GripVertical className="h-4 w-4 text-muted-foreground" />
                       </div>
-                      <div className="font-mono text-sm">
+                      <div className="font-mono text-sm py-3">
                         var {v.name}: {v.colorSet};
                       </div>
                     </div>
-                    <div className="flex items-center">
+                    <div className="flex items-center pr-1">
                       <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditVariable(v)}>
                         <Edit className="h-3 w-3" />
                       </Button>
@@ -418,7 +424,8 @@ export function DeclarationManager() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
             <div className="flex items-center gap-2">
               <Input

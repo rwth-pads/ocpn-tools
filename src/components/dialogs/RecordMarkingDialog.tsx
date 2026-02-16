@@ -146,7 +146,7 @@ export function RecordMarkingDialog({
 
   // === Record mode functions ===
 
-  // Add a new empty record
+  // Add a new empty record, auto-incrementing the 'id' field if it's of type INT
   const addRecord = () => {
     const newRecord: RecordData = {}
     attributes.forEach((attr) => {
@@ -161,6 +161,19 @@ export function RecordMarkingDialog({
         newRecord[attr.name] = ""
       }
     })
+
+    // Auto-increment 'id' field if it exists and is of type INT
+    const idAttr = attributes.find(
+      (attr) => attr.name.toLowerCase() === "id" && attr.type === "INT"
+    )
+    if (idAttr) {
+      const existingIds = records
+        .map((r) => r[idAttr.name])
+        .filter((v): v is number => typeof v === "number")
+      const nextId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1
+      newRecord[idAttr.name] = nextId
+    }
+
     const newRecords = [...records, newRecord]
     setRecords(newRecords)
     setCurrentPage(Math.ceil(newRecords.length / pageSize))

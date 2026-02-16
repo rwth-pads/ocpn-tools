@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Trash2, GripVertical } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import type { ColorSet } from "@/declarations";
 import { HexColorPicker } from "react-colorful";
@@ -29,11 +29,72 @@ interface ColorSetField {
   type: string
 }
 
+/**
+ * Generate a color that is maximally distinct from a set of existing colors.
+ * Uses HSL color space: picks the hue that maximizes the minimum angular
+ * distance from all existing hues, with fixed saturation and lightness.
+ */
+function generateDistinctColor(existingColorSets: ColorSet[]): string {
+  const existingColors = existingColorSets
+    .map((cs) => cs.color)
+    .filter((c): c is string => !!c)
+
+  if (existingColors.length === 0) {
+    return "hsl(210, 70%, 55%)" // Start with blue if nothing exists
+  }
+
+  // Parse hex colors to HSL hue values (0-360)
+  function hexToHue(hex: string): number {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    if (!result) return 0
+    const r = parseInt(result[1], 16) / 255
+    const g = parseInt(result[2], 16) / 255
+    const b = parseInt(result[3], 16) / 255
+    const max = Math.max(r, g, b), min = Math.min(r, g, b)
+    let h = 0
+    if (max !== min) {
+      const d = max - min
+      if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60
+      else if (max === g) h = ((b - r) / d + 2) * 60
+      else h = ((r - g) / d + 4) * 60
+    }
+    return h
+  }
+
+  // Also handle hsl(...) strings
+  function parseHue(color: string): number {
+    const hslMatch = color.match(/hsl\(\s*([\d.]+)/)
+    if (hslMatch) return parseFloat(hslMatch[1])
+    return hexToHue(color)
+  }
+
+  const existingHues = existingColors.map(parseHue)
+
+  // Test candidate hues in 1-degree steps, find the one with max min-distance
+  let bestHue = 0
+  let bestMinDist = -1
+  for (let candidate = 0; candidate < 360; candidate++) {
+    let minDist = 360
+    for (const h of existingHues) {
+      const diff = Math.abs(candidate - h)
+      const dist = Math.min(diff, 360 - diff)
+      if (dist < minDist) minDist = dist
+    }
+    if (minDist > bestMinDist) {
+      bestMinDist = minDist
+      bestHue = candidate
+    }
+  }
+
+  return `hsl(${bestHue}, 70%, 55%)`
+}
+
 export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: AdvancedColorSetEditorProps) {
+  const defaultColor = colorSet?.color || generateDistinctColor(existingColorSets)
   const [name, setName] = useState(colorSet?.name || "")
   const [type, setType] = useState(colorSet?.type || "basic")
   const [definition, setDefinition] = useState(colorSet?.definition || "")
-  const [color, setColor] = useState(colorSet?.color || "#3b82f6") // Default to blue
+  const [color, setColor] = useState(defaultColor)
   const [timed, setTimed] = useState(colorSet?.timed || false) // Whether this is a timed color set
   const [activeTab, setActiveTab] = useState("visual")
 
@@ -90,7 +151,11 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
       } else if (colorSet.type === "product") {
         const productMatch = colorSet.definition.match(/product\s+([\w\s\*]+)/);
         if (productMatch) {
-          const productSets = productMatch[1].split("*").map((cs) => cs.trim());
+          // Strip trailing "timed" suffix(es) to avoid them being parsed as a component
+          const componentsStr = productMatch[1].replace(/(\s+timed)+\s*$/, '').trim();
+          const productSets = componentsStr
+            ? componentsStr.split("*").map((cs) => cs.trim()).filter(Boolean)
+            : [];
           setProductColorSets(productSets);
         }
       } else if (colorSet.type === "record") {
@@ -139,6 +204,33 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
 
   const handleRemoveProductColorSet = (index: number) => {
     setProductColorSets(productColorSets.filter((_, i) => i !== index))
+  }
+
+  // Drag-to-reorder state for product color sets
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+
+  const handleProductDragStart = (e: React.DragEvent, index: number) => {
+    setDragIndex(index)
+    e.dataTransfer.effectAllowed = "move"
+  }
+
+  const handleProductDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+  }
+
+  const handleProductDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault()
+    if (dragIndex === null || dragIndex === targetIndex) return
+    const updated = [...productColorSets]
+    const [moved] = updated.splice(dragIndex, 1)
+    updated.splice(targetIndex, 0, moved)
+    setProductColorSets(updated)
+    setDragIndex(null)
+  }
+
+  const handleProductDragEnd = () => {
+    setDragIndex(null)
   }
 
   const handleAddRecordField = () => {
@@ -383,7 +475,18 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
               <Label>Product Color Sets</Label>
 
               {productColorSets.map((cs, index) => (
-                <div key={index} className="flex items-center space-x-2">
+                <div
+                  key={index}
+                  className="flex items-center space-x-2"
+                  draggable
+                  onDragStart={(e) => handleProductDragStart(e, index)}
+                  onDragOver={handleProductDragOver}
+                  onDrop={(e) => handleProductDrop(e, index)}
+                  onDragEnd={handleProductDragEnd}
+                >
+                  <div className="cursor-grab active:cursor-grabbing">
+                    <GripVertical className="h-4 w-4 text-muted-foreground" />
+                  </div>
                   <div className="flex-1 border rounded-md px-3 py-2">{cs}</div>
                   <Button variant="ghost" size="icon" onClick={() => handleRemoveProductColorSet(index)}>
                     <Trash2 className="h-4 w-4" />
@@ -397,11 +500,13 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
                     <SelectValue placeholder="Add color set" />
                   </SelectTrigger>
                   <SelectContent>
-                    {existingColorSets.map((cs) => (
-                      <SelectItem key={cs.id} value={cs.name}>
-                        {cs.name}
-                      </SelectItem>
-                    ))}
+                    {existingColorSets
+                      .filter((cs) => cs.name !== name)
+                      .map((cs) => (
+                        <SelectItem key={cs.id} value={cs.name}>
+                          {cs.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -499,7 +604,11 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
       </Tabs>
 
       <div className="pt-4">
-        <Button onClick={handleSave} className="w-full">
+        <Button
+          onClick={handleSave}
+          className="w-full"
+          disabled={type === "product" && productColorSets.length < 2}
+        >
           Save Color Set
         </Button>
       </div>

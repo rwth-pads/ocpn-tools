@@ -117,10 +117,15 @@
         {
           "id": "p-runway-avail",
           "name": "Runway\nAvailable",
-          "colorSet": "UNIT",
-          "initialMarking": "[()]",
+          "colorSet": "Runway",
+          "initialMarking": "[{\"id\":1},{\"id\":2}]",
           "marking": [
-            null
+            {
+              "id": 1
+            },
+            {
+              "id": 2
+            }
           ],
           "position": {
             "x": 2996,
@@ -134,7 +139,7 @@
         {
           "id": "p-aircraft-landed",
           "name": "Aircraft\nLanded",
-          "colorSet": "Aircraft",
+          "colorSet": "AircraftxRunway",
           "initialMarking": "",
           "marking": [],
           "position": {
@@ -169,7 +174,7 @@
           "id": "p-gate-avail",
           "name": "Gate\nAvailable",
           "colorSet": "Gate",
-          "initialMarking": "[{\"id\": 1}, {\"id\": 2}, {\"id\": 3}]",
+          "initialMarking": "[{\"id\":1},{\"id\":2},{\"id\":3}]",
           "marking": [
             {
               "id": 1
@@ -183,7 +188,7 @@
           ],
           "position": {
             "x": 992.5,
-            "y": 124.1885805178062
+            "y": 385.79012630363354
           },
           "size": {
             "width": 75,
@@ -193,9 +198,13 @@
             "x": 19.827510177438093,
             "y": 28.691246761724244
           },
+          "tokenCountOffset": {
+            "x": 25,
+            "y": -5
+          },
           "markingOffset": {
-            "x": 44,
-            "y": -40
+            "x": 53.18910913136473,
+            "y": -9.369636228784238
           }
         },
         {
@@ -413,16 +422,13 @@
           "id": "p-tug-avail",
           "name": "Tug\nAvailable",
           "colorSet": "Tug",
-          "initialMarking": "[{\"id\": 1}, {\"id\": 2}, {\"id\": 3}]",
+          "initialMarking": "[{\"id\":1},{\"id\":2}]",
           "marking": [
             {
               "id": 1
             },
             {
               "id": 2
-            },
-            {
-              "id": 3
             }
           ],
           "position": {
@@ -671,6 +677,10 @@
           "inscription": "rw",
           "delay": "",
           "isBidirectional": false,
+          "labelOffset": {
+            "x": -686.1193237069726,
+            "y": 29.938447669875067
+          },
           "bendpoints": [
             {
               "x": 2949.351054868868,
@@ -686,17 +696,25 @@
           "id": "e3",
           "source": "t-landing",
           "target": "p-aircraft-landed",
-          "inscription": "ac",
+          "inscription": "[ac, rw]",
           "delay": "",
-          "isBidirectional": false
+          "isBidirectional": false,
+          "labelOffset": {
+            "x": -4.334903867379117,
+            "y": -4.334903867379117
+          }
         },
         {
           "id": "e4",
           "source": "p-aircraft-landed",
           "target": "t-taxi-start",
-          "inscription": "ac",
+          "inscription": "[ac, rw]",
           "delay": "",
-          "isBidirectional": false
+          "isBidirectional": false,
+          "labelOffset": {
+            "x": -5.418629834223896,
+            "y": 5.418629834223896
+          }
         },
         {
           "id": "e5",
@@ -704,15 +722,23 @@
           "target": "p-aircraft-taxiing",
           "inscription": "ac",
           "delay": "",
-          "isBidirectional": false
+          "isBidirectional": false,
+          "labelOffset": {
+            "x": -0.42220044371189047,
+            "y": 3.7998039934070142
+          }
         },
         {
           "id": "e6",
           "source": "t-taxi-start",
           "target": "p-runway-avail",
-          "inscription": "()",
+          "inscription": "rw",
           "delay": "",
           "isBidirectional": false,
+          "labelOffset": {
+            "x": -801.1118965849657,
+            "y": 5.583166172767652
+          },
           "bendpoints": [
             {
               "x": 630,
@@ -730,7 +756,11 @@
           "target": "t-in-block",
           "inscription": "ac",
           "delay": "",
-          "isBidirectional": false
+          "isBidirectional": false,
+          "labelOffset": {
+            "x": 0.42220044371189047,
+            "y": 5.066405324542686
+          }
         },
         {
           "id": "e8",
@@ -943,14 +973,18 @@
           "inscription": "gate",
           "delay": "",
           "isBidirectional": false,
+          "labelOffset": {
+            "x": -41.930409112864375,
+            "y": 4.65893434587382
+          },
           "bendpoints": [
             {
               "x": 2630,
-              "y": 22.064714854068413
+              "y": 507.7586204114141
             },
             {
-              "x": 1030.5,
-              "y": 22.064714854068413
+              "x": 1030,
+              "y": 507.7586204114141
             }
           ]
         },
@@ -1015,7 +1049,7 @@
       "name": "UNIT",
       "type": "basic",
       "definition": "colset UNIT = unit;",
-      "color": "#6b7280",
+      "color": "#9ca3af",
       "timed": false
     },
     {
@@ -1041,10 +1075,18 @@
       "timed": true
     },
     {
+      "name": "Runway",
+      "type": "record",
+      "definition": "colset Runway = record id: INT;",
+      "color": "#78716c",
+      "timed": false,
+      "id": "d6354e55-92f3-48b0-b9b4-f312e1b7faad"
+    },
+    {
       "name": "Crew",
       "type": "record",
       "definition": "colset Crew = record id: INT timed;",
-      "color": "#3b82f6",
+      "color": "#f97316",
       "timed": true,
       "id": "5ced92a4-a01e-44d3-9055-ce5d2367ce96"
     },
@@ -1073,7 +1115,7 @@
       "name": "AircraftxGatexFuelTruck",
       "type": "product",
       "definition": "colset AircraftxGatexFuelTruck = product Aircraft * Gate * FuelTruck timed;",
-      "color": "#3b82f6",
+      "color": "#e11d48",
       "timed": true,
       "id": "b4c64c0b-cc0b-41ce-9571-28bd9db40990"
     },
@@ -1081,7 +1123,7 @@
       "name": "AircraftxTug",
       "type": "product",
       "definition": "colset AircraftxTug = product Aircraft * Tug timed;",
-      "color": "#3b82f6",
+      "color": "#84cc16",
       "timed": true,
       "id": "1cde1d20-b703-4908-8bb0-0cdc6ff1e5a7"
     },
@@ -1089,7 +1131,7 @@
       "name": "AircraftxGatexCrew",
       "type": "product",
       "definition": "colset AircraftxGatexCrew = product Aircraft * Gate * Crew timed;",
-      "color": "#3b82f6",
+      "color": "#d946ef",
       "timed": true,
       "id": "348b98a8-45fd-49ad-80bd-2d3b97eeb534"
     },
@@ -1097,9 +1139,17 @@
       "name": "AircraftxGate",
       "type": "product",
       "definition": "colset AircraftxGate = product Aircraft * Gate timed;",
-      "color": "#a93bf5",
+      "color": "#6366f1",
       "timed": true,
       "id": "9a0a8ad9-8198-4693-8a49-ff807854166a"
+    },
+    {
+      "name": "AircraftxRunway",
+      "type": "product",
+      "definition": "colset AircraftxRunway = product Aircraft * UNIT timed;",
+      "color": "#475569",
+      "timed": true,
+      "id": "6cb478f2-7ab2-46df-b899-3c73f11919a0"
     }
   ],
   "variables": [
@@ -1121,7 +1171,7 @@
     {
       "id": "var-rw",
       "name": "rw",
-      "colorSet": "UNIT"
+      "colorSet": "Runway"
     },
     {
       "id": "var-gate",

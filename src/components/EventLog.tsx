@@ -105,9 +105,9 @@ export function EventLog({ events, onClearLog, onExport, canExport, exportDisabl
     if (searchTerm) {
       result = result.filter(
         (event) =>
-          event.transitionName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          event.tokens.consumed.some((t) => t.placeName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          event.tokens.produced.some((t) => t.placeName.toLowerCase().includes(searchTerm.toLowerCase())),
+          event.transitionName.replace(/\n/g, ' ').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          event.tokens.consumed.some((t) => t.placeName.replace(/\n/g, ' ').toLowerCase().includes(searchTerm.toLowerCase())) ||
+          event.tokens.produced.some((t) => t.placeName.replace(/\n/g, ' ').toLowerCase().includes(searchTerm.toLowerCase())),
       )
     }
     return result
@@ -195,7 +195,7 @@ export function EventLog({ events, onClearLog, onExport, canExport, exportDisabl
                   <div className="flex justify-between items-center">
                     <div className="flex items-center space-x-2">
                       <Badge variant="outline">{event.step}</Badge>
-                      <span className="font-medium">{event.transitionName}</span>
+                      <span className="font-medium">{event.transitionName.replace(/\n/g, ' ')}</span>
                     </div>
                     <div className="flex items-center space-x-1.5 text-muted-foreground">
                       <Clock className="h-3 w-3 flex-shrink-0" />
@@ -223,7 +223,7 @@ export function EventLog({ events, onClearLog, onExport, canExport, exportDisabl
                           <ul className="space-y-1 pl-2 text-xs">
                             {event.tokens.consumed.map((token, idx) => (
                               <li key={`consumed-${idx}`} className="min-w-0">
-                                <span className="text-muted-foreground">{token.placeName}:</span>
+                                <span className="text-muted-foreground">{token.placeName.replace(/\n/g, ' ')}:</span>
                                 <span className="font-mono bg-muted px-1 rounded ml-2 break-all whitespace-pre-wrap">{token.tokens}</span>
                               </li>
                             ))}
@@ -238,7 +238,7 @@ export function EventLog({ events, onClearLog, onExport, canExport, exportDisabl
                           <ul className="space-y-1 pl-2 text-xs">
                             {event.tokens.produced.map((token, idx) => (
                               <li key={`produced-${idx}`} className="min-w-0">
-                                <span className="text-muted-foreground">{token.placeName}:</span>
+                                <span className="text-muted-foreground">{token.placeName.replace(/\n/g, ' ')}:</span>
                                 <span className="font-mono bg-muted px-1 rounded ml-2 break-all whitespace-pre-wrap">{token.tokens}</span>
                               </li>
                             ))}

@@ -6,6 +6,7 @@ settings:
 
 overrides:
   '@rwth-pads/cpnsim': link:../../rust/cpnsim/pkg
+  pkg: link:../../../rust/cpnsim/pkg
 
 importers:
 
@@ -104,6 +105,9 @@ importers:
       ocpn-viz:
         specifier: git+https://github.com/rwth-pads/ocpn-viz-npm.git
         version: git+https://github.com/rwth-pads/ocpn-viz-npm.git#fdfe0dc3fb6d0f6dec4f4f58b623a353356e5c64
+      pkg:
+        specifier: link:../../../rust/cpnsim/pkg
+        version: link:../../../rust/cpnsim/pkg
       react:
         specifier: ^18.3.1
         version: 18.3.1

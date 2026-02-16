@@ -201,7 +201,7 @@
         {
           "id": "p-aircraft-at-gate",
           "name": "Aircraft\nat Gate",
-          "colorSet": "Aircraft",
+          "colorSet": "AircraftxGate",
           "initialMarking": "",
           "marking": [],
           "position": {
@@ -218,24 +218,9 @@
           }
         },
         {
-          "id": "p-gate-occupied",
-          "name": "Gate\nOccupied",
-          "colorSet": "Gate",
-          "initialMarking": "",
-          "marking": [],
-          "position": {
-            "x": 2600,
-            "y": 400
-          },
-          "size": {
-            "width": 75,
-            "height": 45
-          }
-        },
-        {
           "id": "p-await-cleaning",
           "name": "Await\nCleaning",
-          "colorSet": "Aircraft",
+          "colorSet": "AircraftxGate",
           "initialMarking": "",
           "marking": [],
           "position": {
@@ -280,7 +265,7 @@
         {
           "id": "p-aircraft-fueling",
           "name": "Aircraft\nFueling",
-          "colorSet": "AircraftxFuelTruck",
+          "colorSet": "AircraftxGatexFuelTruck",
           "initialMarking": "",
           "marking": [],
           "position": {
@@ -296,14 +281,14 @@
             "y": 36
           },
           "markingOffset": {
-            "x": 75,
-            "y": -100
+            "x": 62.05854867091554,
+            "y": -11.453227748369514
           }
         },
         {
           "id": "p-aircraft-fueled",
           "name": "Aircraft\nFueled",
-          "colorSet": "Aircraft",
+          "colorSet": "AircraftxGate",
           "initialMarking": "",
           "marking": [],
           "position": {
@@ -313,47 +298,73 @@
           "size": {
             "width": 60,
             "height": 40
+          },
+          "colorSetOffset": {
+            "x": -21.17719663982537,
+            "y": 35
+          },
+          "markingOffset": {
+            "x": 111.77082939936702,
+            "y": -88.93479686761586
           }
         },
         {
           "id": "p-cleaning-crew-avail",
           "name": "Cleaning\nCrew Avail",
-          "colorSet": "UNIT",
-          "initialMarking": "[(), ()]",
+          "colorSet": "Crew",
+          "initialMarking": "[{\"value\":{\"id\":1},\"timestamp\":0},{\"value\":{\"id\":2},\"timestamp\":0}]",
           "marking": [
-            null,
-            null
+            {
+              "value": {
+                "id": 1
+              },
+              "timestamp": 0
+            },
+            {
+              "value": {
+                "id": 2
+              },
+              "timestamp": 0
+            }
           ],
           "position": {
-            "x": 1595.6941795994746,
-            "y": 356.75252375380626
+            "x": 1596.508687162545,
+            "y": 266.34218425301333
           },
           "size": {
             "width": 69,
             "height": 48
+          },
+          "colorSetOffset": {
+            "x": 3.2488476561385573,
+            "y": 31.10138281263373
           },
           "tokenCountOffset": {
             "x": 35,
             "y": -4
           },
           "markingOffset": {
-            "x": 34,
-            "y": 20
+            "x": 52.40467029360963,
+            "y": -32.33828114745236
           }
         },
         {
           "id": "p-aircraft-cleaning",
           "name": "Aircraft\nCleaning",
-          "colorSet": "AircraftxUnit",
+          "colorSet": "AircraftxGatexCrew",
           "initialMarking": "",
           "marking": [],
           "position": {
-            "x": 1596.95812156063,
-            "y": 266.9644572230973
+            "x": 1597.287597624315,
+            "y": 368.7687200107309
           },
           "size": {
             "width": 68,
             "height": 43
+          },
+          "colorSetOffset": {
+            "x": 0,
+            "y": 28.502304687722884
           },
           "markingOffset": {
             "x": 56,
@@ -363,7 +374,7 @@
         {
           "id": "p-aircraft-cleaned",
           "name": "Aircraft\nCleaned",
-          "colorSet": "Aircraft",
+          "colorSet": "AircraftxGate",
           "initialMarking": "",
           "marking": [],
           "position": {
@@ -373,12 +384,16 @@
           "size": {
             "width": 60,
             "height": 40
+          },
+          "markingOffset": {
+            "x": 83.45703234393221,
+            "y": -19.246590093760997
           }
         },
         {
           "id": "p-aircraft-ready",
           "name": "Aircraft\nReady",
-          "colorSet": "Aircraft",
+          "colorSet": "AircraftxGate",
           "initialMarking": "",
           "marking": [],
           "position": {
@@ -449,8 +464,8 @@
           "initialMarking": "",
           "marking": [],
           "position": {
-            "x": 3200,
-            "y": 318
+            "x": 3191.3003190027266,
+            "y": 258
           },
           "size": {
             "width": 73,
@@ -632,7 +647,7 @@
           "codeSegment": "",
           "position": {
             "x": 3000,
-            "y": 320
+            "y": 260
           },
           "size": {
             "width": 60,
@@ -723,47 +738,41 @@
           "target": "t-in-block",
           "inscription": "gate",
           "delay": "",
-          "isBidirectional": false
-        },
-        {
-          "id": "e9",
-          "source": "t-in-block",
-          "target": "p-gate-occupied",
-          "inscription": "gate",
-          "delay": "",
           "isBidirectional": false,
-          "bendpoints": [
-            {
-              "x": 1030,
-              "y": 511.9911230650917
-            },
-            {
-              "x": 2543.7766483233595,
-              "y": 511.9911230650917
-            }
-          ]
+          "labelOffset": {
+            "x": -3.6856730432277507,
+            "y": 0
+          }
         },
         {
           "id": "e10",
           "source": "t-in-block",
           "target": "p-aircraft-at-gate",
-          "inscription": "ac",
+          "inscription": "[ac, gate]",
           "delay": "",
-          "isBidirectional": false
+          "isBidirectional": false,
+          "labelOffset": {
+            "x": -4.88704537842124,
+            "y": -5.701552941491446
+          }
         },
         {
           "id": "e11",
           "source": "t-in-block",
           "target": "p-await-cleaning",
-          "inscription": "ac",
+          "inscription": "[ac, gate]",
           "delay": "",
-          "isBidirectional": false
+          "isBidirectional": false,
+          "labelOffset": {
+            "x": 13.846628572193513,
+            "y": 4.072537815351033
+          }
         },
         {
           "id": "e12",
           "source": "p-aircraft-at-gate",
           "target": "t-fuel-start",
-          "inscription": "ac",
+          "inscription": "[ac, gate]",
           "delay": "",
           "isBidirectional": false
         },
@@ -779,7 +788,7 @@
           "id": "e14",
           "source": "t-fuel-start",
           "target": "p-aircraft-fueling",
-          "inscription": "[ac, ft]",
+          "inscription": "[ac, gate, ft]",
           "delay": "",
           "isBidirectional": false
         },
@@ -787,7 +796,7 @@
           "id": "e15",
           "source": "p-aircraft-fueling",
           "target": "t-fuel-end",
-          "inscription": "[ac, ft]",
+          "inscription": "[ac, gate, ft]",
           "delay": "",
           "isBidirectional": false
         },
@@ -795,7 +804,7 @@
           "id": "e16",
           "source": "t-fuel-end",
           "target": "p-aircraft-fueled",
-          "inscription": "ac",
+          "inscription": "[ac, gate]",
           "delay": "",
           "isBidirectional": false
         },
@@ -811,9 +820,13 @@
           "id": "e18",
           "source": "p-await-cleaning",
           "target": "t-clean-start",
-          "inscription": "ac",
+          "inscription": "[ac, gate]",
           "delay": "",
-          "isBidirectional": false
+          "isBidirectional": false,
+          "labelOffset": {
+            "x": -2.44352268921062,
+            "y": -4.88704537842124
+          }
         },
         {
           "id": "e19",
@@ -827,7 +840,7 @@
           "id": "e20",
           "source": "t-clean-start",
           "target": "p-aircraft-cleaning",
-          "inscription": "[ac, crew]",
+          "inscription": "[ac, gate, crew]",
           "delay": "",
           "isBidirectional": false
         },
@@ -835,7 +848,7 @@
           "id": "e21",
           "source": "p-aircraft-cleaning",
           "target": "t-clean-end",
-          "inscription": "[ac, crew]",
+          "inscription": "[ac, gate, crew]",
           "delay": "",
           "isBidirectional": false
         },
@@ -843,7 +856,7 @@
           "id": "e22",
           "source": "t-clean-end",
           "target": "p-aircraft-cleaned",
-          "inscription": "ac",
+          "inscription": "[ac, gate]",
           "delay": "",
           "isBidirectional": false
         },
@@ -859,7 +872,7 @@
           "id": "e24",
           "source": "p-await-cleaning",
           "target": "t-skip-cleaning",
-          "inscription": "ac",
+          "inscription": "[ac, gate]",
           "delay": "",
           "isBidirectional": false
         },
@@ -867,7 +880,7 @@
           "id": "e25",
           "source": "t-skip-cleaning",
           "target": "p-aircraft-cleaned",
-          "inscription": "ac",
+          "inscription": "[ac, gate]",
           "delay": "",
           "isBidirectional": false
         },
@@ -875,7 +888,7 @@
           "id": "e26",
           "source": "p-aircraft-fueled",
           "target": "t-turnaround-complete",
-          "inscription": "ac",
+          "inscription": "[ac, gate]",
           "delay": "",
           "isBidirectional": false
         },
@@ -883,15 +896,19 @@
           "id": "e27",
           "source": "p-aircraft-cleaned",
           "target": "t-turnaround-complete",
-          "inscription": "ac",
+          "inscription": "[ac, gate]",
           "delay": "",
-          "isBidirectional": false
+          "isBidirectional": false,
+          "labelOffset": {
+            "x": -10.588598319912686,
+            "y": -2.44352268921062
+          }
         },
         {
           "id": "e28",
           "source": "t-turnaround-complete",
           "target": "p-aircraft-ready",
-          "inscription": "ac",
+          "inscription": "[ac, gate]",
           "delay": "",
           "isBidirectional": false
         },
@@ -899,15 +916,7 @@
           "id": "e29",
           "source": "p-aircraft-ready",
           "target": "t-off-block",
-          "inscription": "ac",
-          "delay": "",
-          "isBidirectional": false
-        },
-        {
-          "id": "e30",
-          "source": "p-gate-occupied",
-          "target": "t-off-block",
-          "inscription": "gate",
+          "inscription": "[ac, gate]",
           "delay": "",
           "isBidirectional": false
         },
@@ -936,7 +945,7 @@
           "isBidirectional": false,
           "bendpoints": [
             {
-              "x": 2532.6230940456694,
+              "x": 2630,
               "y": 22.064714854068413
             },
             {
@@ -1032,6 +1041,14 @@
       "timed": true
     },
     {
+      "name": "Crew",
+      "type": "record",
+      "definition": "colset Crew = record id: INT timed;",
+      "color": "#3b82f6",
+      "timed": true,
+      "id": "5ced92a4-a01e-44d3-9055-ce5d2367ce96"
+    },
+    {
       "id": "cs-tug",
       "name": "Tug",
       "type": "record",
@@ -1053,9 +1070,9 @@
       "color": "#06b6d4"
     },
     {
-      "name": "AircraftxFuelTruck",
+      "name": "AircraftxGatexFuelTruck",
       "type": "product",
-      "definition": "colset AircraftxFuelTruck = product Aircraft * FuelTruck timed;",
+      "definition": "colset AircraftxGatexFuelTruck = product Aircraft * Gate * FuelTruck timed;",
       "color": "#3b82f6",
       "timed": true,
       "id": "b4c64c0b-cc0b-41ce-9571-28bd9db40990"
@@ -1069,12 +1086,20 @@
       "id": "1cde1d20-b703-4908-8bb0-0cdc6ff1e5a7"
     },
     {
-      "name": "AircraftxUnit",
+      "name": "AircraftxGatexCrew",
       "type": "product",
-      "definition": "colset AircraftxUnit = product Aircraft * UNIT timed;",
+      "definition": "colset AircraftxGatexCrew = product Aircraft * Gate * Crew timed;",
       "color": "#3b82f6",
       "timed": true,
       "id": "348b98a8-45fd-49ad-80bd-2d3b97eeb534"
+    },
+    {
+      "name": "AircraftxGate",
+      "type": "product",
+      "definition": "colset AircraftxGate = product Aircraft * Gate timed;",
+      "color": "#a93bf5",
+      "timed": true,
+      "id": "9a0a8ad9-8198-4693-8a49-ff807854166a"
     }
   ],
   "variables": [
@@ -1106,7 +1131,7 @@
     {
       "id": "var-crew",
       "name": "crew",
-      "colorSet": "UNIT"
+      "colorSet": "Crew"
     }
   ],
   "priorities": [],

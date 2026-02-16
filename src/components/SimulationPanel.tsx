@@ -51,30 +51,43 @@ interface OCEL2Export {
 }
 
 /**
- * Extract the ID value from a token if it has an 'id' or 'ID' field
+ * Unwrap a timed token wrapper ({value, timestamp}) if present.
+ * WASM tokens store timestamps separately, but some paths may still wrap them.
  */
-function extractIdFromToken(token: unknown): string | number | null {
-  if (token && typeof token === 'object') {
-    const record = token as Record<string, unknown>;
-    if ('id' in record) return record.id as string | number;
-    if ('ID' in record) return record.ID as string | number;
+function unwrapTimedToken(token: unknown): unknown {
+  if (token && typeof token === 'object' && !Array.isArray(token)) {
+    const obj = token as Record<string, unknown>;
+    if ('value' in obj && 'timestamp' in obj) {
+      return obj.value;
+    }
   }
-  return null;
+  return token;
 }
 
 /**
- * Generate a unique object ID from a token's content and its type
- * Includes the type prefix to avoid collisions between different object types
+ * Format an attribute value for OCEL 2.0.
+ * Avoids producing "[object Object]" for nested values.
  */
-function generateObjectId(token: unknown, typeName: string): string {
+function formatAttributeValue(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
+/**
+ * Generate a stable object ID from a record token using its 'id'/'ID' field.
+ * Falls back to a content hash if no id field is present.
+ */
+function stableObjectId(token: unknown, typeName: string): string {
   const typePrefix = typeName.toLowerCase();
-  // Try to use an 'id' or 'ID' field if present
-  const idValue = extractIdFromToken(token);
-  if (idValue !== null) {
-    return `${typePrefix}_${idValue}`;
+  const unwrapped = unwrapTimedToken(token);
+  if (unwrapped && typeof unwrapped === 'object' && !Array.isArray(unwrapped)) {
+    const record = unwrapped as Record<string, unknown>;
+    if ('id' in record) return `${typePrefix}_${record.id}`;
+    if ('ID' in record) return `${typePrefix}_${record.ID}`;
   }
-  // Fallback: use stringified content hash
-  const hash = JSON.stringify(token).split('').reduce((a, b) => {
+  // Fallback: content hash
+  const hash = JSON.stringify(unwrapped).split('').reduce((a, b) => {
     a = ((a << 5) - a) + b.charCodeAt(0);
     return a & a;
   }, 0);
@@ -82,7 +95,32 @@ function generateObjectId(token: unknown, typeName: string): string {
 }
 
 /**
- * Convert simulation events and model data to OCEL 2.0 format
+ * Parse product color set definitions to extract component record type names.
+ * e.g., "colset AircraftxGate = product Aircraft * Gate timed;" → ["Aircraft", "Gate"]
+ */
+function parseProductComponents(
+  colorSets: { name: string; type: string; definition: string }[]
+): Map<string, string[]> {
+  const result = new Map<string, string[]>();
+  for (const cs of colorSets) {
+    if (cs.type !== 'product') continue;
+    const match = cs.definition.match(/=\s*product\s+(.+?)(?:\s+timed)?;/);
+    if (match) {
+      const components = match[1].split('*').map(s => s.trim());
+      result.set(cs.name, components);
+    }
+  }
+  return result;
+}
+
+/**
+ * Convert simulation events and model data to OCEL 2.0 format.
+ *
+ * Handles:
+ * - Record color sets: tokens are objects with fields (id, name, etc.)
+ * - Product color sets: tokens are arrays of component record objects
+ * - Stable object identity based on record type + id field
+ * - Proper attribute serialization (no "[object Object]")
  */
 function convertToOCEL2(
   events: SimulationEvent[],
@@ -91,20 +129,20 @@ function convertToOCEL2(
   places: { id: string; name: string; colorSet: string }[],
   simulationEpoch: string | null
 ): OCEL2Export {
-  // Build ObjectTypes from Record ColorSets
+  // --- Build ObjectTypes from Record ColorSets ---
   const objectTypes: OCEL2ObjectType[] = [];
   const recordColorSets = colorSets.filter(cs => cs.type === 'record');
-  
+  const recordColorSetNames = new Set(recordColorSets.map(cs => cs.name));
+
   for (const cs of recordColorSets) {
-    // Parse record fields from definition like "colset OBJECT = record id: INT * name: STRING * age: INT;"
     const attributes: { name: string; type: string }[] = [];
-    const recordMatch = cs.definition.match(/=\s*record\s+(.+);/);
+    // Parse record fields: "colset X = record id: INT * name: STRING timed;"
+    const recordMatch = cs.definition.match(/=\s*record\s+(.+?)(?:\s+timed)?;/);
     if (recordMatch) {
       const fieldsStr = recordMatch[1];
       const fields = fieldsStr.split('*').map(f => f.trim());
       for (const field of fields) {
         const [name, type] = field.split(':').map(s => s.trim());
-        // Skip the 'id' field - it's used as the object identifier, not an attribute
         if (name && type && name.toLowerCase() !== 'id') {
           attributes.push({ name: name.toLowerCase(), type: type.toLowerCase() });
         }
@@ -112,148 +150,156 @@ function convertToOCEL2(
     }
     objectTypes.push({ name: cs.name, attributes });
   }
-  
-  // Build EventTypes from transitions
+
+  // --- Parse product color sets → component types ---
+  const productComponentsMap = parseProductComponents(colorSets);
+
+  // --- Build EventTypes from transitions ---
   const eventTypes: OCEL2EventType[] = transitions.map(t => ({
     name: t.name || t.id,
-    attributes: [] // Transitions don't have custom attributes in our model yet
+    attributes: [],
   }));
-  
-  // Build a map from place ID to its ColorSet
+
+  // --- Build place ID → ColorSet name map ---
   const placeColorSetMap = new Map<string, string>();
   for (const place of places) {
     placeColorSetMap.set(place.id, place.colorSet);
   }
-  
-  // Track unique objects by their generated ID
+
+  // --- Track unique objects ---
   const objectsMap = new Map<string, OCEL2Object>();
-  
-  // Build Events and extract Objects
+
+  /**
+   * Register a single record object. Returns the stable objectId.
+   * Only registers the object once (first occurrence sets attributes).
+   */
+  function registerObject(token: unknown, typeName: string, eventTime: string): string {
+    const unwrapped = unwrapTimedToken(token);
+    const objectId = stableObjectId(unwrapped, typeName);
+
+    if (!objectsMap.has(objectId)) {
+      const attributes: { name: string; time: string; value: string }[] = [];
+      if (unwrapped && typeof unwrapped === 'object' && !Array.isArray(unwrapped)) {
+        for (const [key, value] of Object.entries(unwrapped as Record<string, unknown>)) {
+          if (key.toLowerCase() === 'id') continue; // id is the object identifier, not an attribute
+          attributes.push({
+            name: key.toLowerCase(),
+            time: eventTime,
+            value: formatAttributeValue(value),
+          });
+        }
+      }
+      objectsMap.set(objectId, {
+        id: objectId,
+        type: typeName,
+        attributes,
+        relationships: [],
+      });
+    }
+    return objectId;
+  }
+
+  /**
+   * Process a token from a place, potentially decomposing product tokens
+   * into individual record objects.
+   * Returns a map of objectId → typeName for all extracted objects.
+   */
+  function processToken(
+    token: unknown,
+    colorSetName: string,
+    eventTime: string
+  ): Map<string, string> {
+    const result = new Map<string, string>();
+
+    if (recordColorSetNames.has(colorSetName)) {
+      // Direct record type — register the token as an object
+      const oid = registerObject(token, colorSetName, eventTime);
+      result.set(oid, colorSetName);
+    } else if (productComponentsMap.has(colorSetName)) {
+      // Product type — decompose into component record objects
+      const componentTypes = productComponentsMap.get(colorSetName)!;
+      const unwrapped = unwrapTimedToken(token);
+
+      if (Array.isArray(unwrapped) && unwrapped.length === componentTypes.length) {
+        for (let i = 0; i < componentTypes.length; i++) {
+          const compType = componentTypes[i];
+          if (recordColorSetNames.has(compType)) {
+            const oid = registerObject(unwrapped[i], compType, eventTime);
+            result.set(oid, compType);
+          }
+        }
+      }
+    }
+    return result;
+  }
+
+  // --- Build OCEL Events ---
   const ocelEvents: OCEL2Event[] = [];
-  
-  // Get epoch for simulation time calculation
   const epochDate = simulationEpoch ? new Date(simulationEpoch) : null;
-  
+
   for (const event of events) {
     const eventId = `e${event.step}`;
     const eventType = event.transitionName;
-    // Use simulation time (epoch + event.time) for OCEL export, fallback to wall-clock if no epoch
-    const eventTime = epochDate 
+    const eventTime = epochDate
       ? new Date(epochDate.getTime() + event.time).toISOString()
       : event.timestamp.toISOString();
-    
-    // Track unique objects involved in this event (to avoid duplicates)
-    // Map objectId -> colorSetName (for qualifier)
+
+    // Collect all objects involved in this event (deduped by objectId)
     const involvedObjects = new Map<string, string>();
-    
-    // Process consumed tokens
-    for (const consumed of event.tokens.consumed) {
-      const colorSetName = placeColorSetMap.get(consumed.placeId);
-      const isRecordType = recordColorSets.some(cs => cs.name === colorSetName);
-      
-      if (isRecordType && colorSetName) {
-        try {
-          const tokens = JSON.parse(consumed.tokens);
-          if (Array.isArray(tokens)) {
-            for (const token of tokens) {
-              const objectId = generateObjectId(token, colorSetName);
-              
-              // Add object if not already tracked
-              if (!objectsMap.has(objectId)) {
-                const attributes: { name: string; time: string; value: string }[] = [];
-                if (token && typeof token === 'object') {
-                  for (const [key, value] of Object.entries(token)) {
-                    // Skip the id field as it's already used as object id
-                    if (key.toLowerCase() === 'id') continue;
-                    attributes.push({
-                      name: key.toLowerCase(),
-                      time: eventTime,
-                      value: String(value)
-                    });
-                  }
-                }
-                objectsMap.set(objectId, {
-                  id: objectId,
-                  type: colorSetName,
-                  attributes,
-                  relationships: [] // No object-to-object relations yet
-                });
-              }
-              
-              // Track this object as involved in this event (with its type)
-              involvedObjects.set(objectId, colorSetName);
+
+    // Process consumed and produced tokens
+    const allTokenMovements = [
+      ...event.tokens.consumed,
+      ...event.tokens.produced,
+    ];
+
+    for (const movement of allTokenMovements) {
+      const colorSetName = placeColorSetMap.get(movement.placeId);
+      if (!colorSetName) continue;
+
+      // Only process record and product types (skip UNIT, INT, STRING, etc.)
+      const isRelevant =
+        recordColorSetNames.has(colorSetName) ||
+        productComponentsMap.has(colorSetName);
+      if (!isRelevant) continue;
+
+      try {
+        const tokens = JSON.parse(movement.tokens);
+        if (Array.isArray(tokens)) {
+          for (const token of tokens) {
+            const extracted = processToken(token, colorSetName, eventTime);
+            for (const [oid, typeName] of extracted) {
+              involvedObjects.set(oid, typeName);
             }
           }
-        } catch {
-          // Skip if tokens can't be parsed
         }
+      } catch {
+        // Skip if tokens can't be parsed
       }
     }
-    
-    // Process produced tokens
-    for (const produced of event.tokens.produced) {
-      const colorSetName = placeColorSetMap.get(produced.placeId);
-      const isRecordType = recordColorSets.some(cs => cs.name === colorSetName);
-      
-      if (isRecordType && colorSetName) {
-        try {
-          const tokens = JSON.parse(produced.tokens);
-          if (Array.isArray(tokens)) {
-            for (const token of tokens) {
-              const objectId = generateObjectId(token, colorSetName);
-              
-              // Add object if not already tracked
-              if (!objectsMap.has(objectId)) {
-                const attributes: { name: string; time: string; value: string }[] = [];
-                if (token && typeof token === 'object') {
-                  for (const [key, value] of Object.entries(token)) {
-                    // Skip the id field as it's already used as object id
-                    if (key.toLowerCase() === 'id') continue;
-                    attributes.push({
-                      name: key.toLowerCase(),
-                      time: eventTime,
-                      value: String(value)
-                    });
-                  }
-                }
-                objectsMap.set(objectId, {
-                  id: objectId,
-                  type: colorSetName,
-                  attributes,
-                  relationships: []
-                });
-              }
-              
-              // Track this object as involved in this event (with its type)
-              involvedObjects.set(objectId, colorSetName);
-            }
-          }
-        } catch {
-          // Skip if tokens can't be parsed
-        }
-      }
-    }
-    
-    // Create relationships from unique involved objects with type-based qualifiers
-    const relationships = Array.from(involvedObjects.entries()).map(([objectId, typeName]) => ({
-      objectId,
-      qualifier: typeName.toLowerCase()
-    }));
-    
+
+    // Create event-to-object relationships
+    const relationships = Array.from(involvedObjects.entries()).map(
+      ([objectId, typeName]) => ({
+        objectId,
+        qualifier: typeName.toLowerCase(),
+      })
+    );
+
     ocelEvents.push({
       id: eventId,
       type: eventType,
       time: eventTime,
       attributes: [],
-      relationships
+      relationships,
     });
   }
-  
+
   return {
     objectTypes,
     eventTypes,
     objects: Array.from(objectsMap.values()),
-    events: ocelEvents
+    events: ocelEvents,
   };
 }
 
@@ -277,7 +323,8 @@ export function SimulationPanel() {
   const [tempConfig, setTempConfig] = useState<SimulationConfig>(simulationConfig);
   const [filteredTransitionIds, setFilteredTransitionIds] = useState<Set<string> | null>(null);
 
-  // Build transition filter items: list all transitions and mark which ones involve record-typed places
+  // Build transition filter items: list all transitions and mark which ones involve record-typed or product-typed places
+  // (product places contain record objects, so they are relevant for OCEL export)
   const transitionFilterItems: TransitionFilterItem[] = useMemo(() => {
     if (!activePetriNetId) return [];
     const petriNet = petriNetsById[activePetriNetId];
@@ -287,20 +334,29 @@ export function SimulationPanel() {
       colorSets.filter(cs => cs.type === 'record').map(cs => cs.name)
     );
 
-    // Build a set of place IDs that use record color sets
-    const recordPlaceIds = new Set(
+    // Product color sets also contain record objects as components
+    const productColorSetNames = new Set(
+      colorSets.filter(cs => cs.type === 'product').map(cs => cs.name)
+    );
+
+    // Build a set of place IDs that use record or product color sets
+    const objectPlaceIds = new Set(
       petriNet.nodes
-        .filter(n => n.type === 'place' && recordColorSetNames.has((n.data?.colorSet as string) || ''))
+        .filter(n => {
+          if (n.type !== 'place') return false;
+          const cs = (n.data?.colorSet as string) || '';
+          return recordColorSetNames.has(cs) || productColorSetNames.has(cs);
+        })
         .map(n => n.id)
     );
 
-    // For each transition, check if any connected arc touches a record-typed place
+    // For each transition, check if any connected arc touches a record/product-typed place
     const transitions = petriNet.nodes.filter(n => n.type === 'transition');
     return transitions.map(t => {
       const involvesRecord = petriNet.edges.some(
         e =>
-          (e.source === t.id && recordPlaceIds.has(e.target)) ||
-          (e.target === t.id && recordPlaceIds.has(e.source))
+          (e.source === t.id && objectPlaceIds.has(e.target)) ||
+          (e.target === t.id && objectPlaceIds.has(e.source))
       );
       return {
         id: t.id,

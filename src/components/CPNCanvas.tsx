@@ -67,9 +67,12 @@ import { LayoutOptions } from '@/components/LayoutPopover';
 import { SimulationContext } from '@/context/useSimulationContextHook';
 
 const selector = (state: StoreState) => ({
+  ocpnName: state.ocpnName,
+  setOcpnName: state.setOcpnName,
   petriNetOrder: state.petriNetOrder,
   petriNetsById: state.petriNetsById,
   activePetriNetId: state.activePetriNetId,
+  activeMode: state.activeMode,
   colorSets: state.colorSets,
   variables: state.variables,
   priorities: state.priorities,
@@ -108,6 +111,8 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
   const [renamePetriNetDialogOpen, setRenamePetriNetDialogOpen] = useState(false);
   const [renamePetriNetId, setRenamePetriNetId] = useState<string | null>(null);
   const [renamePetriNetValue, setRenamePetriNetValue] = useState('');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editingNameValue, setEditingNameValue] = useState('');
 
   const [isDialOpen, setIsDialOpen] = useState(false);
   const [dialPosition, setDialPosition] = useState({ x: 0, y: 0 });
@@ -122,9 +127,12 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
   const simulationContext = useContext(SimulationContext); // Get simulation context
   
   const {
+    ocpnName,
+    setOcpnName,
     petriNetOrder,
     petriNetsById,
     activePetriNetId,
+    activeMode,
     colorSets,
     variables,
     priorities,
@@ -275,6 +283,15 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       // Reset the current state
       reset();
 
+      // Restore OCPN name from file, or derive from filename
+      if (data.ocpnName) {
+        setOcpnName(data.ocpnName);
+      } else {
+        // Derive name from filename without extension
+        const baseName = fileName.replace(/\.\w+$/, '');
+        setOcpnName(baseName);
+      }
+
       // Iterate over the array of Petri nets and add them to the store
       Object.values(data.petriNetsById).forEach((petriNet) => {
         useStore.getState().addPetriNet(petriNet);
@@ -355,6 +372,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     let filename: string
 
     const petriNetData: PetriNetData = {
+      ocpnName,
       petriNetsById,
       petriNetOrder,
       colorSets,
@@ -391,18 +409,18 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
           ),
         });
         //filename = `${petriNetsById.name.replace(/\s+/g, "_")}.cpn`;
-        filename = 'PetriNet.cpn';
+        filename = `${ocpnName.replace(/\s+/g, '_')}.cpn`;
         break;
       case "cpn-py":
         content = convertToCPNPyJSON(petriNetData);
         //filename = `${petriNetData.name.replace(/\s+/g, "_")}.json`;
-        filename = 'PetriNet.json';
+        filename = `${ocpnName.replace(/\s+/g, '_')}.json`;
         break;
       case "json":
       default:
         content = convertToJSON(petriNetData);
         //filename = `${petriNetData.name.replace(/\s+/g, "_")}.ocpn`;
-        filename = 'PetriNet.ocpn';
+        filename = `${ocpnName.replace(/\s+/g, '_')}.ocpn`;
         break;
     }
 
@@ -937,7 +955,44 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
               </Tooltip>
             </TooltipProvider>
           </div>
-          <SimulationToolbar/>
+          {/* Editable OCPN Name */}
+          <div className="flex items-center">
+            {isEditingName ? (
+              <input
+                className="text-base font-semibold bg-transparent border-b border-foreground/30 outline-none px-1 py-0.5 text-center"
+                value={editingNameValue}
+                onChange={(e) => setEditingNameValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    if (editingNameValue.trim()) {
+                      setOcpnName(editingNameValue.trim());
+                    }
+                    setIsEditingName(false);
+                  } else if (e.key === 'Escape') {
+                    setIsEditingName(false);
+                  }
+                }}
+                onBlur={() => {
+                  if (editingNameValue.trim()) {
+                    setOcpnName(editingNameValue.trim());
+                  }
+                  setIsEditingName(false);
+                }}
+                autoFocus
+              />
+            ) : (
+              <button
+                className="text-base font-semibold text-foreground hover:text-foreground/70 transition-colors cursor-pointer px-1 py-0.5"
+                onClick={() => {
+                  setEditingNameValue(ocpnName);
+                  setIsEditingName(true);
+                }}
+                title="Click to rename"
+              >
+                {ocpnName}
+              </button>
+            )}
+          </div>
           <AssistanceToolbar onToggleAIAssistant={onToggleAIAssistant} />
         </div>
 
@@ -947,7 +1002,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
           open={saveDialogOpen}
           onOpenChange={setSaveDialogOpen}
           onSave={handleSave}
-          petriNetName="Petri Net" //{activePetriNetName}
+          petriNetName={ocpnName}
         />
 
         {/* A Tab bar with the names of the Petri nets */}
@@ -974,24 +1029,24 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
                   {petriNetsById[id].name}
                 </TabsTrigger>
               ))}
-                {/* <Button variant="ghost" onClick={() => setNewPetriNetDialogOpen(true)}>New Subnet</Button> */}
+                <Button variant="ghost" onClick={() => setNewPetriNetDialogOpen(true)}>New Subpage</Button>
               <Dialog open={newPetriNetDialogOpen} onOpenChange={setNewPetriNetDialogOpen}>
                 <DialogContent className="p-4">
                   <DialogHeader>
-                    <DialogTitle>Add New Subnet</DialogTitle>
+                    <DialogTitle>Add New Subpage</DialogTitle>
                   </DialogHeader>
                   <form onSubmit={handleAddPetriNet} className="space-y-2">
                     <div className="space-y-1">
-                      <Label htmlFor="petri-net-name">Subnet Name</Label>
+                      <Label htmlFor="petri-net-name">Subpage Name</Label>
                       <Input
                         id="petri-net-name"
-                        placeholder="Enter Petri Net name"
+                        placeholder="Enter subpage name"
                         value={newPetriNetName}
                         onChange={(e) => setNewPetriNetName(e.target.value)}
                       />
                     </div>
                     <Button type="submit" className="w-full">
-                      Add Petri Net
+                      Add Subpage
                     </Button>
                   </form>
                 </DialogContent>
@@ -999,7 +1054,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
               <Dialog open={renamePetriNetDialogOpen} onOpenChange={setRenamePetriNetDialogOpen}>
                 <DialogContent className="p-4">
                   <DialogHeader>
-                    <DialogTitle>Rename Petri Net</DialogTitle>
+                    <DialogTitle>Rename Subpage</DialogTitle>
                   </DialogHeader>
                   <form onSubmit={handleRenamePetriNet} className="space-y-2">
                     <div className="space-y-1">
@@ -1056,7 +1111,13 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
             <MiniMap />
             <Controls />
             <Panel position="top-center">
-              <Toolbar toggleArcMode={toggleArcMode} onApplyLayout={(options) => petriNet && applyLayout(options, petriNet.nodes, petriNet.edges)}/>
+              {activeMode === 'simulation' ? (
+                <div className="bg-background border rounded-lg p-2 shadow-sm">
+                  <SimulationToolbar />
+                </div>
+              ) : (
+                <Toolbar toggleArcMode={toggleArcMode} onApplyLayout={(options) => petriNet && applyLayout(options, petriNet.nodes, petriNet.edges)}/>
+              )}
             </Panel>
             <BoomerDial
               slices={slices}

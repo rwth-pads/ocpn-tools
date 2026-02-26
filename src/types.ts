@@ -45,10 +45,14 @@ export type SelectedElement =
   | { type: 'edge'; element: Edge }
   | null;
 
+export type ActiveMode = 'model' | 'simulation';
+
 export type AppState = {
+  ocpnName: string; // Top-level name for the OCPN project
   petriNetsById: Record<string, PetriNet>;
   petriNetOrder: string[]; // IDs in tab order
   activePetriNetId: string | null;
+  activeMode: ActiveMode; // Whether the UI is in model editing or simulation mode
   colorSets: ColorSet[];
   variables: Variable[];
   priorities: Priority[];
@@ -100,6 +104,8 @@ export type AppActions = {
 
   toggleArcMode: (state: boolean, arcType?: ArcType) => void;
   setActiveArcType: (arcType: ArcType) => void;
+  setActiveMode: (mode: ActiveMode) => void;
+  setOcpnName: (name: string) => void;
   setSimulationEpoch: (epoch: string | null) => void;
   setShowMarkingDisplay: (show: boolean) => void;
   reset: () => void;

@@ -1,8 +1,9 @@
 {
+  "ocpnName": "Airport Ground Handling",
   "petriNets": [
     {
       "id": "airport-net",
-      "name": "Airport Ground Handling",
+      "name": "Main",
       "places": [
         {
           "id": "p-aircraft-queue",

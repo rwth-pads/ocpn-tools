@@ -13,6 +13,8 @@ import { SimulationPanel } from '@/components/SimulationPanel';
 import { DeclarationManager } from '@/components/DeclarationManager';
 import { TabsContent } from '@radix-ui/react-tabs';
 
+import type { ActiveMode } from '@/types';
+
 const Sidebar = () => {
   // Access selectedElement from the store
   const selectedElement = useStore((state) => {
@@ -22,6 +24,8 @@ const Sidebar = () => {
 
   const colorSets = useStore((state) => state.colorSets);
   const priorities = useStore((state) => state.priorities);
+  const activeMode = useStore((state) => state.activeMode);
+  const setActiveMode = useStore((state) => state.setActiveMode);
 
   const renderElementProperties = () => {
     if (!selectedElement) {
@@ -63,7 +67,7 @@ const Sidebar = () => {
         <h3 className="text-lg font-medium">OCPN Tools</h3>
       </div>
       <div className="px-4 py-2 flex-1 flex flex-col overflow-hidden">
-        <Tabs defaultValue="model" className="flex flex-col flex-1 overflow-hidden">
+        <Tabs value={activeMode} onValueChange={(v) => setActiveMode(v as ActiveMode)} className="flex flex-col flex-1 overflow-hidden">
           <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
             <TabsTrigger value="model">Model</TabsTrigger>
             <TabsTrigger value="simulation">Simulation</TabsTrigger>

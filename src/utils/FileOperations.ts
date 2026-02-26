@@ -6,6 +6,7 @@ import { PlaceNodeProps } from '@/nodes/PlaceNode';
 import { TransitionNodeProps } from '@/nodes/TransitionNode';
 
 export type PetriNetData = {
+  ocpnName?: string; // Top-level OCPN project name
   petriNetsById: Record<string, PetriNet>;
   petriNetOrder: string[];
   colorSets: ColorSet[]
@@ -229,6 +230,7 @@ export function convertToCPNPyJSON(data: PetriNetData): string {
 // Convert Petri Net data to JSON format
 export function convertToJSON(data: PetriNetData): string {
   const transformedData = {
+    ocpnName: data.ocpnName || undefined,
     petriNets: data.petriNetOrder.map((id) => {
       const petriNet = data.petriNetsById[id];
       return {
@@ -406,6 +408,7 @@ export function parseJSON(content: string): PetriNetData {
   } : undefined;
 
   return {
+    ocpnName: parsedData.ocpnName || undefined,
     petriNetsById,
     petriNetOrder,
     colorSets,

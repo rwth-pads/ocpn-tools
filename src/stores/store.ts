@@ -20,9 +20,11 @@ import type { ArcType } from '@/types';
 
 // define the initial state
 const emptyState: AppState = {
+  ocpnName: 'Demo OCPN',
   petriNetsById: {},
   petriNetOrder: [],
   activePetriNetId: null,
+  activeMode: 'model',
   colorSets: [],
   variables: [],
   priorities: [],
@@ -40,7 +42,7 @@ const initialPetriNetId = "ID6";
 
 const initialPetriNet: PetriNet = {
   id: initialPetriNetId,
-  name: "Petri Net",
+  name: "Main",
   nodes: initialNodes,
   edges: initialEdges,
   selectedElement: null,
@@ -82,6 +84,7 @@ const stripTransientPetriNetFields = (petriNetsById: Record<string, PetriNet>) =
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useStore = create<StoreState>()(temporal((set) => ({
+  ocpnName: 'Demo OCPN',
   petriNetsById: {
     [initialPetriNetId]: initialPetriNet,
   },
@@ -96,6 +99,7 @@ const useStore = create<StoreState>()(temporal((set) => ({
   showMarkingDisplay: true,
   isArcMode: false,
   activeArcType: 'normal' as ArcType,
+  activeMode: 'model',
 
   // Actions
   setNodes: (petriNetId: string, nodes: Node[]) => {
@@ -643,6 +647,16 @@ const useStore = create<StoreState>()(temporal((set) => ({
   set(() => ({
     activeArcType: arcType,
   })),
+
+  setActiveMode: (mode) =>
+    set(() => ({
+      activeMode: mode,
+    })),
+
+  setOcpnName: (name: string) =>
+    set(() => ({
+      ocpnName: name,
+    })),
 
   setSimulationEpoch: (epoch: string | null) =>
     set(() => ({

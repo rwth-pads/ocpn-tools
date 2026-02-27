@@ -94,7 +94,8 @@ export function ObjectEvolutionPanel({ simulationTimeRange }: ObjectEvolutionPan
             const parts = pair.split(':'); // Split name and type by ':'
             if (parts.length === 2) {
               const name = parts[0].trim();
-              const typeString = parts[1].trim();
+              // Strip 'timed' suffix if present (e.g., "INT timed" → "INT")
+              const typeString = parts[1].trim().replace(/\s+timed$/i, '');
 
               // Map CPN Tools types to Attribute types
               let type: Attribute["type"] = "string"; // Default type

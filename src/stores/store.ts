@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { temporal } from 'zundo';
 import { Node, Edge } from '@xyflow/react';
 import { AppState, AppActions, PetriNet, SelectedElement } from '@/types';
+import type { FusionSet } from '@/types';
 
 import { v4 as uuidv4 } from 'uuid';
 
@@ -34,6 +35,7 @@ const emptyState: AppState = {
   showMarkingDisplay: true,
   isArcMode: false,
   activeArcType: 'normal' as ArcType,
+  fusionSets: [],
 }
 
 export type StoreState = AppState & AppActions;
@@ -61,6 +63,7 @@ let _realHandleSet: ((state: any, replace: any) => void) | undefined;
 const stripTransientPetriNetFields = (petriNetsById: Record<string, PetriNet>) => {
   const result: Record<string, { id: string; name: string; nodes: { id: string; type?: string; position: { x: number; y: number }; data: Record<string, unknown> }[]; edges: { id: string; source: string; target: string; label?: unknown; data?: Record<string, unknown> }[] }> = {};
   for (const [id, pn] of Object.entries(petriNetsById)) {
+    if (!pn || !pn.nodes || !pn.edges) continue;
     result[id] = {
       id: pn.id,
       name: pn.name,
@@ -100,6 +103,7 @@ const useStore = create<StoreState>()(temporal((set) => ({
   isArcMode: false,
   activeArcType: 'normal' as ArcType,
   activeMode: 'model',
+  fusionSets: [],
 
   // Actions
   setNodes: (petriNetId: string, nodes: Node[]) => {
@@ -159,15 +163,63 @@ const useStore = create<StoreState>()(temporal((set) => ({
     }));
   },
   setActivePetriNet: (id) => {
-    set((state) => ({
-      activePetriNetId: id,
-      petriNetsById: {
-        ...state.petriNetsById,
-        [id]: {
-          ...state.petriNetsById[id],
-          selectedElement: null,
+    set((state) => {
+      // Guard: don't switch to a non-existent petri net
+      if (!state.petriNetsById[id]) return state;
+      return {
+        activePetriNetId: id,
+        petriNetsById: {
+          ...state.petriNetsById,
+          [id]: {
+            ...state.petriNetsById[id],
+            selectedElement: null,
+          },
         },
+      };
+    });
+  },
+  duplicatePetriNet: (id) => {
+    const state = useStore.getState();
+    const source = state.petriNetsById[id];
+    if (!source) return;
+
+    // Build ID remap table
+    const idMap = new Map<string, string>();
+    source.nodes.forEach((n) => idMap.set(n.id, uuidv4()));
+    source.edges.forEach((e) => idMap.set(e.id, uuidv4()));
+
+    const newId = uuidv4();
+    const remappedNodes = source.nodes.map((n) => ({
+      ...n,
+      id: idMap.get(n.id)!,
+      data: {
+        ...n.data,
+        // Clear hierarchy links — duplicated subpage is disconnected
+        subPageId: undefined,
+        socketAssignments: undefined,
+        portType: undefined,
+        fusionSetId: undefined,
       },
+    }));
+    const remappedEdges = source.edges.map((e) => ({
+      ...e,
+      id: idMap.get(e.id)!,
+      source: idMap.get(e.source) || e.source,
+      target: idMap.get(e.target) || e.target,
+    }));
+
+    const newNet: PetriNet = {
+      id: newId,
+      name: `${source.name} (copy)`,
+      nodes: remappedNodes,
+      edges: remappedEdges,
+      selectedElement: null,
+    };
+
+    set((s) => ({
+      petriNetsById: { ...s.petriNetsById, [newId]: newNet },
+      petriNetOrder: [...s.petriNetOrder, newId],
+      activePetriNetId: newId,
     }));
   },
   renamePetriNet: (id: string, newName: string) => {
@@ -181,6 +233,43 @@ const useStore = create<StoreState>()(temporal((set) => ({
       },
     }));
   },
+  deletePetriNet: (id: string) =>
+    set((state) => {
+      // Cannot delete the main (first) net
+      if (state.petriNetOrder[0] === id) return state;
+      // Clean up substitution transitions in other nets that reference this subpage
+      const updatedNetsById = { ...state.petriNetsById };
+      for (const [netId, net] of Object.entries(updatedNetsById)) {
+        if (netId === id) continue;
+        const hasReference = net.nodes.some(
+          (n) => n.type === 'transition' && n.data?.subPageId === id
+        );
+        if (hasReference) {
+          updatedNetsById[netId] = {
+            ...net,
+            nodes: net.nodes.map((n) => {
+              if (n.type === 'transition' && n.data?.subPageId === id) {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { subPageId, socketAssignments, ...restData } = n.data as Record<string, unknown>;
+                return { ...n, data: restData };
+              }
+              return n;
+            }),
+          };
+        }
+      }
+      delete updatedNetsById[id];
+      const newOrder = state.petriNetOrder.filter((pid) => pid !== id);
+      return {
+        petriNetsById: updatedNetsById,
+        petriNetOrder: newOrder,
+        activePetriNetId: state.activePetriNetId === id ? newOrder[0] : state.activePetriNetId,
+      };
+    }),
+  reorderPetriNets: (newOrder: string[]) =>
+    set(() => ({
+      petriNetOrder: newOrder,
+    })),
 
   // Add a new node to a petri net
   addNode: (petriNetId: string, newNode: Node) => {
@@ -232,19 +321,24 @@ const useStore = create<StoreState>()(temporal((set) => ({
   },
   updateNodeMarking: (id: string, newMarking: unknown[]) => {
     set((state) => {
-      const petriNet = state.petriNetsById[state.activePetriNetId!];
-      const updatedNodes = petriNet.nodes.map((node) =>
-        node.id === id ? { ...node, data: { ...node.data, marking: newMarking } } : node
-      );
-      return {
-        petriNetsById: {
-          ...state.petriNetsById,
-          [state.activePetriNetId!]: {
-            ...petriNet,
-            nodes: updatedNodes,
-          },
-        },
-      };
+      // Search across all petri nets for the node (supports subpage places during simulation)
+      const updatedNetsById = { ...state.petriNetsById };
+      let found = false;
+      for (const [netId, net] of Object.entries(updatedNetsById)) {
+        const nodeIndex = net.nodes.findIndex((n) => n.id === id);
+        if (nodeIndex !== -1) {
+          updatedNetsById[netId] = {
+            ...net,
+            nodes: net.nodes.map((node) =>
+              node.id === id ? { ...node, data: { ...node.data, marking: newMarking } } : node
+            ),
+          };
+          found = true;
+          break;
+        }
+      }
+      if (!found) return state;
+      return { petriNetsById: updatedNetsById };
     });
   },
   // Update node data
@@ -401,82 +495,80 @@ const useStore = create<StoreState>()(temporal((set) => ({
     });
   },
 
-  // Set marking = initialMarking for all places in the store
+  // Set marking = initialMarking for all places across all nets
   applyInitialMarkings: () => {
     set((state) => {
-      const petriNet = state.petriNetsById[state.activePetriNetId!];
-      const updatedNodes = petriNet.nodes.map((node) => {
-        if (node.type === 'place') {
-          let marking: (string | number | null)[] = []; // Include null for unit tokens
-          if (node.data.initialMarking) {
-            try {
-              if (typeof node.data.initialMarking === 'string' && node.data.initialMarking.trim() !== '') {
-                let parsedMarking: (string | number | null)[] = []; // Include null for unit tokens
-                
-                // Check for UNIT type marking: [(), (), ...]
-                const unitMatch = node.data.initialMarking.match(/^\s*\[\s*((?:\(\)\s*,?\s*)*)\s*\]\s*$/);
-                if (unitMatch) {
-                  // Count the number of () in the array
-                  const unitCount = (node.data.initialMarking.match(/\(\)/g) || []).length;
-                  // Create array of null values to represent unit tokens
-                  parsedMarking = Array(unitCount).fill(null);
-                } else if (node.data.initialMarking.endsWith('.all()')) {
-                  const colorSetName = node.data.initialMarking.substring(0, node.data.initialMarking.length - '.all()'.length).trim();
-                  const colorSet = state.colorSets.find(cs => cs.name === colorSetName);
+      const updatedNetsById = { ...state.petriNetsById };
+      for (const [netId, petriNet] of Object.entries(updatedNetsById)) {
+        const updatedNodes = petriNet.nodes.map((node) => {
+          if (node.type === 'place') {
+            let marking: (string | number | null)[] = []; // Include null for unit tokens
+            if (node.data.initialMarking) {
+              try {
+                if (typeof node.data.initialMarking === 'string' && node.data.initialMarking.trim() !== '') {
+                  let parsedMarking: (string | number | null)[] = []; // Include null for unit tokens
+                  
+                  // Check for UNIT type marking: [(), (), ...]
+                  const unitMatch = node.data.initialMarking.match(/^\s*\[\s*((?:\(\)\s*,?\s*)*)\s*\]\s*$/);
+                  if (unitMatch) {
+                    // Count the number of () in the array
+                    const unitCount = (node.data.initialMarking.match(/\(\)/g) || []).length;
+                    // Create array of null values to represent unit tokens
+                    parsedMarking = Array(unitCount).fill(null);
+                  } else if (node.data.initialMarking.endsWith('.all()')) {
+                    const colorSetName = node.data.initialMarking.substring(0, node.data.initialMarking.length - '.all()'.length).trim();
+                    const colorSet = state.colorSets.find(cs => cs.name === colorSetName);
 
-                  if (colorSet && colorSet.definition.includes('int')) {
-                    const rangeMatch = colorSet.definition.match(/with\s+(\d+)\.\.(\d+);/);
-                    if (rangeMatch) {
-                      const start = parseInt(rangeMatch[1], 10);
-                      const end = parseInt(rangeMatch[2], 10);
-                      if (!isNaN(start) && !isNaN(end)) {
-                        // Generate array from start to end (inclusive)
-                        parsedMarking = Array.from({ length: end - start + 1 }, (_, i) => start + i);
+                    if (colorSet && colorSet.definition.includes('int')) {
+                      const rangeMatch = colorSet.definition.match(/with\s+(\d+)\.\.(\d+);/);
+                      if (rangeMatch) {
+                        const start = parseInt(rangeMatch[1], 10);
+                        const end = parseInt(rangeMatch[2], 10);
+                        if (!isNaN(start) && !isNaN(end)) {
+                          // Generate array from start to end (inclusive)
+                          parsedMarking = Array.from({ length: end - start + 1 }, (_, i) => start + i);
+                        } else {
+                          console.warn(`Invalid range values in color set definition: "${colorSet.definition}"`);
+                        }
                       } else {
-                        console.warn(`Invalid range values in color set definition: "${colorSet.definition}"`);
+                        console.warn(`No valid range found in color set definition: "${colorSet.definition}"`);
                       }
                     } else {
-                      console.warn(`No valid range found in color set definition: "${colorSet.definition}"`);
+                      console.warn(`Cannot apply '.all()' to color set "${colorSetName}". It's either not found, not a 'basic' type, or doesn't contain 'int' in its definition.`);
+                      parsedMarking = []; // Default to empty if conditions aren't met
                     }
                   } else {
-                    console.warn(`Cannot apply '.all()' to color set "${colorSetName}". It's either not found, not a 'basic' type, or doesn't contain 'int' in its definition.`);
-                    parsedMarking = []; // Default to empty if conditions aren't met
+                    // Attempt to parse as JSON for other cases
+                    const parsed = JSON.parse(node.data.initialMarking);
+                    // Ensure result is an array
+                    if (Array.isArray(parsed)) {
+                      parsedMarking = parsed;
+                    } else {
+                      // Single value - wrap in array
+                      parsedMarking = [parsed];
+                    }
                   }
-                } else {
-                  // Attempt to parse as JSON for other cases
-                  const parsed = JSON.parse(node.data.initialMarking);
-                  // Ensure result is an array
-                  if (Array.isArray(parsed)) {
-                    parsedMarking = parsed;
-                  } else {
-                    // Single value - wrap in array
-                    parsedMarking = [parsed];
-                  }
+                  marking = parsedMarking;
                 }
-                marking = parsedMarking;
+              } catch (error) {
+                console.error(`Error parsing initial marking for node ${node.id}:`, node.data.initialMarking, error);
+                marking = []; // Default to empty on error
               }
-            } catch (error) {
-              console.error(`Error parsing initial marking for node ${node.id}:`, node.data.initialMarking, error);
-              marking = []; // Default to empty on error
             }
+            // Ensure data retains other properties and update marking
+            return {
+              ...node,
+              data: { ...node.data, marking },
+            };
           }
-          // Ensure data retains other properties and update marking
-          return {
-            ...node,
-            data: { ...node.data, marking },
-          };
-        }
-        return node;
-      });
-      return {
-        petriNetsById: {
-          ...state.petriNetsById,
-          [state.activePetriNetId!]: {
-            ...petriNet,
-            nodes: updatedNodes,
-          },
-        },
-      };
+          return node;
+        });
+        updatedNetsById[netId] = {
+          ...petriNet,
+          nodes: updatedNodes,
+        };
+      }
+      return { petriNetsById: updatedNetsById };
     });
   },
 
@@ -668,6 +760,584 @@ const useStore = create<StoreState>()(temporal((set) => ({
       showMarkingDisplay: show,
     })),
 
+  // Fusion sets
+  setFusionSets: (fusionSets: FusionSet[]) =>
+    set(() => ({ fusionSets })),
+
+  addFusionSet: (fusionSet: FusionSet) =>
+    set((state) => ({
+      fusionSets: [...state.fusionSets, { ...fusionSet, id: fusionSet.id ?? uuidv4() }],
+    })),
+
+  deleteFusionSet: (id: string) =>
+    set((state) => {
+      // Remove the fusion set and clear references from all places
+      const updatedPetriNetsById: Record<string, PetriNet> = {};
+      for (const [netId, petriNet] of Object.entries(state.petriNetsById)) {
+        updatedPetriNetsById[netId] = {
+          ...petriNet,
+          nodes: petriNet.nodes.map((node) => {
+            if (node.type === 'place' && node.data?.fusionSetId === id) {
+              return { ...node, data: { ...node.data, fusionSetId: undefined } };
+            }
+            return node;
+          }),
+        };
+      }
+      return {
+        fusionSets: state.fusionSets.filter((fs) => fs.id !== id),
+        petriNetsById: updatedPetriNetsById,
+      };
+    }),
+
+  // Hierarchy: Move transition to subpage
+  moveTransitionToSubpage: (petriNetId: string, transitionId: string) =>
+    set((state) => {
+      const parentNet = state.petriNetsById[petriNetId];
+      if (!parentNet) return state;
+
+      const transition = parentNet.nodes.find((n) => n.id === transitionId && n.type === 'transition');
+      if (!transition) return state;
+
+      // Already a substitution transition
+      if (transition.data?.subPageId) return state;
+
+      const subPageId = uuidv4();
+      const baseName = (transition.data?.label as string) || 'Subpage';
+      // Ensure unique subpage name
+      const existingNames = new Set(Object.values(state.petriNetsById).map((n) => n.name));
+      let subPageName = baseName;
+      if (existingNames.has(subPageName)) {
+        let counter = 2;
+        while (existingNames.has(`${baseName} (${counter})`)) counter++;
+        subPageName = `${baseName} (${counter})`;
+      }
+
+      // Find all arcs connected to this transition
+      const connectedArcs = parentNet.edges.filter(
+        (e) => e.source === transitionId || e.target === transitionId
+      );
+
+      // Find unique connected places
+      const connectedPlaceIds = new Set<string>();
+      connectedArcs.forEach((arc) => {
+        if (arc.source === transitionId) connectedPlaceIds.add(arc.target);
+        else connectedPlaceIds.add(arc.source);
+      });
+
+      const socketAssignments: { portPlaceId: string; socketPlaceId: string }[] = [];
+      const portPlaces: Node[] = [];
+      const subpageArcs: Edge[] = [];
+
+      // Compute bounding box of transition + connected places to preserve relative positions
+      const allInvolvedNodes = [transition, ...[...connectedPlaceIds].map((id) => parentNet.nodes.find((n) => n.id === id)).filter(Boolean)] as Node[];
+      let minX = Infinity, minY = Infinity;
+      for (const n of allInvolvedNodes) {
+        if (n.position.x < minX) minX = n.position.x;
+        if (n.position.y < minY) minY = n.position.y;
+      }
+      const offsetX = 300, offsetY = 200;
+
+      // Create a copy of the transition for the subpage
+      const copiedTransitionId = uuidv4();
+      const copiedTransition: Node = {
+        ...transition,
+        id: copiedTransitionId,
+        position: {
+          x: transition.position.x - minX + offsetX,
+          y: transition.position.y - minY + offsetY,
+        },
+        data: {
+          ...transition.data,
+          subPageId: undefined,
+          socketAssignments: undefined,
+        },
+      };
+
+      let portIndex = 0;
+      connectedPlaceIds.forEach((placeId) => {
+        const place = parentNet.nodes.find((n) => n.id === placeId);
+        if (!place) return;
+
+        // Determine port type
+        const inArcs = connectedArcs.filter((e) => e.source === placeId && e.target === transitionId);
+        const outArcs = connectedArcs.filter((e) => e.source === transitionId && e.target === placeId);
+        const portType = inArcs.length > 0 && outArcs.length > 0 ? 'io' : inArcs.length > 0 ? 'in' : 'out';
+
+        const portPlaceId = uuidv4();
+        portPlaces.push({
+          id: portPlaceId,
+          type: 'place',
+          position: {
+            x: place.position.x - minX + offsetX,
+            y: place.position.y - minY + offsetY,
+          },
+          data: {
+            label: place.data?.label || 'Port',
+            colorSet: place.data?.colorSet || '',
+            initialMarking: '',
+            marking: [],
+            portType,
+            isArcMode: false,
+            type: 'place',
+          },
+        });
+
+        socketAssignments.push({ portPlaceId, socketPlaceId: placeId });
+
+        // Create arcs on subpage mirroring parent arcs
+        for (const arc of inArcs) {
+          subpageArcs.push({
+            id: uuidv4(),
+            source: portPlaceId,
+            target: copiedTransitionId,
+            label: arc.label,
+            data: { ...arc.data },
+          });
+        }
+        for (const arc of outArcs) {
+          subpageArcs.push({
+            id: uuidv4(),
+            source: copiedTransitionId,
+            target: portPlaceId,
+            label: arc.label,
+            data: { ...arc.data },
+          });
+        }
+
+        portIndex++;
+      });
+
+      // Create the subpage
+      const subPage: PetriNet = {
+        id: subPageId,
+        name: subPageName,
+        nodes: [copiedTransition, ...portPlaces],
+        edges: subpageArcs,
+        selectedElement: null,
+      };
+
+      // Update the original transition to be a substitution transition
+      const updatedParentNodes = parentNet.nodes.map((n) =>
+        n.id === transitionId
+          ? {
+              ...n,
+              data: {
+                ...n.data,
+                subPageId,
+                socketAssignments,
+              },
+            }
+          : n
+      );
+
+      return {
+        petriNetsById: {
+          ...state.petriNetsById,
+          [petriNetId]: {
+            ...parentNet,
+            nodes: updatedParentNodes,
+          },
+          [subPageId]: subPage,
+        },
+        petriNetOrder: [...state.petriNetOrder, subPageId],
+        activePetriNetId: subPageId, // Switch to the new subpage
+      };
+    }),
+
+  // Hierarchy: Move multiple selected nodes to a subpage
+  moveNodesToSubpage: (petriNetId: string, nodeIds: string[], subpageName?: string) =>
+    set((state) => {
+      const parentNet = state.petriNetsById[petriNetId];
+      if (!parentNet) return state;
+
+      const selectedIds = new Set(nodeIds);
+      const selectedNodes = parentNet.nodes.filter((n) => selectedIds.has(n.id));
+      if (selectedNodes.length === 0) return state;
+
+      // Must contain at least one transition
+      const selectedTransitions = selectedNodes.filter((n) => n.type === 'transition');
+      if (selectedTransitions.length === 0) return state;
+
+      // Don't allow if any selected transition is already a substitution transition
+      if (selectedTransitions.some((t) => t.data?.subPageId)) return state;
+
+      const subPageId = uuidv4();
+      const baseName = subpageName ||
+        (selectedTransitions.length === 1 ? (selectedTransitions[0].data?.label as string) || 'Subpage' : 'Subpage');
+      // Ensure unique subpage name
+      const existingNames = new Set(Object.values(state.petriNetsById).map((n) => n.name));
+      let name = baseName;
+      if (existingNames.has(name)) {
+        let counter = 2;
+        while (existingNames.has(`${baseName} (${counter})`)) counter++;
+        name = `${baseName} (${counter})`;
+      }
+
+      // For multi-node moves, name the substitution transition "Substitution" (distinct from subpage name)
+      const substTransitionLabel = selectedTransitions.length > 1 ? 'Substitution' : name;
+
+      // Classify nodes:
+      // - Internal nodes: selected transitions and selected places that are ONLY connected to selected nodes
+      // - Boundary places: selected places connected to both selected and non-selected nodes
+      //   OR non-selected places connected to selected transitions
+      const allArcs = parentNet.edges;
+
+      // Find boundary places: non-selected places connected to selected nodes
+      const boundaryPlaceIds = new Set<string>();
+      // Also find selected places that have connections outside the selection (they become boundary too)
+      const internalSelectedPlaceIds = new Set<string>();
+
+      const selectedPlaces = selectedNodes.filter((n) => n.type === 'place');
+      const selectedTransitionIds = new Set(selectedTransitions.map((t) => t.id));
+
+      // Check each arc to classify places
+      for (const arc of allArcs) {
+        const sourceSelected = selectedIds.has(arc.source);
+        const targetSelected = selectedIds.has(arc.target);
+
+        if (sourceSelected && !targetSelected) {
+          // Arc from selected to non-selected: source's connected non-selected target is boundary
+          const sourceNode = parentNet.nodes.find((n) => n.id === arc.source);
+          if (sourceNode?.type === 'place') {
+            // Selected place connects to outside — it's a boundary place
+            boundaryPlaceIds.add(arc.source);
+          }
+          // Non-selected target that's a place connected to a selected transition
+          const targetNode = parentNet.nodes.find((n) => n.id === arc.target);
+          if (targetNode?.type === 'place') {
+            boundaryPlaceIds.add(arc.target);
+          }
+        } else if (!sourceSelected && targetSelected) {
+          // Arc from non-selected to selected: similar logic
+          const targetNode = parentNet.nodes.find((n) => n.id === arc.target);
+          if (targetNode?.type === 'place') {
+            boundaryPlaceIds.add(arc.target);
+          }
+          const sourceNode = parentNet.nodes.find((n) => n.id === arc.source);
+          if (sourceNode?.type === 'place') {
+            boundaryPlaceIds.add(arc.source);
+          }
+        }
+      }
+
+      // Selected places not in boundary are internal
+      for (const p of selectedPlaces) {
+        if (!boundaryPlaceIds.has(p.id)) {
+          internalSelectedPlaceIds.add(p.id);
+        }
+      }
+
+      // Internal nodes = selected transitions + internal selected places
+      const internalNodeIds = new Set([...selectedTransitionIds, ...internalSelectedPlaceIds]);
+
+      // Internal arcs: arcs where both ends are internal nodes
+      const internalArcs = allArcs.filter(
+        (e) => internalNodeIds.has(e.source) && internalNodeIds.has(e.target)
+      );
+
+      // Boundary arcs: arcs connecting boundary places to internal nodes
+      const boundaryArcs = allArcs.filter(
+        (e) =>
+          (boundaryPlaceIds.has(e.source) && internalNodeIds.has(e.target)) ||
+          (internalNodeIds.has(e.source) && boundaryPlaceIds.has(e.target))
+      );
+
+      // Compute bounding box of all involved nodes (internal + boundary) to preserve relative positions
+      const internalNodes = parentNet.nodes.filter((n) => internalNodeIds.has(n.id));
+      const allInvolvedNodes = [...internalNodes, ...[...boundaryPlaceIds].map((id) => parentNet.nodes.find((n) => n.id === id)).filter(Boolean)] as Node[];
+      let minX = Infinity, minY = Infinity;
+      for (const n of allInvolvedNodes) {
+        if (n.position.x < minX) minX = n.position.x;
+        if (n.position.y < minY) minY = n.position.y;
+      }
+
+      // Create port places for boundary places and build socket assignments
+      const socketAssignments: { portPlaceId: string; socketPlaceId: string }[] = [];
+      const portPlaces: Node[] = [];
+      const portArcs: Edge[] = [];
+      const portIdMap = new Map<string, string>(); // boundaryPlaceId → portPlaceId
+
+      let portIndex = 0;
+      for (const bpId of boundaryPlaceIds) {
+        const bp = parentNet.nodes.find((n) => n.id === bpId);
+        if (!bp) continue;
+
+        // Determine port type from arcs connecting this boundary place to internal nodes
+        const arcsIn = boundaryArcs.filter((e) => e.source === bpId && internalNodeIds.has(e.target));
+        const arcsOut = boundaryArcs.filter((e) => e.target === bpId && internalNodeIds.has(e.source));
+        const portType = arcsIn.length > 0 && arcsOut.length > 0 ? 'io' : arcsIn.length > 0 ? 'in' : 'out';
+
+        const portPlaceId = uuidv4();
+        portIdMap.set(bpId, portPlaceId);
+
+        // Position port places preserving original boundary place position relative to internal nodes
+        portPlaces.push({
+          id: portPlaceId,
+          type: 'place',
+          position: {
+            x: bp.position.x - minX + 300,
+            y: bp.position.y - minY + 200,
+          },
+          data: {
+            label: bp.data?.label || 'Port',
+            colorSet: bp.data?.colorSet || '',
+            initialMarking: '',
+            marking: [],
+            portType,
+            isArcMode: false,
+            type: 'place',
+          },
+        });
+
+        socketAssignments.push({ portPlaceId, socketPlaceId: bpId });
+
+        // Create arcs from port to internal nodes (mirroring the boundary arcs)
+        for (const arc of arcsIn) {
+          portArcs.push({
+            id: uuidv4(),
+            source: portPlaceId,
+            target: arc.target,
+            label: arc.label,
+            data: { ...arc.data },
+          });
+        }
+        for (const arc of arcsOut) {
+          portArcs.push({
+            id: uuidv4(),
+            source: arc.source,
+            target: portPlaceId,
+            label: arc.label,
+            data: { ...arc.data },
+          });
+        }
+
+        portIndex++;
+      }
+
+      // Reposition internal nodes relative to subpage origin
+      const subpageNodes: Node[] = internalNodes.map((n) => ({
+        ...n,
+        position: {
+          x: n.position.x - minX + 300,
+          y: n.position.y - minY + 200,
+        },
+        selected: false,
+      }));
+
+      // Create the subpage
+      const subPage: PetriNet = {
+        id: subPageId,
+        name,
+        nodes: [...subpageNodes, ...portPlaces],
+        edges: [...internalArcs, ...portArcs],
+        selectedElement: null,
+      };
+
+      // Create the substitution transition in the parent
+      // Position it at the centroid of the removed nodes
+      const centroidX = internalNodes.reduce((sum, n) => sum + n.position.x, 0) / internalNodes.length;
+      const centroidY = internalNodes.reduce((sum, n) => sum + n.position.y, 0) / internalNodes.length;
+
+      const substTransitionId = uuidv4();
+      const substTransition: Node = {
+        id: substTransitionId,
+        type: 'transition',
+        position: { x: centroidX, y: centroidY },
+        data: {
+          label: substTransitionLabel,
+          guard: '',
+          time: '',
+          priority: '',
+          codeSegment: '',
+          isArcMode: false,
+          type: 'transition',
+          subPageId,
+          socketAssignments,
+        },
+      };
+
+      // Rewire arcs: arcs from non-selected nodes to boundary places stay.
+      // Arcs from boundary places to internal nodes are removed (replaced by port arcs).
+      // We need new arcs from boundary places to the substitution transition? No —
+      // the boundary places are the sockets; the substitution transition concept means
+      // arcs from boundary sockets to the subst. transition represent the interface.
+      // Actually in CPN tools, the substitution transition doesn't have explicit arcs
+      // to sockets — the socket assignments define the mapping. But for our React Flow
+      // rendering, we should add arcs to make the graph connected.
+      const newParentArcs: Edge[] = [];
+      for (const bpId of boundaryPlaceIds) {
+        const arcsIn = boundaryArcs.filter((e) => e.source === bpId && internalNodeIds.has(e.target));
+        const arcsOut = boundaryArcs.filter((e) => e.target === bpId && internalNodeIds.has(e.source));
+
+        if (arcsIn.length > 0) {
+          // Boundary place feeds into internal: create arc from boundary to subst. transition
+          // Use the inscription from the first arc as representative
+          newParentArcs.push({
+            id: uuidv4(),
+            source: bpId,
+            target: substTransitionId,
+            label: arcsIn[0].label,
+            data: { ...arcsIn[0].data },
+          });
+        }
+        if (arcsOut.length > 0) {
+          // Internal feeds out to boundary: create arc from subst. transition to boundary
+          newParentArcs.push({
+            id: uuidv4(),
+            source: substTransitionId,
+            target: bpId,
+            label: arcsOut[0].label,
+            data: { ...arcsOut[0].data },
+          });
+        }
+      }
+
+      // Remove internal nodes and their arcs from parent, and boundary arcs
+      const boundaryArcIds = new Set(boundaryArcs.map((e) => e.id));
+      const internalArcIds = new Set(internalArcs.map((e) => e.id));
+      const remainingNodes = parentNet.nodes.filter((n) => !internalNodeIds.has(n.id));
+      const remainingEdges = parentNet.edges.filter(
+        (e) => !boundaryArcIds.has(e.id) && !internalArcIds.has(e.id)
+      );
+
+      return {
+        petriNetsById: {
+          ...state.petriNetsById,
+          [petriNetId]: {
+            ...parentNet,
+            nodes: [...remainingNodes, substTransition],
+            edges: [...remainingEdges, ...newParentArcs],
+          },
+          [subPageId]: subPage,
+        },
+        petriNetOrder: [...state.petriNetOrder, subPageId],
+        activePetriNetId: subPageId,
+      };
+    }),
+
+  // Hierarchy: Flatten (replace substitution transition with subpage content)
+  flattenSubstitutionTransition: (petriNetId: string, transitionId: string) =>
+    set((state) => {
+      const parentNet = state.petriNetsById[petriNetId];
+      if (!parentNet) return state;
+
+      const transition = parentNet.nodes.find((n) => n.id === transitionId && n.type === 'transition');
+      if (!transition || !transition.data?.subPageId) return state;
+
+      const subPageId = transition.data.subPageId as string;
+      const socketAssignments = (transition.data.socketAssignments as { portPlaceId: string; socketPlaceId: string }[]) || [];
+      const subPage = state.petriNetsById[subPageId];
+      if (!subPage) return state;
+
+      // Build port-to-socket mapping
+      const portToSocket = new Map<string, string>();
+      socketAssignments.forEach((sa) => portToSocket.set(sa.portPlaceId, sa.socketPlaceId));
+
+      // Get non-port nodes from subpage (skip port places)
+      const subpageNonPortNodes = subPage.nodes.filter(
+        (n) => !(n.type === 'place' && n.data?.portType)
+      );
+
+      // Adjust positions of subpage nodes relative to the transition position
+      const offsetX = transition.position.x - 300;
+      const offsetY = transition.position.y - 200;
+      const repositionedNodes = subpageNonPortNodes.map((n) => ({
+        ...n,
+        id: n.id, // Keep original IDs
+        position: {
+          x: n.position.x + offsetX,
+          y: n.position.y + offsetY,
+        },
+      }));
+
+      // Remap arcs: replace port place references with socket places
+      const remappedArcs = subPage.edges.map((e) => ({
+        ...e,
+        id: uuidv4(), // New IDs to avoid conflicts
+        source: portToSocket.get(e.source) || e.source,
+        target: portToSocket.get(e.target) || e.target,
+      }));
+
+      // Remove the substitution transition and its arcs from parent
+      const filteredParentNodes = parentNet.nodes.filter((n) => n.id !== transitionId);
+      const filteredParentEdges = parentNet.edges.filter(
+        (e) => e.source !== transitionId && e.target !== transitionId
+      );
+
+      // Remove the subpage from petri nets
+      const remainingNets = Object.fromEntries(
+        Object.entries(state.petriNetsById).filter(([key]) => key !== subPageId)
+      );
+
+      return {
+        petriNetsById: {
+          ...remainingNets,
+          [petriNetId]: {
+            ...parentNet,
+            nodes: [...filteredParentNodes, ...repositionedNodes],
+            edges: [...filteredParentEdges, ...remappedArcs],
+          },
+        },
+        petriNetOrder: state.petriNetOrder.filter((id) => id !== subPageId),
+        activePetriNetId: state.activePetriNetId === subPageId ? petriNetId : state.activePetriNetId,
+      };
+    }),
+
+  // Hierarchy: Manually assign a subpage to a transition (making it a substitution transition)
+  assignSubpageToTransition: (petriNetId: string, transitionId: string, subPageId: string, socketAssignments: { portPlaceId: string; socketPlaceId: string }[]) =>
+    set((state) => {
+      const parentNet = state.petriNetsById[petriNetId];
+      if (!parentNet) return state;
+      const transition = parentNet.nodes.find((n) => n.id === transitionId && n.type === 'transition');
+      if (!transition) return state;
+      if (!state.petriNetsById[subPageId]) return state;
+      const updatedNode = { ...transition, data: { ...transition.data, subPageId, socketAssignments } };
+      const updatedNet = {
+        ...parentNet,
+        nodes: parentNet.nodes.map((n) => n.id === transitionId ? updatedNode : n),
+        // Update selectedElement if this transition is currently selected
+        selectedElement: parentNet.selectedElement?.type === 'node' && parentNet.selectedElement.element?.id === transitionId
+          ? { type: 'node' as const, element: updatedNode }
+          : parentNet.selectedElement,
+      };
+      return {
+        petriNetsById: {
+          ...state.petriNetsById,
+          [petriNetId]: updatedNet,
+        },
+      };
+    }),
+
+  // Hierarchy: Remove subpage assignment from a transition (revert to regular transition)
+  removeSubpageFromTransition: (petriNetId: string, transitionId: string) =>
+    set((state) => {
+      const parentNet = state.petriNetsById[petriNetId];
+      if (!parentNet) return state;
+      const updatedNodes = parentNet.nodes.map((n) => {
+        if (n.id === transitionId && n.type === 'transition') {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { subPageId, socketAssignments, ...restData } = n.data as Record<string, unknown>;
+          return { ...n, data: restData };
+        }
+        return n;
+      });
+      const updatedNode = updatedNodes.find((n) => n.id === transitionId);
+      return {
+        petriNetsById: {
+          ...state.petriNetsById,
+          [petriNetId]: {
+            ...parentNet,
+            nodes: updatedNodes,
+            // Update selectedElement if this transition is currently selected
+            selectedElement: parentNet.selectedElement?.type === 'node' && parentNet.selectedElement.element?.id === transitionId && updatedNode
+              ? { type: 'node' as const, element: updatedNode }
+              : parentNet.selectedElement,
+          },
+        },
+      };
+    }),
+
   reset: () => {
     set(emptyState);
   },
@@ -702,6 +1372,7 @@ const useStore = create<StoreState>()(temporal((set) => ({
       priorities: state.priorities,
       functions: state.functions,
       uses: state.uses,
+      fusionSets: state.fusionSets,
     }),
     equality: (pastState, currentState) => {
       // Compare serialized snapshots to avoid recording no-op changes
@@ -715,6 +1386,7 @@ const useStore = create<StoreState>()(temporal((set) => ({
         priorities: pastState.priorities,
         functions: pastState.functions,
         uses: pastState.uses,
+        fusionSets: pastState.fusionSets,
       }) === JSON.stringify({
         petriNetsById: stripTransientPetriNetFields(currentState.petriNetsById as Record<string, PetriNet>),
         petriNetOrder: currentState.petriNetOrder,
@@ -724,6 +1396,7 @@ const useStore = create<StoreState>()(temporal((set) => ({
         priorities: currentState.priorities,
         functions: currentState.functions,
         uses: currentState.uses,
+        fusionSets: currentState.fusionSets,
       });
     },
     limit: 100,

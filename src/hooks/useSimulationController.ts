@@ -1,10 +1,12 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import useStore, { pauseUndo, resumeUndo } from '@/stores/store';
 import init, { WasmSimulator, type InitOutput } from '@rwth-pads/cpnsim';
 import { PetriNetData, convertToJSON } from '@/utils/FileOperations';
 import type { SimulationEvent } from '@/components/EventLog'; // Import SimulationEvent
 import { v4 as uuidv4 } from 'uuid'; // For generating unique event IDs
 import { type SimulationConfig, DEFAULT_SIMULATION_CONFIG } from '@/context/useSimulationContextHook';
+import type { PetriNet, FusionSet } from '@/types';
+import type { Node } from '@xyflow/react';
 
 // Define TokenMovement locally as it's not exported from EventLog
 export interface TokenMovement {
@@ -155,6 +157,176 @@ function splitOnMultisetUnion(s: string): string[] {
     return parts;
 }
 
+/**
+ * Flattens a hierarchical Petri net into a single flat net for simulation.
+ * 
+ * 1. Substitution transitions are replaced by the content of their subpages:
+ *    - Port places on the subpage are merged with their socket places on the parent
+ *    - All non-port nodes and remapped arcs from the subpage are added to the parent
+ *    - The substitution transition and its arcs are removed
+ * 
+ * 2. Fusion places: All places in the same fusion set are merged into one canonical place.
+ *    All arcs to/from non-canonical fusion places are redirected to the canonical one.
+ */
+function flattenHierarchicalNet(
+  petriNetsById: Record<string, PetriNet>,
+  petriNetOrder: string[],
+  fusionSets: FusionSet[],
+): { flattenedNets: Record<string, PetriNet>; flattenedOrder: string[] } {
+  // Deep clone to avoid mutating originals
+  const nets: Record<string, PetriNet> = JSON.parse(JSON.stringify(petriNetsById));
+
+  // Phase 1: Inline substitution transitions (recursively)
+  // Process each net starting from the "root" pages (those not referenced as subpages)
+  const subPageIds = new Set<string>();
+  for (const net of Object.values(nets)) {
+    for (const node of net.nodes) {
+      if (node.type === 'transition' && node.data?.subPageId) {
+        subPageIds.add(node.data.subPageId as string);
+      }
+    }
+  }
+
+  // Inline subpages into their parent nets
+  const inlineSubpage = (netId: string, visited: Set<string>) => {
+    if (visited.has(netId)) return; // Prevent infinite recursion
+    visited.add(netId);
+
+    const net = nets[netId];
+    if (!net) return;
+
+    // First, recursively inline any subpages within our subpages
+    for (const node of net.nodes) {
+      if (node.type === 'transition' && node.data?.subPageId) {
+        inlineSubpage(node.data.subPageId as string, visited);
+      }
+    }
+
+    // Now inline all substitution transitions in this net
+    let changed = true;
+    while (changed) {
+      changed = false;
+      const subTransitions = net.nodes.filter(
+        (n) => n.type === 'transition' && n.data?.subPageId
+      );
+
+      for (const subTrans of subTransitions) {
+        const subPageId = subTrans.data.subPageId as string;
+        const socketAssignments = (subTrans.data.socketAssignments as { portPlaceId: string; socketPlaceId: string }[]) || [];
+        const subPage = nets[subPageId];
+        if (!subPage) continue;
+
+        // Build port-to-socket mapping
+        const portToSocket = new Map<string, string>();
+        socketAssignments.forEach((sa) => portToSocket.set(sa.portPlaceId, sa.socketPlaceId));
+
+        // Get non-port nodes from subpage
+        const subpageNonPortNodes = subPage.nodes.filter(
+          (n) => !(n.type === 'place' && n.data?.portType)
+        );
+
+        // Add non-port nodes to this net (with position offset)
+        const offsetX = subTrans.position?.x || 0;
+        const offsetY = subTrans.position?.y || 0;
+        for (const node of subpageNonPortNodes) {
+          net.nodes.push({
+            ...node,
+            position: {
+              x: (node.position?.x || 0) + offsetX,
+              y: (node.position?.y || 0) + offsetY,
+            },
+          });
+        }
+
+        // Remap arcs: replace port place references with socket places
+        for (const edge of subPage.edges) {
+          net.edges.push({
+            ...edge,
+            id: `flat_${edge.id}`,
+            source: portToSocket.get(edge.source) || edge.source,
+            target: portToSocket.get(edge.target) || edge.target,
+          });
+        }
+
+        // Remove the substitution transition and its arcs from this net
+        net.nodes = net.nodes.filter((n) => n.id !== subTrans.id);
+        net.edges = net.edges.filter(
+          (e) => e.source !== subTrans.id && e.target !== subTrans.id
+        );
+
+        changed = true;
+        break; // Restart the loop since we modified the arrays
+      }
+    }
+  };
+
+  // Process root nets (those not referenced as subpages)
+  const rootNets = petriNetOrder.filter((id) => !subPageIds.has(id));
+  const visited = new Set<string>();
+  for (const rootId of rootNets) {
+    inlineSubpage(rootId, visited);
+  }
+
+  // Phase 2: Merge fusion places
+  if (fusionSets.length > 0) {
+    for (const fusionSet of fusionSets) {
+      // Find all place nodes across all nets that belong to this fusion set
+      const fusionPlaces: { netId: string; node: Node }[] = [];
+      for (const [netId, net] of Object.entries(nets)) {
+        for (const node of net.nodes) {
+          if (node.type === 'place' && node.data?.fusionSetId === fusionSet.id) {
+            fusionPlaces.push({ netId, node });
+          }
+        }
+      }
+
+      if (fusionPlaces.length <= 1) continue;
+
+      // Pick the first as canonical
+      const canonical = fusionPlaces[0];
+      const canonicalId = canonical.node.id;
+
+      // For all other fusion places, redirect their arcs to the canonical place
+      for (let i = 1; i < fusionPlaces.length; i++) {
+        const fp = fusionPlaces[i];
+        const fpId = fp.node.id;
+        const net = nets[fp.netId];
+
+        // Redirect arcs
+        net.edges = net.edges.map((e) => ({
+          ...e,
+          source: e.source === fpId ? canonicalId : e.source,
+          target: e.target === fpId ? canonicalId : e.target,
+        }));
+
+        // Remove the non-canonical fusion place
+        net.nodes = net.nodes.filter((n) => n.id !== fpId);
+      }
+
+      // Merge initial markings: combine all markings into canonical place
+      const canonicalNet = nets[canonical.netId];
+      const canonicalNode = canonicalNet.nodes.find((n) => n.id === canonicalId);
+      if (canonicalNode) {
+        // Use the canonical place's marking/initial marking as-is
+        // The other places' tokens would be on the canonical place already
+        // since they share the same fusion set
+      }
+    }
+  }
+
+  // Build the flattened result: only include root nets (subpages have been inlined)
+  const flattenedNets: Record<string, PetriNet> = {};
+  const flattenedOrder: string[] = [];
+  for (const id of rootNets) {
+    if (nets[id]) {
+      flattenedNets[id] = nets[id];
+      flattenedOrder.push(id);
+    }
+  }
+
+  return { flattenedNets, flattenedOrder };
+}
+
 export function useSimulationController() {
   const wasmRef = useRef<InitOutput | null>(null); // Initialize as null
   const wasmSimulatorRef = useRef<WasmSimulator | null>(null);
@@ -166,6 +338,13 @@ export function useSimulationController() {
   const stepCounterRef = useRef(0); // Synchronous source of truth for step counter
   const [simulationTime, setSimulationTime] = useState(0.0); // State for simulation time
   const [simulationConfig, setSimulationConfig] = useState<SimulationConfig>(DEFAULT_SIMULATION_CONFIG); // Simulation config
+
+  // Socket-to-port mapping for synchronizing markings between parent and subpage places
+  const socketToPortMapRef = useRef<Map<string, string[]>>(new Map());
+
+  // Refs for auto-invalidation: track whether simulation updates (not user edits) are causing store changes
+  const isInitializedRef = useRef(false);
+  const isSimulationUpdatingRef = useRef(false);
 
   // Get necessary actions/state selectors from Zustand store
   const updateNodeMarking = useStore((state) => state.updateNodeMarking);
@@ -193,6 +372,21 @@ export function useSimulationController() {
     consumed?: Map<string, number[]>; // Use any[] for tokens from WASM
     produced?: Map<string, number[]> // Use any[] for tokens from WASM
   }) => {
+
+    // Helper: after updating a node's marking, sync port places if this is a socket place
+    const syncPortPlaces = (nodeId: string) => {
+      const portIds = socketToPortMapRef.current.get(nodeId);
+      if (portIds && portIds.length > 0) {
+        // Get the latest marking from the socket place
+        const socketNode = findNodeById(nodeId);
+        const marking = socketNode?.data?.marking;
+        if (Array.isArray(marking)) {
+          for (const portId of portIds) {
+            updateNodeMarking(portId, [...marking]);
+          }
+        }
+      }
+    };
 
     // --- Update Markings in Zustand Store ---
     if (eventData.consumed instanceof Map) {
@@ -233,6 +427,7 @@ export function useSimulationController() {
           });
           // Update the store with the new marking (which should be an array)
           updateNodeMarking(nodeId, updatedMarking);
+          syncPortPlaces(nodeId);
         } else {
           // Log if the node wasn't found or wasn't a place
           console.warn(`Place node not found or invalid for consumed event: ${nodeId}`);
@@ -271,6 +466,7 @@ export function useSimulationController() {
           const updatedMarking = [...currentMarking, ...normalizedTokens];
           // Update the store
           updateNodeMarking(nodeId, updatedMarking);
+          syncPortPlaces(nodeId);
         } else {
            console.warn(`Place node not found or invalid for produced event: ${nodeId}`);
         }
@@ -350,6 +546,7 @@ export function useSimulationController() {
     setStepCounter(0);
     stepCounterRef.current = 0;
     setSimulationTime(0.0);
+    isInitializedRef.current = false; // Prevent auto-invalidation subscriber from triggering
     setIsInitialized(false); // Mark as not initialized until successful
     wasmRef.current = null; // Clear refs
     wasmSimulatorRef.current = null;
@@ -372,11 +569,58 @@ export function useSimulationController() {
         const currentFunctions = useStore.getState().functions;
         const currentUses = useStore.getState().uses;
         const currentSimulationEpoch = useStore.getState().simulationEpoch;
+        const currentFusionSets = useStore.getState().fusionSets;
+
+        // Flatten hierarchical nets (substitute transitions + merge fusion places)
+        const { flattenedNets, flattenedOrder } = flattenHierarchicalNet(
+          currentPetriNetsById,
+          currentPetriNetOrder,
+          currentFusionSets,
+        );
+
+        // Build socket-to-port mapping for marking synchronization
+        // When WASM updates a socket place, we also update the corresponding port place(s)
+        const socketToPort = new Map<string, string[]>();
+        for (const net of Object.values(currentPetriNetsById)) {
+          for (const node of net.nodes) {
+            if (node.type === 'transition' && node.data?.socketAssignments) {
+              const assignments = node.data.socketAssignments as { portPlaceId: string; socketPlaceId: string }[];
+              for (const sa of assignments) {
+                const existing = socketToPort.get(sa.socketPlaceId) || [];
+                existing.push(sa.portPlaceId);
+                socketToPort.set(sa.socketPlaceId, existing);
+              }
+            }
+          }
+        }
+        socketToPortMapRef.current = socketToPort;
+
+        // Sync initial markings from socket places to their port places
+        // Port places typically have no initialMarking; they should mirror their socket place
+        if (socketToPort.size > 0) {
+          const state = useStore.getState();
+          for (const [socketId, portIds] of socketToPort.entries()) {
+            // Find the socket place's current marking
+            let socketMarking: (string | number)[] | undefined;
+            for (const net of Object.values(state.petriNetsById)) {
+              const socketNode = net.nodes.find(n => n.id === socketId && n.type === 'place');
+              if (socketNode) {
+                socketMarking = Array.isArray(socketNode.data.marking) ? socketNode.data.marking : [];
+                break;
+              }
+            }
+            if (socketMarking && socketMarking.length > 0) {
+              for (const portId of portIds) {
+                updateNodeMarking(portId, socketMarking);
+              }
+            }
+          }
+        }
 
         // Prepare the data structure for the WASM simulator
         const petriNetData: PetriNetData = {
-          petriNetsById: structuredClone(currentPetriNetsById), // Deep clone the latest state
-          petriNetOrder: currentPetriNetOrder,
+          petriNetsById: structuredClone(flattenedNets), // Use flattened nets
+          petriNetOrder: flattenedOrder,
           colorSets: currentColorSets,
           variables: currentVariables,
           priorities: currentPriorities,
@@ -483,6 +727,7 @@ export function useSimulationController() {
         // Set the event listener callback
         wasmSimulatorRef.current.setEventListener(handleWasmEvent);
         // Mark initialization as complete
+        isInitializedRef.current = true;
         setIsInitialized(true);
         console.log("WASM Simulator initialized successfully.");
 
@@ -512,6 +757,8 @@ export function useSimulationController() {
         try {
             // Step counter is now incremented reactively in handleWasmEvent
             console.log(`Requesting simulation step...`);
+            // Guard: mark as simulation update so the auto-invalidation subscriber ignores marking changes
+            isSimulationUpdatingRef.current = true;
             // Execute the step in WASM
             const result = wasmSimulatorRef.current.run_step();
             console.log(`Simulation step result:`, result);
@@ -520,6 +767,8 @@ export function useSimulationController() {
         } catch (error) {
             console.error("Error running simulation step:", error);
             return null;
+        } finally {
+            isSimulationUpdatingRef.current = false;
         }
     } else {
         // This should ideally not happen if ensureInitialized succeeded without errors,
@@ -586,21 +835,27 @@ export function useSimulationController() {
         
         if (typeof simulator.runMultipleSteps === 'function') {
           // Use batch execution - events are returned as an array
-          const results = simulator.runMultipleSteps(steps);
-          
-          // Process all results to update the UI state
-          if (Array.isArray(results)) {
-            for (const eventData of results) {
-              if (eventData && typeof eventData === 'object') {
-                // Process each event through the event handler
-                handleWasmEvent(eventData as {
-                  transitionId: string;
-                  time: number;
-                  consumed?: Map<string, number[]>;
-                  produced?: Map<string, number[]>;
-                });
+          // Guard: mark as simulation update so the auto-invalidation subscriber ignores marking changes
+          isSimulationUpdatingRef.current = true;
+          try {
+            const results = simulator.runMultipleSteps(steps);
+            
+            // Process all results to update the UI state
+            if (Array.isArray(results)) {
+              for (const eventData of results) {
+                if (eventData && typeof eventData === 'object') {
+                  // Process each event through the event handler
+                  handleWasmEvent(eventData as {
+                    transitionId: string;
+                    time: number;
+                    consumed?: Map<string, number[]>;
+                    produced?: Map<string, number[]>;
+                  });
+                }
               }
             }
+          } finally {
+            isSimulationUpdatingRef.current = false;
           }
         } else {
           // Fallback: run steps one by one without delay
@@ -637,12 +892,15 @@ export function useSimulationController() {
       if (typeof simulator.fireTransition === 'function') {
         pauseUndo();
         try {
+          // Guard: mark as simulation update so the auto-invalidation subscriber ignores marking changes
+          isSimulationUpdatingRef.current = true;
           const result = simulator.fireTransition(transitionId);
           console.log(`Fire transition ${transitionId} result:`, result);
           // Event handling happens via the event listener callback
         } catch (error) {
           console.error(`Error firing transition ${transitionId}:`, error);
         } finally {
+          isSimulationUpdatingRef.current = false;
           resumeUndo();
         }
       } else {
@@ -688,6 +946,64 @@ export function useSimulationController() {
       //console.log("Clearing event log.");
       setEvents([]); // Reset the local events state
   }
+
+  // Auto-invalidate simulation when the model changes structurally.
+  // This prevents stale WASM state from producing incorrect results after model edits.
+  useEffect(() => {
+    const unsub = useStore.subscribe((state, prevState) => {
+      // Skip if simulation is not initialized or we're inside a simulation update
+      if (!isInitializedRef.current || isSimulationUpdatingRef.current) return;
+
+      // Check if declarations changed (reference equality — cheap)
+      const declarationsChanged =
+        state.petriNetOrder !== prevState.petriNetOrder ||
+        state.colorSets !== prevState.colorSets ||
+        state.variables !== prevState.variables ||
+        state.priorities !== prevState.priorities ||
+        state.functions !== prevState.functions ||
+        state.uses !== prevState.uses ||
+        state.fusionSets !== prevState.fusionSets;
+
+      // For petriNetsById, we need to check if nodes or edges actually changed
+      // (ignoring selectedElement changes which happen on tab switch/selection)
+      let netsStructurallyChanged = false;
+      if (state.petriNetsById !== prevState.petriNetsById) {
+        const curIds = Object.keys(state.petriNetsById);
+        const prevIds = Object.keys(prevState.petriNetsById);
+        if (curIds.length !== prevIds.length) {
+          netsStructurallyChanged = true;
+        } else {
+          for (const id of curIds) {
+            const cur = state.petriNetsById[id];
+            const prev = prevState.petriNetsById[id];
+            if (!prev || cur.nodes !== prev.nodes || cur.edges !== prev.edges || cur.name !== prev.name) {
+              netsStructurallyChanged = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (declarationsChanged || netsStructurallyChanged) {
+        console.log('Model changed while simulation was active — resetting simulation.');
+        // Tear down the simulation
+        stopRequestedRef.current = true;
+        setIsRunning(false);
+        isInitializedRef.current = false;
+        setIsInitialized(false);
+        wasmSimulatorRef.current = null;
+        socketToPortMapRef.current = new Map();
+        setEvents([]);
+        setStepCounter(0);
+        stepCounterRef.current = 0;
+        setSimulationTime(0.0);
+        // Restore initial markings so the UI doesn't show stale simulation state
+        useStore.getState().applyInitialMarkings();
+      }
+    });
+
+    return unsub;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Return the state and functions needed by UI components
   return { 

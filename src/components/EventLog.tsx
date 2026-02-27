@@ -44,9 +44,10 @@ interface EventLogProps {
   transitions?: TransitionFilterItem[]
   filteredTransitionIds?: Set<string>
   onFilterChange?: (ids: Set<string>) => void
+  subpageNote?: string
 }
 
-export function EventLog({ events, onClearLog, onExport, canExport, exportDisabledReason, transitions, filteredTransitionIds, onFilterChange }: EventLogProps) {
+export function EventLog({ events, onClearLog, onExport, canExport, exportDisabledReason, transitions, filteredTransitionIds, onFilterChange, subpageNote }: EventLogProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set())
   const [filterDialogOpen, setFilterDialogOpen] = useState(false)
@@ -178,6 +179,11 @@ export function EventLog({ events, onClearLog, onExport, canExport, exportDisabl
           />
         </div>
       </CardHeader>
+      {subpageNote && (
+        <div className="mx-4 mb-2 px-3 py-1.5 text-xs text-muted-foreground bg-muted/50 rounded-md border border-border">
+          {subpageNote}
+        </div>
+      )}
       <CardContent className="flex-1 overflow-hidden min-h-0">
         <ScrollArea className="h-full">
           {visibleEvents.length === 0 ? (

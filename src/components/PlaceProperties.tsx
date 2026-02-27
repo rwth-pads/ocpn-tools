@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { RecordMarkingDialog } from '@/components/dialogs/RecordMarkingDialog';
 import { TimedMarkingDialog, TimedToken } from '@/components/dialogs/TimedMarkingDialog';
 import { ColorSet } from '@/declarations';
+import { Separator } from "@/components/ui/separator";
+import { v4 as uuidv4 } from 'uuid';
 
 // Define the type for the values within a parsed record (matches RecordMarkingDialog)
 type RecordValue = string | number | boolean | unknown[] | Record<string, unknown>;
@@ -25,6 +27,8 @@ interface SelectedPlaceData {
   isArcMode?: boolean;
   type?: string;
   initialMarking?: string;
+  portType?: 'in' | 'out' | 'io';
+  fusionSetId?: string;
 }
 
 // Define the type for the selected place state
@@ -38,6 +42,7 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
   const [isTimedMarkingDialogOpen, setIsTimedMarkingDialogOpen] = useState(false);
   // Use the specific type for the selectedPlace state
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
+  const [newFusionSetName, setNewFusionSetName] = useState('');
 
   // Access selectedElement from the store
   const activePetriNetId = useStore((state) => state.activePetriNetId);
@@ -46,6 +51,10 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
     return activePetriNet?.selectedElement;
   });
   const updateNodeData = useStore((state) => state.updateNodeData);
+  const fusionSets = useStore((state) => state.fusionSets);
+  const addFusionSet = useStore((state) => state.addFusionSet);
+  const deleteFusionSet = useStore((state) => state.deleteFusionSet);
+  const isSubpage = useStore((state) => state.petriNetOrder[0] !== state.activePetriNetId);
 
   // Ensure selectedElement is a node and has the correct data type
   if (!selectedElement || selectedElement.type !== 'node' || !selectedElement.element) {
@@ -394,6 +403,128 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
               </Button>
             </div>
           </div>
+        )}
+      </div>
+
+      {/* Port Type (available on subpage places) */}
+      {isSubpage && (
+        <>
+          <Separator />
+          <div className="grid w-full items-center gap-1.5">
+            <Label htmlFor="portType">Port Type</Label>
+            <Select
+              value={data.portType || '__none__'}
+              onValueChange={(value) => {
+                if (activePetriNetId) {
+                  updateNodeData(activePetriNetId, id, {
+                    ...data,
+                    label: data.label || "",
+                    isArcMode: data.isArcMode || false,
+                    type: data.type || "place",
+                    colorSet: data.colorSet || "",
+                    initialMarking: data.initialMarking || "",
+                    portType: value === '__none__' ? undefined : value as 'in' | 'out' | 'io',
+                  });
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">None</SelectItem>
+                <SelectItem value="in">In</SelectItem>
+                <SelectItem value="out">Out</SelectItem>
+                <SelectItem value="io">I/O</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </>
+      )}
+
+      {/* Fusion Set */}
+      <Separator />
+      <div className="grid w-full items-center gap-1.5">
+        <Label htmlFor="fusionSet">Fusion Set</Label>
+        <Select
+          value={data.fusionSetId || '__none__'}
+          onValueChange={(value) => {
+            if (activePetriNetId) {
+              updateNodeData(activePetriNetId, id, {
+                ...data,
+                label: data.label || "",
+                isArcMode: data.isArcMode || false,
+                type: data.type || "place",
+                colorSet: data.colorSet || "",
+                initialMarking: data.initialMarking || "",
+                fusionSetId: value === '__none__' ? undefined : value,
+              });
+            }
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="None" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">None</SelectItem>
+            {fusionSets.map((fs) => (
+              <SelectItem key={fs.id} value={fs.id}>
+                <div className="flex items-center justify-between w-full">
+                  <span>{fs.name}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="flex gap-1 mt-1">
+          <Input
+            id="newFusionSetName"
+            value={newFusionSetName}
+            onChange={(e) => setNewFusionSetName(e.target.value)}
+            placeholder="New fusion set name"
+            className="flex-1 h-7 text-xs"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs px-2"
+            disabled={!newFusionSetName.trim()}
+            onClick={() => {
+              const name = newFusionSetName.trim();
+              if (!name) return;
+              const newId = uuidv4();
+              addFusionSet({ id: newId, name });
+              setNewFusionSetName('');
+              // Auto-assign this place to the new fusion set
+              if (activePetriNetId) {
+                updateNodeData(activePetriNetId, id, {
+                  ...data,
+                  label: data.label || "",
+                  isArcMode: data.isArcMode || false,
+                  type: data.type || "place",
+                  colorSet: data.colorSet || "",
+                  initialMarking: data.initialMarking || "",
+                  fusionSetId: newId,
+                });
+              }
+            }}
+          >
+            Create
+          </Button>
+        </div>
+        {data.fusionSetId && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 text-xs text-destructive hover:text-destructive mt-1"
+            onClick={() => {
+              if (data.fusionSetId) {
+                deleteFusionSet(data.fusionSetId);
+              }
+            }}
+          >
+            Delete Fusion Set
+          </Button>
         )}
       </div>
 

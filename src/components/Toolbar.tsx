@@ -16,6 +16,7 @@ import { LayoutPopover, LayoutOptions } from "@/components/LayoutPopover";
 
 import { useDnD } from '@/utils/DnDContext';
 import useStore from '@/stores/store';
+import { useShallow } from 'zustand/react/shallow';
 import type { ArcType } from '@/types';
 
 interface ToolbarProps {
@@ -29,6 +30,53 @@ export function Toolbar({ toggleArcMode, onApplyLayout }: ToolbarProps) {
   const setShowMarkingDisplay = useStore((state) => state.setShowMarkingDisplay);
   const activeArcType = useStore((state) => state.activeArcType);
   const isArcMode = useStore((state) => state.isArcMode);
+
+  // Hierarchy: get selected element info
+  const activePetriNetId = useStore((state) => state.activePetriNetId);
+  const selectedElement = useStore((state) => {
+    const net = state.activePetriNetId ? state.petriNetsById[state.activePetriNetId] : null;
+    return net?.selectedElement;
+  });
+  // Get all selected nodes (for multi-select move to subpage)
+  const selectedNodes = useStore(useShallow((state) => {
+    const net = state.activePetriNetId ? state.petriNetsById[state.activePetriNetId] : null;
+    return net?.nodes.filter((n) => n.selected) || [];
+  }));
+  const moveTransitionToSubpage = useStore((state) => state.moveTransitionToSubpage);
+  const moveNodesToSubpage = useStore((state) => state.moveNodesToSubpage);
+  const flattenSubstitutionTransition = useStore((state) => state.flattenSubstitutionTransition);
+
+  // Determine if selected element is a single transition (and whether it's a substitution transition)
+  const isTransitionSelected = selectedElement?.type === 'node' && selectedElement.element?.type === 'transition';
+  const selectedTransitionId = isTransitionSelected ? selectedElement.element.id : null;
+  const isSubstitutionTransition = isTransitionSelected && !!selectedElement.element?.data?.subPageId;
+
+  // Multi-selection: at least one transition selected, none are substitution transitions
+  const multiSelectedTransitions = selectedNodes.filter((n) => n.type === 'transition');
+  const hasMultiSelection = selectedNodes.length > 1 && multiSelectedTransitions.length > 0;
+  const multiHasSubstitution = multiSelectedTransitions.some((t) => t.data?.subPageId);
+
+  // Can move to subpage: either single transition or multi-selection with transitions
+  const canMoveToSubpage = (!hasMultiSelection && isTransitionSelected && !isSubstitutionTransition)
+    || (hasMultiSelection && !multiHasSubstitution);
+
+  const handleMoveToSubpage = () => {
+    if (!activePetriNetId) return;
+    if (hasMultiSelection) {
+      // Multi-node move
+      const nodeIds = selectedNodes.map((n) => n.id);
+      moveNodesToSubpage(activePetriNetId, nodeIds);
+    } else if (selectedTransitionId && !isSubstitutionTransition) {
+      // Single transition move
+      moveTransitionToSubpage(activePetriNetId, selectedTransitionId);
+    }
+  };
+
+  const handleFlattenSubpage = () => {
+    if (activePetriNetId && selectedTransitionId && isSubstitutionTransition) {
+      flattenSubstitutionTransition(activePetriNetId, selectedTransitionId);
+    }
+  };
 
   const handleArcToggle = (arcType: ArcType) => {
     if (isArcMode && activeArcType === arcType) {
@@ -206,6 +254,73 @@ export function Toolbar({ toggleArcMode, onApplyLayout }: ToolbarProps) {
               </TooltipTrigger>
               <TooltipContent>
                 <p>Drag a Text Annotation from Here</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
+        <div className="flex items-center gap-2 h-6">
+          <Separator orientation="vertical" className="mx-1 h-6" />
+        </div>
+
+        {/* Hierarchy buttons */}
+        <div className="flex items-center gap-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Move to Subpage"
+                    disabled={!canMoveToSubpage}
+                    onClick={handleMoveToSubpage}
+                  >
+                    {/* Hierarchy: transition with arrow to subpage icon */}
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="6" width="8" height="6" rx="0.5" />
+                      <rect x="16" y="3" width="6" height="4" rx="0.5" />
+                      <rect x="16" y="10" width="6" height="4" rx="0.5" />
+                      <path d="M10 9h3m0 0l-1.5-1.5M13 9l-1.5 1.5" />
+                      <line x1="13" y1="5" x2="16" y2="5" />
+                      <line x1="13" y1="12" x2="16" y2="12" />
+                    </svg>
+                    <span className="sr-only">Move to Subpage</span>
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Move to Subpage</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Replace Substitution Transition by Subpage"
+                    disabled={!isSubstitutionTransition}
+                    onClick={handleFlattenSubpage}
+                  >
+                    {/* Flatten: subpage content replacing transition icon */}
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="14" y="6" width="8" height="6" rx="0.5" />
+                      <rect x="2" y="3" width="6" height="4" rx="0.5" />
+                      <rect x="2" y="10" width="6" height="4" rx="0.5" />
+                      <path d="M14 9h-3m0 0l1.5-1.5M11 9l1.5 1.5" />
+                      <line x1="8" y1="5" x2="11" y2="5" />
+                      <line x1="8" y1="12" x2="11" y2="12" />
+                    </svg>
+                    <span className="sr-only">Replace Substitution Transition by Subpage</span>
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Replace Substitution Transition by Subpage</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

@@ -13,6 +13,7 @@ import {
   useNodesInitialized,
   Node,
   Edge,
+  type Viewport,
 } from '@xyflow/react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -41,10 +42,17 @@ import {
   TooltipProvider,
 } from '@/components/ui/tooltip';
 
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input'; // Ensure this path is correct
+import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { MoreVertical, Plus, GripVertical, Upload, Copy } from 'lucide-react';
 
 import {
   convertToCPNToolsXML,
@@ -59,6 +67,7 @@ import { nodeTypes } from '../nodes';
 import { edgeTypes } from '../edges';
 import { applySugiyamaLayout } from '@/utils/sugiyamaAdapter';
 
+import { v4 as uuidv4 } from 'uuid';
 import { type StoreState } from '@/stores/store'; // Ensure these types are defined in your store
 
 import { LayoutOptions } from '@/components/LayoutPopover';
@@ -89,7 +98,11 @@ const selector = (state: StoreState) => ({
   setPriorities: state.setPriorities,
   setFunctions: state.setFunctions,
   setUses: state.setUses,
+  setFusionSets: state.setFusionSets,
   toggleArcMode: state.toggleArcMode,
+  deletePetriNet: state.deletePetriNet,
+  duplicatePetriNet: state.duplicatePetriNet,
+  reorderPetriNets: state.reorderPetriNets,
   reset: state.reset,
 });
 
@@ -111,6 +124,8 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
   const [renamePetriNetDialogOpen, setRenamePetriNetDialogOpen] = useState(false);
   const [renamePetriNetId, setRenamePetriNetId] = useState<string | null>(null);
   const [renamePetriNetValue, setRenamePetriNetValue] = useState('');
+  const [deleteConfirmDialogOpen, setDeleteConfirmDialogOpen] = useState(false);
+  const [deleteConfirmPetriNetId, setDeleteConfirmPetriNetId] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editingNameValue, setEditingNameValue] = useState('');
 
@@ -149,7 +164,11 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     setPriorities,
     setFunctions,
     setUses,
+    setFusionSets,
     toggleArcMode,
+    deletePetriNet,
+    duplicatePetriNet,
+    reorderPetriNets,
     reset,
   } = useStore(
     useShallow(selector),
@@ -161,9 +180,13 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     ? petriNetHandlers
     : { onNodesChange: () => {}, onEdgesChange: () => {}, onConnect: () => {} };
 
-  const { fitView, screenToFlowPosition } = useReactFlow();
+  const { fitView, screenToFlowPosition, getViewport, setViewport } = useReactFlow();
   const nodesInitialized = useNodesInitialized();
   const [type] = useDnD();
+
+  // Store viewport per tab so switching tabs preserves pan/zoom
+  const viewportsRef = useRef<Record<string, Viewport>>({});
+  const prevActiveTabRef = useRef<string | null>(activePetriNetId);
 
   // Subscribe to temporal store for undo/redo
   const { undo, redo } = useStore.temporal.getState();
@@ -176,12 +199,27 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     () => useStore.temporal.getState().futureStates.length > 0,
   );
 
-  // Fit view once nodes have been measured (have actual width/height)
+  // Save viewport when switching away from a tab, restore when switching to it
   useEffect(() => {
-    if (nodesInitialized) {
-      fitView({ padding: 0.35, maxZoom: 4 });
+    const prevId = prevActiveTabRef.current;
+    if (prevId && prevId !== activePetriNetId) {
+      // Save the viewport of the tab we're leaving
+      viewportsRef.current[prevId] = getViewport();
     }
-  }, [nodesInitialized, fitView]);
+    prevActiveTabRef.current = activePetriNetId;
+  }, [activePetriNetId, getViewport]);
+
+  // Restore viewport or fitView once nodes have been measured
+  useEffect(() => {
+    if (nodesInitialized && activePetriNetId) {
+      const saved = viewportsRef.current[activePetriNetId];
+      if (saved) {
+        setViewport(saved);
+      } else {
+        fitView({ padding: 0.35, maxZoom: 4 });
+      }
+    }
+  }, [nodesInitialized, activePetriNetId, fitView, setViewport]);
 
   // Keyboard shortcuts for simulation controls
   useEffect(() => {
@@ -308,6 +346,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       if (data.priorities) setPriorities(data.priorities);
       if (data.functions) setFunctions(data.functions);
       if (data.uses) setUses(data.uses);
+      if (data.fusionSets) setFusionSets(data.fusionSets);
       
       // Restore simulation settings if available
       if (data.simulationSettings) {
@@ -380,6 +419,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       priorities,
       functions,
       uses,
+      fusionSets: useStore.getState().fusionSets,
       // Include simulation settings for JSON/OCPN format
       simulationSettings: {
         stepsPerRun: simulationContext?.simulationConfig?.stepsPerRun,
@@ -854,6 +894,96 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     setNewPetriNetName(''); // Clear the input field
   };
 
+  // Import a saved .ocpn/.cpn/.json file as a new subpage with remapped IDs
+  const handleImportSubpage = (fileContent: string, fileName: string) => {
+    const data = parseFileContent(fileContent, fileName);
+    if (!data) {
+      alert('Failed to parse the file. Please check the file format.');
+      return;
+    }
+
+    // Import each petri net from the file as a new subpage
+    const addPetriNet = useStore.getState().addPetriNet;
+    for (const oldId of data.petriNetOrder) {
+      const source = data.petriNetsById[oldId];
+      if (!source) continue;
+
+      // Remap all IDs to avoid collisions
+      const idMap = new Map<string, string>();
+      source.nodes.forEach((n) => idMap.set(n.id, uuidv4()));
+      source.edges.forEach((e) => idMap.set(e.id, uuidv4()));
+
+      const newId = uuidv4();
+      const remappedNodes = source.nodes.map((n) => ({
+        ...n,
+        id: idMap.get(n.id)!,
+        data: {
+          ...n.data,
+          // Clear hierarchy links — imported net is a fresh subpage
+          subPageId: undefined,
+          socketAssignments: undefined,
+          portType: undefined,
+          fusionSetId: undefined,
+        },
+      }));
+      const remappedEdges = source.edges.map((e) => ({
+        ...e,
+        id: idMap.get(e.id)!,
+        source: idMap.get(e.source) || e.source,
+        target: idMap.get(e.target) || e.target,
+      }));
+
+      addPetriNet({
+        id: newId,
+        name: source.name,
+        nodes: remappedNodes,
+        edges: remappedEdges,
+        selectedElement: null,
+      });
+    }
+
+    // Also merge color sets, variables, etc. from the imported file if they are new
+    if (data.colorSets?.length) {
+      const existing = new Set(colorSets.map((cs) => cs.name));
+      const newCS = data.colorSets.filter((cs) => !existing.has(cs.name));
+      if (newCS.length > 0) setColorSets([...colorSets, ...newCS]);
+    }
+    if (data.variables?.length) {
+      const existing = new Set(variables.map((v) => v.name));
+      const newVars = data.variables.filter((v) => !existing.has(v.name));
+      if (newVars.length > 0) setVariables([...variables, ...newVars]);
+    }
+
+    setNewPetriNetDialogOpen(false);
+    setNewPetriNetName('');
+  };
+
+  const handleSubpageFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const content = ev.target?.result as string;
+      if (content) handleImportSubpage(content, file.name);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleSubpageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const content = ev.target?.result as string;
+      if (content) handleImportSubpage(content, file.name);
+    };
+    reader.readAsText(file);
+    // Reset the input so the same file can be selected again
+    e.target.value = '';
+  };
+
   const handleRenamePetriNet = (e: React.FormEvent) => {
     e.preventDefault();
     if (renamePetriNetId && renamePetriNetValue.trim()) {
@@ -864,13 +994,99 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     }
   };
 
-  const handleTabClick = (id: string) => {
+  const openRenameDialog = (id: string) => {
     const petriNet = petriNetsById[id];
     if (petriNet) {
       setRenamePetriNetId(id);
       setRenamePetriNetValue(petriNet.name);
       setRenamePetriNetDialogOpen(true);
     }
+  };
+
+  // Check if deleting a subpage would affect substitution transitions
+  const handleDeleteSubpage = (id: string) => {
+    // Check if any substitution transition references this subpage
+    const referencingNets = Object.values(petriNetsById).filter(
+      (net) => net.id !== id && net.nodes.some((n) => n.type === 'transition' && n.data?.subPageId === id)
+    );
+    if (referencingNets.length > 0) {
+      setDeleteConfirmPetriNetId(id);
+      setDeleteConfirmDialogOpen(true);
+    } else {
+      deletePetriNet(id);
+    }
+  };
+
+  const confirmDeleteSubpage = () => {
+    if (deleteConfirmPetriNetId) {
+      deletePetriNet(deleteConfirmPetriNetId);
+    }
+    setDeleteConfirmDialogOpen(false);
+    setDeleteConfirmPetriNetId(null);
+  };
+
+  const handleSaveSubpageAsNet = (id: string) => {
+    const petriNet = petriNetsById[id];
+    if (!petriNet) return;
+    const singleNetData: PetriNetData = {
+      ocpnName: petriNet.name,
+      petriNetsById: { [id]: petriNet },
+      petriNetOrder: [id],
+      colorSets,
+      variables,
+      priorities,
+      functions,
+      uses,
+    };
+    const content = convertToJSON(singleNetData);
+    saveFile(content, `${petriNet.name.replace(/\s+/g, '_')}.ocpn`);
+  };
+
+  // Tab drag-to-reorder state
+  const [draggedTabId, setDraggedTabId] = useState<string | null>(null);
+  const [dragOverTabId, setDragOverTabId] = useState<string | null>(null);
+
+  const handleTabDragStart = (e: React.DragEvent, id: string) => {
+    // Don't allow dragging the main (first) tab
+    if (petriNetOrder[0] === id) {
+      e.preventDefault();
+      return;
+    }
+    setDraggedTabId(id);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+  };
+
+  const handleTabDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    if (!draggedTabId || draggedTabId === id) return;
+    // Don't allow dropping before the main tab
+    if (petriNetOrder[0] === id) return;
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverTabId(id);
+  };
+
+  const handleTabDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    setDragOverTabId(null);
+    if (!draggedTabId || draggedTabId === targetId) return;
+    // Don't allow dropping before the main tab
+    if (petriNetOrder[0] === targetId) return;
+
+    const oldIndex = petriNetOrder.indexOf(draggedTabId);
+    const newIndex = petriNetOrder.indexOf(targetId);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const newOrder = [...petriNetOrder];
+    newOrder.splice(oldIndex, 1);
+    newOrder.splice(newIndex, 0, draggedTabId);
+    reorderPetriNets(newOrder);
+    setDraggedTabId(null);
+  };
+
+  const handleTabDragEnd = () => {
+    setDraggedTabId(null);
+    setDragOverTabId(null);
   };
 
   return (
@@ -1005,77 +1221,190 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
           petriNetName={ocpnName}
         />
 
-        {/* A Tab bar with the names of the Petri nets */}
-        <div className="flex flex-col w-full mx-auto bg-muted">
-          <Tabs
-            defaultValue={activePetriNetId || petriNetOrder[0]}
-            value={activePetriNetId ?? undefined}
-            onValueChange={(value) => setActivePetriNet(value)}
-            className="flex flex-col gap-2 items-start"
-          >
-            <TabsList className="flex gap-4 items-center">
-              {petriNetOrder.map((id) => (
-                <TabsTrigger 
-                  key={id} 
-                  value={id}
-                  onClick={(e) => {
-                    // Prevent tab switching when clicking on the active tab
-                    if (id === activePetriNetId) {
-                      e.preventDefault();
-                      handleTabClick(id);
-                    }
-                  }}
-                >
-                  {petriNetsById[id].name}
-                </TabsTrigger>
-              ))}
-                <Button variant="ghost" onClick={() => setNewPetriNetDialogOpen(true)}>New Subpage</Button>
-              <Dialog open={newPetriNetDialogOpen} onOpenChange={setNewPetriNetDialogOpen}>
-                <DialogContent className="p-4">
-                  <DialogHeader>
-                    <DialogTitle>Add New Subpage</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleAddPetriNet} className="space-y-2">
-                    <div className="space-y-1">
-                      <Label htmlFor="petri-net-name">Subpage Name</Label>
-                      <Input
-                        id="petri-net-name"
-                        placeholder="Enter subpage name"
-                        value={newPetriNetName}
-                        onChange={(e) => setNewPetriNetName(e.target.value)}
-                      />
-                    </div>
-                    <Button type="submit" className="w-full">
-                      Add Subpage
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-              <Dialog open={renamePetriNetDialogOpen} onOpenChange={setRenamePetriNetDialogOpen}>
-                <DialogContent className="p-4">
-                  <DialogHeader>
-                    <DialogTitle>Rename Subpage</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleRenamePetriNet} className="space-y-2">
-                    <div className="space-y-1">
-                      <Label htmlFor="rename-petri-net-name">New Name</Label>
-                      <Input
-                        id="rename-petri-net-name"
-                        placeholder="Enter new name"
-                        value={renamePetriNetValue}
-                        onChange={(e) => setRenamePetriNetValue(e.target.value)}
-                        autoFocus
-                      />
-                    </div>
-                    <Button type="submit" className="w-full">
+        {/* Subpage tab bar */}
+        <div className="flex items-end w-full bg-muted/50 px-1 pt-1 gap-0 overflow-x-auto border-b border-border">
+          {petriNetOrder.map((id, index) => {
+            const isMain = index === 0;
+            const isActive = id === activePetriNetId;
+            const isDragOver = id === dragOverTabId;
+            return (
+              <div
+                key={id}
+                className={`
+                  group relative flex items-center gap-0.5 px-3 py-1.5 text-sm cursor-pointer select-none
+                  border border-b-0 rounded-t-md transition-colors
+                  ${isActive
+                    ? 'bg-background border-border text-foreground font-medium z-10 -mb-px'
+                    : 'bg-muted/60 border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }
+                  ${isMain && !isActive ? 'bg-muted border-border/50' : ''}
+                  ${isDragOver ? 'ring-2 ring-primary/50' : ''}
+                `}
+                draggable={!isMain}
+                onDragStart={(e) => handleTabDragStart(e, id)}
+                onDragOver={(e) => handleTabDragOver(e, id)}
+                onDragLeave={() => setDragOverTabId(null)}
+                onDrop={(e) => handleTabDrop(e, id)}
+                onDragEnd={handleTabDragEnd}
+                onClick={() => setActivePetriNet(id)}
+              >
+                {/* Drag handle for non-main tabs */}
+                {!isMain && (
+                  <GripVertical className="h-3 w-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab shrink-0 -ml-1" />
+                )}
+                {/* Main page icon */}
+                {isMain && (
+                  <svg className="h-3.5 w-3.5 mr-0.5 shrink-0 text-muted-foreground" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M2 6l6-4 6 4v7a1 1 0 01-1 1H3a1 1 0 01-1-1V6z" />
+                    <path d="M6 14V9h4v5" />
+                  </svg>
+                )}
+                <span className="truncate max-w-[140px]">{petriNetsById[id]?.name}</span>
+                {/* Three-dot menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className={`
+                        ml-1 p-0.5 rounded hover:bg-foreground/10 transition-opacity shrink-0
+                        ${isActive ? 'opacity-60 hover:opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100'}
+                      `}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <MoreVertical className="h-3.5 w-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    <DropdownMenuItem onClick={() => openRenameDialog(id)}>
                       Rename
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </TabsList>
-          </Tabs>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => duplicatePetriNet(id)}>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Duplicate
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSaveSubpageAsNet(id)}>
+                      Save as Petri Net
+                    </DropdownMenuItem>
+                    {!isMain && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => handleDeleteSubpage(id)}
+                        >
+                          Delete
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            );
+          })}
+          {/* Add subpage button */}
+          <button
+            className="flex items-center gap-1 px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-t-md transition-colors border border-transparent ml-0.5"
+            onClick={() => setNewPetriNetDialogOpen(true)}
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
         </div>
+
+        {/* New Subpage Dialog */}
+        <Dialog open={newPetriNetDialogOpen} onOpenChange={setNewPetriNetDialogOpen}>
+          <DialogContent className="p-4">
+            <DialogHeader>
+              <DialogTitle>Add New Subpage</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleAddPetriNet} className="space-y-2">
+              <div className="space-y-1">
+                <Label htmlFor="petri-net-name">Subpage Name</Label>
+                <Input
+                  id="petri-net-name"
+                  placeholder="Enter subpage name"
+                  value={newPetriNetName}
+                  onChange={(e) => setNewPetriNetName(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <Button type="submit" className="w-full">
+                Add Empty Subpage
+              </Button>
+            </form>
+
+            <div className="relative flex items-center my-1">
+              <div className="flex-grow border-t border-border" />
+              <span className="mx-3 text-xs text-muted-foreground">or import from file</span>
+              <div className="flex-grow border-t border-border" />
+            </div>
+
+            <div
+              className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onDrop={handleSubpageFileDrop}
+              onClick={() => document.getElementById('import-subpage-file')?.click()}
+            >
+              <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground/60" />
+              <p className="text-sm text-muted-foreground">
+                Drop an <span className="font-medium text-foreground">.ocpn</span> or <span className="font-medium text-foreground">.cpn</span> file here
+              </p>
+              <p className="text-xs text-muted-foreground/60 mt-1">or click to browse</p>
+              <input
+                id="import-subpage-file"
+                type="file"
+                accept=".ocpn,.cpn,.json,.xml"
+                className="hidden"
+                onChange={handleSubpageFileSelect}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+        {/* Rename Subpage Dialog */}
+        <Dialog open={renamePetriNetDialogOpen} onOpenChange={setRenamePetriNetDialogOpen}>
+          <DialogContent className="p-4">
+            <DialogHeader>
+              <DialogTitle>Rename Subpage</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleRenamePetriNet} className="space-y-2">
+              <div className="space-y-1">
+                <Label htmlFor="rename-petri-net-name">New Name</Label>
+                <Input
+                  id="rename-petri-net-name"
+                  placeholder="Enter new name"
+                  value={renamePetriNetValue}
+                  onChange={(e) => setRenamePetriNetValue(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <Button type="submit" className="w-full">
+                Rename
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+        {/* Delete Subpage Confirmation Dialog */}
+        <Dialog open={deleteConfirmDialogOpen} onOpenChange={setDeleteConfirmDialogOpen}>
+          <DialogContent className="p-4">
+            <DialogHeader>
+              <DialogTitle>Delete Subpage</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                This subpage is referenced by a substitution transition. Deleting it will convert the substitution transition back to a regular transition, which may result in an incomplete model.
+              </p>
+              <p className="text-sm font-medium">
+                Are you sure you want to delete &quot;{deleteConfirmPetriNetId ? petriNetsById[deleteConfirmPetriNetId]?.name : ''}&quot;?
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setDeleteConfirmDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={confirmDeleteSubpage}>
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* ReactFlow Component Wrapper */}
         {/* Add w-full and h-full to ensure the wrapper takes available space */}

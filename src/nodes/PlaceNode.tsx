@@ -12,6 +12,9 @@ export interface PlaceNodeData {
   colorSet: string;
   initialMarking: string;
   marking: unknown[]; // Array of tokens (can be plain values or TimedToken objects)
+  // Hierarchy: port places and fusion places
+  portType?: 'in' | 'out' | 'io'; // Port type for places on subpages
+  fusionSetId?: string; // Links this place to a fusion set
   // Offset positions for draggable inscriptions
   colorSetOffset?: { x: number; y: number };
   tokenCountOffset?: { x: number; y: number };
@@ -206,6 +209,12 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
   const simulationEpoch = useStore((state) => state.simulationEpoch);
   const epoch = simulationEpoch ? new Date(simulationEpoch) : null;
 
+  // Get fusion set name if this place belongs to one
+  const fusionSetName = useStore((state) => {
+    if (!data.fusionSetId) return null;
+    return state.fusionSets.find((fs) => fs.id === data.fusionSetId)?.name || null;
+  });
+
   const isTarget = connection.inProgress && connection.fromNode.id !== id && connection.fromNode.type === 'transition';
 
   const hasMarking = data.marking && Array.isArray(data.marking) && data.marking.length > 0;
@@ -301,6 +310,54 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
             </tbody>
           </table>
         </DraggableInscription>
+      )}
+
+      {/* Port type hierarchy tag (In/Out/I/O) at bottom center */}
+      {data.portType && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: '50%',
+            transform: selected
+              ? 'translate(-50%, calc(100% + 8px))'
+              : 'translate(-50%, calc(100% + 2px))',
+            transition: 'transform 0.15s ease-out',
+          }}
+          className="nodrag pointer-events-none"
+        >
+          <div className={`flex items-center justify-center px-1.5 h-[14px] rounded-[2px] border text-[8px] font-semibold whitespace-nowrap ${
+            data.portType === 'in' ? 'border-green-400/70 bg-green-50 text-green-700' :
+            data.portType === 'out' ? 'border-orange-400/70 bg-orange-50 text-orange-700' :
+            'border-purple-400/70 bg-purple-50 text-purple-700'
+          }`}>
+            {data.portType === 'in' ? 'In' : data.portType === 'out' ? 'Out' : 'I/O'}
+          </div>
+        </div>
+      )}
+
+      {/* Fusion set tag at bottom center (below port tag if both exist) */}
+      {fusionSetName && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: '50%',
+            transform: selected
+              ? `translate(-50%, calc(100% + ${data.portType ? '24px' : '8px'}))`
+              : `translate(-50%, calc(100% + ${data.portType ? '18px' : '2px'}))`,
+            transition: 'transform 0.15s ease-out',
+          }}
+          className="nodrag pointer-events-none"
+        >
+          <div className="flex items-center gap-0.5 px-1.5 h-[14px] rounded-[2px] border border-cyan-400/70 bg-cyan-50 text-[8px] font-medium text-cyan-700 whitespace-nowrap">
+            <svg width="8" height="8" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="5" cy="8" r="4" stroke="currentColor" strokeWidth="1.2" fill="none" />
+              <circle cx="11" cy="8" r="4" stroke="currentColor" strokeWidth="1.2" fill="none" />
+            </svg>
+            {fusionSetName}
+          </div>
+        </div>
       )}
 
       <Handle

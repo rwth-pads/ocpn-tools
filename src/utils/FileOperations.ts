@@ -1,4 +1,4 @@
-import type { PetriNet } from '@/types';
+import type { PetriNet, FusionSet } from '@/types';
 import type { ColorSet, Variable, Priority, Function, Use } from '@/declarations';
 
 import { v4 as uuidv4 } from 'uuid';
@@ -14,6 +14,7 @@ export type PetriNetData = {
   priorities: Priority[]
   functions: Function[]
   uses: Use[] // Added uses
+  fusionSets?: FusionSet[] // Fusion sets for fusion places
   // Simulation settings (optional for backward compatibility)
   simulationSettings?: {
     stepsPerRun?: number;
@@ -249,6 +250,8 @@ export function convertToJSON(data: PetriNetData): string {
             colorSetOffset: place.data.colorSetOffset || undefined,
             tokenCountOffset: place.data.tokenCountOffset || undefined,
             markingOffset: place.data.markingOffset || undefined,
+            portType: place.data.portType || undefined,
+            fusionSetId: place.data.fusionSetId || undefined,
           })),
         transitions: petriNet.nodes
           .filter((node) => node.type === "transition")
@@ -261,6 +264,8 @@ export function convertToJSON(data: PetriNetData): string {
             codeSegment: transition.data.codeSegment || "",
             position: transition.position,
             size: transition.measured || { width: 50, height: 30 }, // Replace "measured" with "size"
+            subPageId: transition.data.subPageId || undefined,
+            socketAssignments: transition.data.socketAssignments || undefined,
           })),
         arcs: petriNet.edges.map((arc) => ({
           id: arc.id,
@@ -280,6 +285,7 @@ export function convertToJSON(data: PetriNetData): string {
     priorities: data.priorities,
     functions: data.functions,
     uses: data.uses, // Include uses in JSON
+    fusionSets: data.fusionSets || undefined, // Include fusion sets
     simulationSettings: data.simulationSettings || undefined, // Include simulation settings if present
     simulationEpoch: data.simulationSettings?.simulationEpoch || undefined, // Top-level for WASM simulator
   };
@@ -313,6 +319,8 @@ export function parseJSON(content: string): PetriNetData {
       colorSetOffset?: { x: number; y: number };
       tokenCountOffset?: { x: number; y: number };
       markingOffset?: { x: number; y: number };
+      portType?: 'in' | 'out' | 'io';
+      fusionSetId?: string;
     }[];
     transitions: {
       id: string;
@@ -323,6 +331,8 @@ export function parseJSON(content: string): PetriNetData {
       codeSegment?: string;
       position?: { x: number; y: number };
       size?: { width: number; height: number };
+      subPageId?: string;
+      socketAssignments?: { portPlaceId: string; socketPlaceId: string }[];
     }[];
     arcs: {
       id: string;
@@ -348,6 +358,8 @@ export function parseJSON(content: string): PetriNetData {
         colorSetOffset: place.colorSetOffset || undefined,
         tokenCountOffset: place.tokenCountOffset || undefined,
         markingOffset: place.markingOffset || undefined,
+        portType: place.portType || undefined,
+        fusionSetId: place.fusionSetId || undefined,
       },
       width: place.size?.width || 50,
       height: place.size?.height || 30,
@@ -363,6 +375,8 @@ export function parseJSON(content: string): PetriNetData {
         time: transition.time || "",
         priority: transition.priority || "",
         codeSegment: transition.codeSegment || "",
+        subPageId: transition.subPageId || undefined,
+        socketAssignments: transition.socketAssignments || undefined,
       },
       width: transition.size?.width || 50,
       height: transition.size?.height || 30,
@@ -399,6 +413,7 @@ export function parseJSON(content: string): PetriNetData {
   const priorities: Priority[] = parsedData.priorities || [];
   const functions: Function[] = parsedData.functions || [];
   const uses: Use[] = parsedData.uses || []; // Parse uses
+  const fusionSets: FusionSet[] = parsedData.fusionSets || []; // Parse fusion sets
   
   // Parse simulation settings if present
   const simulationSettings = parsedData.simulationSettings ? {
@@ -416,6 +431,7 @@ export function parseJSON(content: string): PetriNetData {
     priorities,
     functions,
     uses, // Include uses in the returned data
+    fusionSets, // Include fusion sets
     simulationSettings, // Include simulation settings in the returned data
   };
 }

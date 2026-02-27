@@ -29,6 +29,18 @@ export function isTimedToken(token: unknown): token is TimedToken {
 
 export type ArcType = 'normal' | 'reset' | 'inhibitor';
 
+export type PortType = 'in' | 'out' | 'io';
+
+export type SocketAssignment = {
+  portPlaceId: string; // Place ID on the subpage
+  socketPlaceId: string; // Place ID on the parent page
+};
+
+export type FusionSet = {
+  id: string;
+  name: string;
+};
+
 export type PetriNet = {
   id: string;
   name: string;
@@ -62,6 +74,7 @@ export type AppState = {
   showMarkingDisplay: boolean; // Toggle for showing/hiding marking rectangles
   isArcMode: boolean; // Whether arc connection mode is active
   activeArcType: ArcType; // The type of arc to create when connecting nodes
+  fusionSets: FusionSet[]; // Named fusion sets for fusion places
 };
 
 export type AppActions = {
@@ -72,6 +85,9 @@ export type AppActions = {
   addPetriNet: (newPetriNet: PetriNet) => void;
   setActivePetriNet: (id: string) => void;
   renamePetriNet: (id: string, newName: string) => void;
+  deletePetriNet: (id: string) => void;
+  duplicatePetriNet: (id: string) => void;
+  reorderPetriNets: (newOrder: string[]) => void;
   addNode: (petriNetId: string, newNode: Node) => void;
   addEdge: (petriNetId: string, edge: Edge) => void;
   updateNode: (petriNetId: string, node: Node) => void;
@@ -108,6 +124,19 @@ export type AppActions = {
   setOcpnName: (name: string) => void;
   setSimulationEpoch: (epoch: string | null) => void;
   setShowMarkingDisplay: (show: boolean) => void;
+
+  // Fusion sets
+  setFusionSets: (fusionSets: FusionSet[]) => void;
+  addFusionSet: (fusionSet: FusionSet) => void;
+  deleteFusionSet: (id: string) => void;
+
+  // Hierarchy
+  moveTransitionToSubpage: (petriNetId: string, transitionId: string) => void;
+  moveNodesToSubpage: (petriNetId: string, nodeIds: string[], subpageName?: string) => void;
+  flattenSubstitutionTransition: (petriNetId: string, transitionId: string) => void;
+  assignSubpageToTransition: (petriNetId: string, transitionId: string, subPageId: string, socketAssignments: SocketAssignment[]) => void;
+  removeSubpageFromTransition: (petriNetId: string, transitionId: string) => void;
+
   reset: () => void;
 };
 

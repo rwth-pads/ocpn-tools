@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import useStore from '@/stores/store';
 
 import { Label } from "@/components/ui/label";
@@ -6,6 +6,7 @@ import { UndoableInput as Input, UndoableTextarea as Textarea, UndoableAutoExpan
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { CodeSegmentEditor } from "@/components/CodeSegmentEditor";
 
 import type { Priority } from "@/declarations";
@@ -84,6 +85,10 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
     return activePetriNet?.selectedElement;
   });
   const updateNodeData = useStore((state) => state.updateNodeData);
+  const petriNetsById = useStore((state) => state.petriNetsById);
+  const petriNetOrder = useStore((state) => state.petriNetOrder);
+  const assignSubpageToTransition = useStore((state) => state.assignSubpageToTransition);
+  const removeSubpageFromTransition = useStore((state) => state.removeSubpageFromTransition);
 
   // State for time input mode
   const [timeMode, setTimeMode] = useState<'relative' | 'expression'>('relative');
@@ -94,7 +99,7 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
   // Extract node data safely (for use in useEffect before early returns)
   const isValidNode = selectedElement && selectedElement.type === 'node' && selectedElement.element;
   const nodeId = isValidNode ? selectedElement.element.id : null;
-  const nodeData = isValidNode ? selectedElement.element.data as { label?: string; colorSet?: string; isArcMode?: boolean; type?: string; initialMarking?: string; guard?: string; time?: string; priority?: string; codeSegment?: string } : null;
+  const nodeData = isValidNode ? selectedElement.element.data as { label?: string; colorSet?: string; isArcMode?: boolean; type?: string; initialMarking?: string; guard?: string; time?: string; priority?: string; codeSegment?: string; subPageId?: string; socketAssignments?: { portPlaceId: string; socketPlaceId: string }[] } : null;
 
   // Initialize time state when node changes - must be called before any early returns
   useEffect(() => {
@@ -416,8 +421,212 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
           }
         />
       </div>
+
+      <SubpageSection
+        activePetriNetId={activePetriNetId}
+        transitionId={id}
+        data={data}
+        petriNetsById={petriNetsById}
+        petriNetOrder={petriNetOrder}
+        assignSubpageToTransition={assignSubpageToTransition}
+        removeSubpageFromTransition={removeSubpageFromTransition}
+      />
     </div>
   )
+}
+
+/** Subpage assignment section for transitions */
+function SubpageSection({
+  activePetriNetId,
+  transitionId,
+  data,
+  petriNetsById,
+  petriNetOrder,
+  assignSubpageToTransition,
+  removeSubpageFromTransition,
+}: {
+  activePetriNetId: string | null;
+  transitionId: string;
+  data: { subPageId?: string; socketAssignments?: { portPlaceId: string; socketPlaceId: string }[] };
+  petriNetsById: Record<string, { id: string; name: string; nodes: { id: string; type?: string; data?: Record<string, unknown> }[]; edges: { id: string; source: string; target: string }[] }>;
+  petriNetOrder: string[];
+  assignSubpageToTransition: (petriNetId: string, transitionId: string, subPageId: string, socketAssignments: { portPlaceId: string; socketPlaceId: string }[]) => void;
+  removeSubpageFromTransition: (petriNetId: string, transitionId: string) => void;
+}) {
+  // Read live transition data from the store (not from stale selectedElement)
+  const liveNode = useMemo(() => {
+    if (!activePetriNetId || !petriNetsById[activePetriNetId]) return null;
+    return petriNetsById[activePetriNetId].nodes.find((n) => n.id === transitionId);
+  }, [activePetriNetId, petriNetsById, transitionId]);
+
+  const currentSubPageId = (liveNode?.data?.subPageId as string) || data.subPageId || null;
+  const currentSocketAssignments = (liveNode?.data?.socketAssignments as { portPlaceId: string; socketPlaceId: string }[]) || data.socketAssignments || [];
+
+  // Available subpages: exclude the current net and the main page
+  const availableSubpages = useMemo(() => {
+    return petriNetOrder
+      .filter((id) => id !== activePetriNetId)
+      .map((id) => ({ id, name: petriNetsById[id]?.name || id }));
+  }, [petriNetOrder, activePetriNetId, petriNetsById]);
+
+  // Port places on the selected subpage (places with portType set)
+  const portPlaces = useMemo(() => {
+    if (!currentSubPageId || !petriNetsById[currentSubPageId]) return [];
+    return petriNetsById[currentSubPageId].nodes.filter(
+      (n) => n.type === 'place' && n.data?.portType
+    );
+  }, [currentSubPageId, petriNetsById]);
+
+  // Places on the parent net that can be sockets (places connected to this transition)
+  const parentPlaces = useMemo(() => {
+    if (!activePetriNetId || !petriNetsById[activePetriNetId]) return [];
+    const parentNet = petriNetsById[activePetriNetId];
+    // Get all places connected to this transition via arcs
+    const connectedPlaceIds = new Set<string>();
+    parentNet.edges.forEach((e) => {
+      if (e.source === transitionId) connectedPlaceIds.add(e.target);
+      if (e.target === transitionId) connectedPlaceIds.add(e.source);
+    });
+    return parentNet.nodes.filter(
+      (n) => n.type === 'place' && connectedPlaceIds.has(n.id)
+    );
+  }, [activePetriNetId, petriNetsById, transitionId]);
+
+  // All places on the parent net (for socket selection)
+  const allParentPlaces = useMemo(() => {
+    if (!activePetriNetId || !petriNetsById[activePetriNetId]) return [];
+    return petriNetsById[activePetriNetId].nodes.filter((n) => n.type === 'place');
+  }, [activePetriNetId, petriNetsById]);
+
+  const handleSubpageChange = (subPageId: string) => {
+    if (!activePetriNetId) return;
+    if (subPageId === '__none__') {
+      removeSubpageFromTransition(activePetriNetId, transitionId);
+      return;
+    }
+    // Auto-generate socket assignments by matching port places to connected parent places
+    const subPage = petriNetsById[subPageId];
+    if (!subPage) return;
+    const ports = subPage.nodes.filter((n) => n.type === 'place' && n.data?.portType);
+    const autoAssignments: { portPlaceId: string; socketPlaceId: string }[] = [];
+
+    for (const port of ports) {
+      // Try to find a matching parent place by name/label
+      const portLabel = (port.data?.label as string) || '';
+      const matchByName = parentPlaces.find(
+        (p) => (p.data?.label as string) === portLabel
+      );
+      if (matchByName) {
+        autoAssignments.push({ portPlaceId: port.id, socketPlaceId: matchByName.id });
+      }
+    }
+    assignSubpageToTransition(activePetriNetId, transitionId, subPageId, autoAssignments);
+  };
+
+  const handleSocketChange = (portPlaceId: string, socketPlaceId: string) => {
+    if (!activePetriNetId || !currentSubPageId) return;
+    const updated = currentSocketAssignments.filter((sa) => sa.portPlaceId !== portPlaceId);
+    if (socketPlaceId !== '__none__') {
+      updated.push({ portPlaceId, socketPlaceId });
+    }
+    assignSubpageToTransition(activePetriNetId, transitionId, currentSubPageId, updated);
+  };
+
+  return (
+    <>
+      <Separator />
+      <div className="grid w-full items-center gap-1.5">
+        <Label>Subpage</Label>
+        <Select
+          value={currentSubPageId || '__none__'}
+          onValueChange={handleSubpageChange}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="None" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">None</SelectItem>
+            {availableSubpages.map((sp) => (
+              <SelectItem key={sp.id} value={sp.id}>
+                {sp.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Socket assignments - shown when a subpage is selected and has port places */}
+      {currentSubPageId && portPlaces.length > 0 && (
+        <div className="grid w-full items-center gap-1.5">
+          <Label className="text-xs text-muted-foreground">Socket Assignments</Label>
+          <div className="space-y-2">
+            {portPlaces.map((port) => {
+              const currentSocket = currentSocketAssignments.find(
+                (sa) => sa.portPlaceId === port.id
+              );
+              const portLabel = (port.data?.label as string) || port.id;
+              const portType = port.data?.portType as string;
+              const portTypeLabel = portType === 'in' ? 'In' : portType === 'out' ? 'Out' : 'I/O';
+              const portTypeColor = portType === 'in' ? 'text-green-600' : portType === 'out' ? 'text-orange-600' : 'text-purple-600';
+              return (
+                <div key={port.id} className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 min-w-0 flex-1">
+                    <span className={`text-[10px] font-semibold ${portTypeColor}`}>{portTypeLabel}</span>
+                    <span className="text-xs truncate" title={portLabel}>{portLabel}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">→</span>
+                  <div className="flex-1">
+                    <Select
+                      value={currentSocket?.socketPlaceId || '__none__'}
+                      onValueChange={(val) => handleSocketChange(port.id, val)}
+                    >
+                      <SelectTrigger className="h-7 text-xs">
+                        <SelectValue placeholder="Not assigned" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Not assigned</SelectItem>
+                        {allParentPlaces.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {(p.data?.label as string) || p.id}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {portPlaces.length === 0 && currentSubPageId && (
+            <p className="text-xs text-muted-foreground">
+              No port places defined on the subpage. Set port types (In/Out/I/O) on subpage places first.
+            </p>
+          )}
+        </div>
+      )}
+
+      {currentSubPageId && portPlaces.length === 0 && (
+        <p className="text-xs text-muted-foreground">
+          No port places defined on the subpage. Set port types (In/Out/I/O) on subpage places first.
+        </p>
+      )}
+
+      {currentSubPageId && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-destructive hover:text-destructive"
+          onClick={() => {
+            if (activePetriNetId) {
+              removeSubpageFromTransition(activePetriNetId, transitionId);
+            }
+          }}
+        >
+          Remove Subpage
+        </Button>
+      )}
+    </>
+  );
 }
 
 export default TransitionProperties;

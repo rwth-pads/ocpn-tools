@@ -167,7 +167,7 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
     const activePetriNetId = state.activePetriNetId;
     const petriNet = activePetriNetId ? state.petriNetsById[activePetriNetId] : null;
     
-    if (!petriNet) return '#000';
+    if (!petriNet || !petriNet.nodes) return '#000';
     
     // Find the place node (source or target - one of them should be a place)
     const sourceNodeData = petriNet.nodes.find(n => n.id === source);

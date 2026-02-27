@@ -314,6 +314,7 @@ export function SimulationPanel() {
   // Get model data from store for OCEL export
   const colorSets = useStore((state) => state.colorSets);
   const petriNetsById = useStore((state) => state.petriNetsById);
+  const petriNetOrder = useStore((state) => state.petriNetOrder);
   const activePetriNetId = useStore((state) => state.activePetriNetId);
   const simulationEpoch = useStore((state) => state.simulationEpoch);
   const setSimulationEpoch = useStore((state) => state.setSimulationEpoch);
@@ -323,48 +324,54 @@ export function SimulationPanel() {
   const [tempConfig, setTempConfig] = useState<SimulationConfig>(simulationConfig);
   const [filteredTransitionIds, setFilteredTransitionIds] = useState<Set<string> | null>(null);
 
+  // Determine if currently viewing the main (root) page
+  const isMainPage = petriNetOrder.length > 0 && activePetriNetId === petriNetOrder[0];
+
   // Build transition filter items: list all transitions and mark which ones involve record-typed or product-typed places
-  // (product places contain record objects, so they are relevant for OCEL export)
+  // On the main page, include transitions from ALL nets (including subpages)
+  // On subpages, only include transitions from the active subpage
   const transitionFilterItems: TransitionFilterItem[] = useMemo(() => {
     if (!activePetriNetId) return [];
-    const petriNet = petriNetsById[activePetriNetId];
-    if (!petriNet) return [];
 
     const recordColorSetNames = new Set(
       colorSets.filter(cs => cs.type === 'record').map(cs => cs.name)
     );
-
-    // Product color sets also contain record objects as components
     const productColorSetNames = new Set(
       colorSets.filter(cs => cs.type === 'product').map(cs => cs.name)
     );
 
-    // Build a set of place IDs that use record or product color sets
-    const objectPlaceIds = new Set(
-      petriNet.nodes
-        .filter(n => {
-          if (n.type !== 'place') return false;
-          const cs = (n.data?.colorSet as string) || '';
-          return recordColorSetNames.has(cs) || productColorSetNames.has(cs);
-        })
-        .map(n => n.id)
-    );
+    const netsToInclude = isMainPage
+      ? Object.values(petriNetsById)
+      : [petriNetsById[activePetriNetId]].filter(Boolean);
 
-    // For each transition, check if any connected arc touches a record/product-typed place
-    const transitions = petriNet.nodes.filter(n => n.type === 'transition');
-    return transitions.map(t => {
-      const involvesRecord = petriNet.edges.some(
-        e =>
-          (e.source === t.id && objectPlaceIds.has(e.target)) ||
-          (e.target === t.id && objectPlaceIds.has(e.source))
+    const items: TransitionFilterItem[] = [];
+    for (const petriNet of netsToInclude) {
+      const objectPlaceIds = new Set(
+        petriNet.nodes
+          .filter(n => {
+            if (n.type !== 'place') return false;
+            const cs = (n.data?.colorSet as string) || '';
+            return recordColorSetNames.has(cs) || productColorSetNames.has(cs);
+          })
+          .map(n => n.id)
       );
-      return {
-        id: t.id,
-        name: (t.data?.label as string) || t.id,
-        involvesRecordType: involvesRecord,
-      };
-    });
-  }, [activePetriNetId, petriNetsById, colorSets]);
+
+      const transitions = petriNet.nodes.filter(n => n.type === 'transition' && !n.data?.subPageId);
+      for (const t of transitions) {
+        const involvesRecord = petriNet.edges.some(
+          e =>
+            (e.source === t.id && objectPlaceIds.has(e.target)) ||
+            (e.target === t.id && objectPlaceIds.has(e.source))
+        );
+        items.push({
+          id: t.id,
+          name: (t.data?.label as string) || t.id,
+          involvesRecordType: involvesRecord,
+        });
+      }
+    }
+    return items;
+  }, [activePetriNetId, petriNetsById, colorSets, isMainPage]);
 
   // Initialize filter to record-involving transitions when they change (e.g. model reload)
   useEffect(() => {
@@ -411,6 +418,23 @@ export function SimulationPanel() {
     }
     setSettingsOpen(false);
   };
+
+  // Collect the set of transition IDs on the active subpage (for event filtering)
+  const activeSubpageTransitionIds: Set<string> | null = useMemo(() => {
+    if (isMainPage || !activePetriNetId) return null; // null = no filtering
+    const petriNet = petriNetsById[activePetriNetId];
+    if (!petriNet) return null;
+    return new Set(petriNet.nodes.filter(n => n.type === 'transition').map(n => n.id));
+  }, [isMainPage, activePetriNetId, petriNetsById]);
+
+  // Events to display: on main page show all, on subpage show only subpage transitions
+  const displayEvents = useMemo(() => {
+    if (!activeSubpageTransitionIds) return events; // main page: all events
+    return events.filter(e => activeSubpageTransitionIds.has(e.transitionId));
+  }, [events, activeSubpageTransitionIds]);
+
+  // Subpage note for EventLog
+  const subpageNote = !isMainPage && activePetriNetId ? 'Showing only events for transitions on this subpage.' : undefined;
 
   // Get transitions and places from active Petri net
   const getModelData = useCallback(() => {
@@ -576,7 +600,7 @@ ${evt.relationships.map(r => `      <relationship objectId="${r.objectId}" quali
       {/* Event Log */}
       <div className="flex-1 overflow-hidden min-h-0">
         <EventLog
-          events={events}
+          events={displayEvents}
           onClearLog={clearEvents}
           onExport={() => setOcelDialogOpen(true)}
           canExport={canExport}
@@ -584,6 +608,7 @@ ${evt.relationships.map(r => `      <relationship objectId="${r.objectId}" quali
           transitions={transitionFilterItems}
           filteredTransitionIds={filteredTransitionIds ?? undefined}
           onFilterChange={setFilteredTransitionIds}
+          subpageNote={subpageNote}
         />
       </div>
       <OCELExportDialog open={ocelDialogOpen} onOpenChange={setOcelDialogOpen} onExport={handleExportOcel} />

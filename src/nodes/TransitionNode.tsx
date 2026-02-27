@@ -12,6 +12,9 @@ export interface TransitionNodeData {
   time: string;
   priority: string;
   codeSegment: string;
+  // Hierarchy: substitution transition
+  subPageId?: string; // ID of the subpage petri net (makes this a substitution transition)
+  socketAssignments?: { portPlaceId: string; socketPlaceId: string }[];
   // Offset positions for draggable inscriptions
   guardOffset?: { x: number; y: number };
   timeOffset?: { x: number; y: number };
@@ -122,8 +125,68 @@ export interface TransitionNodeProps {
 export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, selected }) => {
   const connection = useConnection();
   const activePetriNetId = useStore((state) => state.activePetriNetId);
+  const setActivePetriNet = useStore((state) => state.setActivePetriNet);
   // const updateNodeData = useStore((state) => state.updateNodeData);
   const { getNode, setNodes } = useReactFlow();
+
+  // Get the subpage name for the hierarchy tag
+  const subPageName = useStore((state) => {
+    if (!data.subPageId) return null;
+    return state.petriNetsById[data.subPageId]?.name || null;
+  });
+
+  // Check if simulation is active and this substitution transition's subpage marking changed
+  const activeMode = useStore((state) => state.activeMode);
+  const hasSubpageActivity = useStore((state) => {
+    if (!data.subPageId || activeMode !== 'simulation') return false;
+    const subPage = state.petriNetsById[data.subPageId];
+    if (!subPage) return false;
+    // Compare each non-port place's current marking against its initial marking
+    // Glow only when any internal place's marking differs from its initial state
+    // Port places (In/Out/I/O) are excluded since they mirror socket places on the parent
+    return subPage.nodes.some((n) => {
+      if (n.type !== 'place') return false;
+      // Skip port places — their markings are shown on the parent page
+      if (n.data?.portType) return false;
+      const currentMarking = Array.isArray(n.data?.marking) ? n.data.marking : [];
+      const initialStr = typeof n.data?.initialMarking === 'string' ? n.data.initialMarking.trim() : '';
+      // Parse initial marking to compare (simple JSON parse; empty string → empty array)
+      let initialMarking: unknown[] = [];
+      if (initialStr) {
+        try {
+          // Handle UNIT marking: [(), (), ...]
+          const unitMatch = initialStr.match(/^\[\s*((?:\(\)\s*,?\s*)*)\s*\]$/);
+          if (unitMatch) {
+            const unitCount = (initialStr.match(/\(\)/g) || []).length;
+            initialMarking = Array(unitCount).fill(null);
+          } else {
+            const parsed = JSON.parse(initialStr);
+            initialMarking = Array.isArray(parsed) ? parsed : [parsed];
+          }
+        } catch {
+          initialMarking = [];
+        }
+      }
+      // Quick length check first
+      if (currentMarking.length !== initialMarking.length) return true;
+      if (currentMarking.length === 0) return false;
+      // Strip timestamps from timed tokens so we compare only values.
+      // Timed tokens have shape { timestamp: number, value: ... }; we keep only `value`.
+      const stripTimestamp = (token: unknown): unknown => {
+        if (token && typeof token === 'object' && 'timestamp' in token && 'value' in token) {
+          return (token as { value: unknown }).value;
+        }
+        return token;
+      };
+      // Order-independent multiset comparison via sorted JSON serialization
+      const sortedStringify = (arr: unknown[]) => {
+        const strings = arr.map((t) => JSON.stringify(stripTimestamp(t)));
+        strings.sort();
+        return strings.join('\n');
+      };
+      return sortedStringify(currentMarking) !== sortedStringify(initialMarking);
+    });
+  });
 
   const handleBadgeClick = useCallback((fieldId: string) => {
     if (!activePetriNetId) return;
@@ -265,6 +328,49 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
             <path d="M8 5v14M8 5h8l-3 4 3 4H8" fill="#b45309" fillOpacity="0.15" stroke="#b45309" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
+      )}
+
+      {/* Hierarchy tag - subpage name at bottom center */}
+      {data.subPageId && subPageName && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: '50%',
+            transform: selected
+              ? 'translate(-50%, calc(100% + 8px))'
+              : 'translate(-50%, calc(100% + 2px))',
+            transition: 'transform 0.15s ease-out',
+          }}
+          className="nodrag pointer-events-auto cursor-pointer"
+        >
+          <div
+            className="flex items-center gap-0.5 px-1.5 h-[16px] rounded-[2px] border border-blue-400/70 bg-blue-50 text-[8px] font-medium text-blue-700 whitespace-nowrap shadow-sm hover:bg-blue-100 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (data.subPageId) setActivePetriNet(data.subPageId);
+            }}>
+            <svg width="8" height="8" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="1" width="6" height="6" rx="0.5" stroke="currentColor" strokeWidth="1.2" />
+              <rect x="9" y="9" width="6" height="6" rx="0.5" stroke="currentColor" strokeWidth="1.2" />
+              <path d="M7 4h2v8H7" stroke="currentColor" strokeWidth="1" fill="none" />
+            </svg>
+            {subPageName}
+          </div>
+        </div>
+      )}
+
+      {/* Green border for substitution transitions with active subpage */}
+      {hasSubpageActivity && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: -3,
+            borderRadius: 3,
+            border: '2px solid #7ED321',
+            pointerEvents: 'none',
+          }}
+        />
       )}
       
       <Handle

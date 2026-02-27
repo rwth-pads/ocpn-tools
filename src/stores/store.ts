@@ -871,6 +871,8 @@ const useStore = create<StoreState>()(temporal((set) => ({
             x: place.position.x - minX + offsetX,
             y: place.position.y - minY + offsetY,
           },
+          ...(place.width ? { width: place.width } : {}),
+          ...(place.height ? { height: place.height } : {}),
           data: {
             label: place.data?.label || 'Port',
             colorSet: place.data?.colorSet || '',
@@ -1075,6 +1077,8 @@ const useStore = create<StoreState>()(temporal((set) => ({
             x: bp.position.x - minX + 300,
             y: bp.position.y - minY + 200,
           },
+          ...(bp.width ? { width: bp.width } : {}),
+          ...(bp.height ? { height: bp.height } : {}),
           data: {
             label: bp.data?.label || 'Port',
             colorSet: bp.data?.colorSet || '',

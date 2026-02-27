@@ -91,6 +91,7 @@ const ArcProperties = () => {
   const edgeData = isValidEdge ? selectedElement.element.data as Record<string, unknown> : null;
 
   // Initialize delay state when edge changes
+  /* eslint-disable react-hooks/set-state-in-effect -- Form init on selection change */
   useEffect(() => {
     if (edgeId && edgeId !== lastEdgeId && edgeData) {
       setLastEdgeId(edgeId);
@@ -107,6 +108,7 @@ const ArcProperties = () => {
       }
     }
   }, [edgeId, lastEdgeId, edgeData]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!selectedElement) {
     return null;

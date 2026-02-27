@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -22,11 +22,6 @@ interface SettingsDialogProps {
 export function SettingsDialog({ open, onOpenChange, apiKey, onApiKeyChange }: SettingsDialogProps) {
   const [localApiKey, setLocalApiKey] = useState(apiKey || "")
   const [showApiKey, setShowApiKey] = useState(false)
-
-  // Update local state when props change
-  useEffect(() => {
-    setLocalApiKey(apiKey || "")
-  }, [apiKey])
 
   const handleSave = () => {
     onApiKeyChange(localApiKey)

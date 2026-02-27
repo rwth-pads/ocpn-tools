@@ -24,6 +24,26 @@ interface ToolbarProps {
   onApplyLayout: (options: LayoutOptions) => void;
 }
 
+function ArcTypeIcon({ type, className }: { type: ArcType; className?: string }) {
+  if (type === 'inhibitor') {
+    return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <line x1="3" y1="12" x2="16" y2="12" />
+        <circle cx="19" cy="12" r="3" fill="none" />
+      </svg>
+    );
+  }
+  if (type === 'reset') {
+    return (
+      <svg viewBox="0 0 24 24" className={className} fill="currentColor" stroke="none">
+        <polygon points="12,6 20,12 12,18" />
+        <polygon points="6,6 14,12 6,18" />
+      </svg>
+    );
+  }
+  return <ArrowRight className={className} />;
+}
+
 export function Toolbar({ toggleArcMode, onApplyLayout }: ToolbarProps) {
   const [, setType] = useDnD();
   const showMarkingDisplay = useStore((state) => state.showMarkingDisplay);
@@ -86,26 +106,6 @@ export function Toolbar({ toggleArcMode, onApplyLayout }: ToolbarProps) {
       // Activate this arc type
       toggleArcMode(true, arcType);
     }
-  };
-
-  const ArcTypeIcon = ({ type, className }: { type: ArcType; className?: string }) => {
-    if (type === 'inhibitor') {
-      return (
-        <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <line x1="3" y1="12" x2="16" y2="12" />
-          <circle cx="19" cy="12" r="3" fill="none" />
-        </svg>
-      );
-    }
-    if (type === 'reset') {
-      return (
-        <svg viewBox="0 0 24 24" className={className} fill="currentColor" stroke="none">
-          <polygon points="12,6 20,12 12,18" />
-          <polygon points="6,6 14,12 6,18" />
-        </svg>
-      );
-    }
-    return <ArrowRight className={className} />;
   };
 
   const onDragStart = (event: React.DragEvent<HTMLElement>, nodeType: string) => {

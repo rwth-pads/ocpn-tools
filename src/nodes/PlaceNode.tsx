@@ -48,7 +48,9 @@ function DraggableInscription({
   const { getZoom } = useReactFlow();
 
   // Keep ref in sync
-  currentOffsetRef.current = dragOffset;
+  React.useEffect(() => {
+    currentOffsetRef.current = dragOffset;
+  });
 
   React.useEffect(() => {
     setDragOffset(offset);

@@ -780,6 +780,7 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
         arcType,
         isSelected,
         style,
+        // eslint-disable-next-line react-hooks/refs -- ref is only accessed inside event handler callbacks, not during render
         handleArcPathMouseDown,
       )}
       {/* Render interactive bendpoint handles - always visible on hover */}
@@ -990,7 +991,9 @@ function DraggableArcLabel({
   const currentOffsetRef = useRef(dragOffset);
   
   // Keep ref in sync with state
-  currentOffsetRef.current = dragOffset;
+  React.useEffect(() => {
+    currentOffsetRef.current = dragOffset;
+  });
   
   // Get viewport zoom for proper drag scaling
   const { getZoom } = useReactFlow();

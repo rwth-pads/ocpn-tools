@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import useStore from '@/stores/store';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
@@ -42,8 +42,6 @@ export function ObjectEvolutionPanel({ simulationTimeRange }: ObjectEvolutionPan
   ])
 
   // Extract object types from colorSets (only those of type "record")
-  const [objectTypes, setObjectTypes] = useState<ObjectType[]>([])
-
   const colorSets = useStore((state) => state.colorSets);
 
   // State for value changes
@@ -72,10 +70,10 @@ export function ObjectEvolutionPanel({ simulationTimeRange }: ObjectEvolutionPan
   const [selectedTimestamp, setSelectedTimestamp] = useState<number | null>(null)
 
   // Extract object types from colorSets
-  useEffect(() => {
+  const objectTypes = useMemo<ObjectType[]>(() => {
     const recordColorSets = colorSets.filter((cs) => cs.type === "record" || cs.type === "complex"); // Include complex as they might be records
 
-    const extractedObjectTypes = recordColorSets
+    return recordColorSets
       .filter((cs): cs is typeof cs & { id: string; definition: string } =>
         typeof cs.id === 'string' && typeof cs.definition === 'string' && cs.definition.includes("record")
       ) // Ensure cs.id and cs.definition are strings and it's a record
@@ -141,9 +139,9 @@ export function ObjectEvolutionPanel({ simulationTimeRange }: ObjectEvolutionPan
           attributes,
         };
       });
-
-    setObjectTypes(extractedObjectTypes);
   }, [colorSets]);
+
+  // State for value changes
 
   // Handle opening the value change dialog
   const handleOpenValueChangeDialog = (attribute: Attribute, timestamp: number, existingChange?: ValueChange) => {

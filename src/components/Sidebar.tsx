@@ -62,7 +62,7 @@ const Sidebar = () => {
   };
 
   return (
-    <ResizablePanel defaultSize={20} className="min-w-[400px] flex flex-col h-full overflow-hidden">
+    <ResizablePanel defaultSize="20%" minSize="400px" className="flex flex-col h-full overflow-hidden">
       <div className="px-4 py-2 flex-shrink-0">
         <h3 className="text-lg font-medium">OCPN Tools</h3>
       </div>

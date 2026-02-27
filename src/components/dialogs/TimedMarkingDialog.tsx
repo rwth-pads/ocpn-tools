@@ -119,6 +119,7 @@ function TokenEditorRow({ token, index, colorSetType, epoch, onChange, onRemove 
   const [relativeTime, setRelativeTime] = useState(relTime);
   const [absoluteTime, setAbsoluteTime] = useState(epoch ? msToDatetime(token.timestamp, epoch) : '');
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Bidirectional sync from prop */
   useEffect(() => {
     const newRelTime = msToRelativeTime(token.timestamp);
     setRelativeTime(newRelTime);
@@ -126,6 +127,7 @@ function TokenEditorRow({ token, index, colorSetType, epoch, onChange, onRemove 
       setAbsoluteTime(msToDatetime(token.timestamp, epoch));
     }
   }, [token.timestamp, epoch]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleValueChange = (newValue: unknown) => {
     onChange(index, { ...token, value: newValue });
@@ -305,10 +307,12 @@ function TimestampCellEditor({ timestamp, epoch, onChange }: TimestampCellEditor
   const [relativeTime, setRelativeTime] = useState(msToRelativeTime(timestamp));
   const [absoluteTime, setAbsoluteTime] = useState(epoch ? msToDatetime(timestamp, epoch) : '');
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Bidirectional sync from prop */
   useEffect(() => {
     setRelativeTime(msToRelativeTime(timestamp));
     if (epoch) setAbsoluteTime(msToDatetime(timestamp, epoch));
   }, [timestamp, epoch]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleFieldChange = (field: keyof ReturnType<typeof msToRelativeTime>, value: number) => {
     const newRelTime = { ...relativeTime, [field]: value };
@@ -402,16 +406,20 @@ export function TimedMarkingDialog({
 
   const isRecordType = recordAttributes && recordAttributes.length > 0;
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Dialog data reset on open */
   useEffect(() => {
     setTokens(initialData);
     setCurrentPage(1);
   }, [initialData, open]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Bidirectional sync between visual and JSON views */
   useEffect(() => {
     if (activeTab === 'visual') {
       setJsonText(JSON.stringify(tokens, null, 2));
     }
   }, [tokens, activeTab]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const totalPages = Math.max(1, Math.ceil(tokens.length / pageSize));
   const paginatedTokens = useMemo(() => {

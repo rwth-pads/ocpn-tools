@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,14 +14,6 @@ interface VariableEditorProps {
 export function VariableEditor({ variable, existingColorSets, onSave }: VariableEditorProps) {
   const [name, setName] = useState(variable?.name || "");
   const [colorSet, setColorSet] = useState(variable?.colorSet || "INT");
-
-  useEffect(() => {
-    // When editing an existing color set, try to parse its definition
-    if (variable) {
-      setName(variable.name)
-      setColorSet(variable.colorSet)
-    }
-  }, [variable]);
 
   const handleSave = () => {
     onSave({

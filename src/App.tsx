@@ -20,14 +20,14 @@ export default function App() {
   return (
     <SimulationProvider>
       <div className="h-screen">
-        <ResizablePanelGroup direction="horizontal">
+        <ResizablePanelGroup orientation="horizontal">
           {/* Left Panel */}
           <Sidebar />
           <ResizableHandle />
 
           {/* Center Panel */}
           <ResizablePanel>
-            <ResizablePanelGroup direction="vertical">
+            <ResizablePanelGroup orientation="vertical">
               <ResizablePanel className="flex flex-col">
                 <ReactFlowProvider>
                   <DnDProvider>
@@ -36,7 +36,7 @@ export default function App() {
                 </ReactFlowProvider>
               </ResizablePanel>
               <ResizableHandle />
-              <ResizablePanel defaultSize={0} collapsedSize={0} collapsible minSize={10}>
+              <ResizablePanel defaultSize="0%" collapsedSize="0%" collapsible minSize="10%">
                 <ObjectEvolutionPanel simulationTimeRange={simulationTimeRange}/>
               </ResizablePanel>
             </ResizablePanelGroup>

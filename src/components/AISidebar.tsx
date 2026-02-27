@@ -235,7 +235,7 @@ export function AISidebar() {
   }
 
   return (
-    <ResizablePanel defaultSize={20} className="min-w-[400px] border-l h-screen">
+    <ResizablePanel defaultSize="20%" minSize="400px" className="border-l h-screen">
       <div className="flex flex-col h-full overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center">

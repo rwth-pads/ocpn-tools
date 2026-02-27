@@ -856,8 +856,8 @@ function parseCPNToolsXML(content: string): PetriNetData {
         }];
       }
 
-      let source = '';
-      let target = '';
+      let source: string;
+      let target: string;
 
       if (orientation === 'PtoT') {
         source = placeEndRef;

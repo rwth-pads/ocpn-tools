@@ -52,6 +52,7 @@ export function RecordMarkingDialog({
   const isRecordMode = attributes.length > 0
 
   // Initialize data from initialData
+  /* eslint-disable react-hooks/set-state-in-effect -- Dialog data init from props */
   useEffect(() => {
     if (initialData && Array.isArray(initialData)) {
       if (isRecordMode) {
@@ -67,6 +68,7 @@ export function RecordMarkingDialog({
     }
     setCurrentPage(1)
   }, [initialData, isRecordMode])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Pagination
   const dataLength = isRecordMode ? records.length : multisetEntries.length
@@ -83,12 +85,14 @@ export function RecordMarkingDialog({
   const handlePageSizeChange = (newSize: number) => { setPageSize(newSize); setCurrentPage(1) }
 
   // Update JSON text when data changes
+  /* eslint-disable react-hooks/set-state-in-effect -- Bidirectional sync between visual and JSON views */
   useEffect(() => {
     if (activeTab === "visual") {
       const data = isRecordMode ? records : multisetEntries
       setJsonText(JSON.stringify(data, null, 2))
     }
   }, [records, multisetEntries, activeTab, isRecordMode])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // === Multiset mode functions ===
   

@@ -120,8 +120,8 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
   const [subsetOf, setSubsetOf] = useState("INT")
   const [predicate, setPredicate] = useState("")
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Form init from prop; component should be keyed by colorSet.id */
   useEffect(() => {
-    // When editing an existing color set, try to parse its definition
     if (colorSet) {
       setName(colorSet.name);
       setType(colorSet.type);
@@ -180,6 +180,7 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
       }
     }
   }, [colorSet, existingColorSets]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleAddEnumValue = () => {
     setEnumValues([

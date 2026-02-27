@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,14 +12,6 @@ interface PriorityEditorProps {
 export function PriorityEditor({ priority, onSave }: PriorityEditorProps) {
   const [name, setName] = useState(priority?.name || "");
   const [level, setLevel] = useState(priority?.level || 100);
-
-  useEffect(() => {
-    // When editing an existing color set, try to parse its definition
-    if (priority) {
-      setName(priority.name)
-      setLevel(priority.level)
-    }
-  }, [priority]);
 
   const handleSave = () => {
     onSave({

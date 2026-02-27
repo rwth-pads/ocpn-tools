@@ -102,6 +102,7 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
   const nodeData = isValidNode ? selectedElement.element.data as { label?: string; colorSet?: string; isArcMode?: boolean; type?: string; initialMarking?: string; guard?: string; time?: string; priority?: string; codeSegment?: string; subPageId?: string; socketAssignments?: { portPlaceId: string; socketPlaceId: string }[] } : null;
 
   // Initialize time state when node changes - must be called before any early returns
+  /* eslint-disable react-hooks/set-state-in-effect -- Form init on selection change */
   useEffect(() => {
     if (nodeId && nodeId !== lastNodeId && nodeData) {
       setLastNodeId(nodeId);
@@ -118,6 +119,7 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
       }
     }
   }, [nodeId, lastNodeId, nodeData]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Ensure selectedElement is a node and has the correct data type
   if (!isValidNode || !nodeData) {

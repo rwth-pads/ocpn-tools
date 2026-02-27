@@ -38,6 +38,7 @@ export function ValueChangeDialog({
   const [currentTimestamp, setCurrentTimestamp] = useState<number>(timestamp)
 
   // Reset form when dialog opens
+  /* eslint-disable react-hooks/set-state-in-effect -- Dialog form reset on open */
   useEffect(() => {
     if (open) {
       if (existingChange) {
@@ -51,6 +52,7 @@ export function ValueChangeDialog({
       }
     }
   }, [open, attribute, timestamp, existingChange])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Get available operations based on attribute type
   const getAvailableOperations = () => {

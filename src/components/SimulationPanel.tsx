@@ -374,12 +374,14 @@ export function SimulationPanel() {
   }, [activePetriNetId, petriNetsById, colorSets, isMainPage]);
 
   // Initialize filter to record-involving transitions when they change (e.g. model reload)
+  /* eslint-disable react-hooks/set-state-in-effect -- Legitimate reset on model change */
   useEffect(() => {
     const defaultIds = new Set(
       transitionFilterItems.filter(t => t.involvesRecordType).map(t => t.id)
     );
     setFilteredTransitionIds(defaultIds);
   }, [transitionFilterItems]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Convert stored epoch (UTC ISO string) to local datetime string for the input
   const epochToLocal = (epoch: string | null | undefined): string => {

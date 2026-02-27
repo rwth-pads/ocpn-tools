@@ -5,7 +5,7 @@
 ## Description
 OCPN Tools is a web application designed to streamline and enhance the design of OCPNs (Object-centric Colored Petri Nets). It provides an intuitive interface for creating, editing, and managing OCPN models.
 
-<img width="1275" alt="ocpn-tools-screenshot" src="https://github.com/user-attachments/assets/e631c5fc-b0ba-4840-adcf-f6c5e33ff033" />
+<img width="1291" height="750" alt="OCPN Tools screenshot showing the built-in Airport Ground Handling example" src="https://github.com/user-attachments/assets/83fa9c27-d6aa-405e-8490-e061233dc3ef" />
 
 ## Installation
 To set up the project locally, follow these steps:

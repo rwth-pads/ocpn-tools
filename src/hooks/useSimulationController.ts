@@ -1003,7 +1003,7 @@ export function useSimulationController() {
     });
 
     return unsub;
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Return the state and functions needed by UI components
   return { 

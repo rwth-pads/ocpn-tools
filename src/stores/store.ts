@@ -854,7 +854,6 @@ const useStore = create<StoreState>()(temporal((set) => ({
         },
       };
 
-      let portIndex = 0;
       connectedPlaceIds.forEach((placeId) => {
         const place = parentNet.nodes.find((n) => n.id === placeId);
         if (!place) return;
@@ -904,8 +903,6 @@ const useStore = create<StoreState>()(temporal((set) => ({
             data: { ...arc.data },
           });
         }
-
-        portIndex++;
       });
 
       // Create the subpage
@@ -1058,7 +1055,6 @@ const useStore = create<StoreState>()(temporal((set) => ({
       const portArcs: Edge[] = [];
       const portIdMap = new Map<string, string>(); // boundaryPlaceId → portPlaceId
 
-      let portIndex = 0;
       for (const bpId of boundaryPlaceIds) {
         const bp = parentNet.nodes.find((n) => n.id === bpId);
         if (!bp) continue;
@@ -1111,8 +1107,6 @@ const useStore = create<StoreState>()(temporal((set) => ({
             data: { ...arc.data },
           });
         }
-
-        portIndex++;
       }
 
       // Reposition internal nodes relative to subpage origin

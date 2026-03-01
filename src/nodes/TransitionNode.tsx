@@ -338,23 +338,18 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
             bottom: 0,
             left: '50%',
             transform: selected
-              ? 'translate(-50%, calc(100% + 8px))'
-              : 'translate(-50%, calc(100% + 2px))',
+              ? 'translate(-50%, calc(100% + 4px))'
+              : 'translate(-50%, calc(100% - 1px))',
             transition: 'transform 0.15s ease-out',
           }}
           className="nodrag pointer-events-auto cursor-pointer"
         >
           <div
-            className="flex items-center gap-0.5 px-1.5 h-[16px] rounded-[2px] border border-blue-400/70 bg-blue-50 text-[8px] font-medium text-blue-700 whitespace-nowrap shadow-sm hover:bg-blue-100 transition-colors"
+            className="flex items-center px-0.5 h-[16px] rounded-[2px] border border-blue-400/70 bg-blue-50 text-[8px] font-medium text-blue-700 whitespace-nowrap shadow-sm hover:bg-blue-100 transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               if (data.subPageId) setActivePetriNet(data.subPageId);
             }}>
-            <svg width="8" height="8" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="1" y="1" width="6" height="6" rx="0.5" stroke="currentColor" strokeWidth="1.2" />
-              <rect x="9" y="9" width="6" height="6" rx="0.5" stroke="currentColor" strokeWidth="1.2" />
-              <path d="M7 4h2v8H7" stroke="currentColor" strokeWidth="1" fill="none" />
-            </svg>
             {subPageName}
           </div>
         </div>

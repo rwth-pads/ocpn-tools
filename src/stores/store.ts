@@ -907,13 +907,19 @@ const useStore = create<StoreState>()(temporal((set) => ({
         }
       });
 
+      // Mark the copied transition as selected on the subpage
+      const selectedCopiedTransition: Node = {
+        ...copiedTransition,
+        selected: true,
+      };
+
       // Create the subpage
       const subPage: PetriNet = {
         id: subPageId,
         name: subPageName,
-        nodes: [copiedTransition, ...portPlaces],
+        nodes: [selectedCopiedTransition, ...portPlaces],
         edges: subpageArcs,
-        selectedElement: null,
+        selectedElement: { type: 'node', element: selectedCopiedTransition },
       };
 
       // Update the original transition to be a substitution transition

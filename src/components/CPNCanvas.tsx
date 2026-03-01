@@ -207,6 +207,23 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       viewportsRef.current[prevId] = getViewport();
     }
     prevActiveTabRef.current = activePetriNetId;
+
+    // Sync selectedElement with React Flow's selected state on tab switch
+    if (activePetriNetId) {
+      const state = useStore.getState();
+      const net = state.petriNetsById[activePetriNetId];
+      if (net) {
+        const selectedNode = net.nodes.find((n) => n.selected);
+        const selectedEdge = !selectedNode ? net.edges.find((e) => e.selected) : undefined;
+        if (selectedNode) {
+          state.setSelectedElement(activePetriNetId, { type: 'node', element: selectedNode });
+        } else if (selectedEdge) {
+          state.setSelectedElement(activePetriNetId, { type: 'edge', element: selectedEdge });
+        } else {
+          state.setSelectedElement(activePetriNetId, null);
+        }
+      }
+    }
   }, [activePetriNetId, getViewport]);
 
   // Restore viewport or fitView once nodes have been measured

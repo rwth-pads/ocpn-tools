@@ -322,13 +322,13 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
             bottom: 0,
             left: '50%',
             transform: selected
-              ? 'translate(-50%, calc(100% + 8px))'
-              : 'translate(-50%, calc(100% + 2px))',
+              ? 'translate(-50%, calc(100% + 4px))'
+              : 'translate(-50%, calc(100% - 1px))',
             transition: 'transform 0.15s ease-out',
           }}
           className="nodrag pointer-events-none"
         >
-          <div className={`flex items-center justify-center px-1.5 h-[14px] rounded-[2px] border text-[8px] font-semibold whitespace-nowrap ${
+          <div className={`flex items-center justify-center px-0.5 h-[14px] rounded-[2px] border text-[8px] font-semibold whitespace-nowrap ${
             data.portType === 'in' ? 'border-green-400/70 bg-green-50 text-green-700' :
             data.portType === 'out' ? 'border-orange-400/70 bg-orange-50 text-orange-700' :
             'border-purple-400/70 bg-purple-50 text-purple-700'
@@ -346,8 +346,8 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
             bottom: 0,
             left: '50%',
             transform: selected
-              ? `translate(-50%, calc(100% + ${data.portType ? '24px' : '8px'}))`
-              : `translate(-50%, calc(100% + ${data.portType ? '18px' : '2px'}))`,
+              ? `translate(-50%, calc(100% + ${data.portType ? '20px' : '4px'}))`
+              : `translate(-50%, calc(100% + ${data.portType ? '15px' : '-1px'}))`,
             transition: 'transform 0.15s ease-out',
           }}
           className="nodrag pointer-events-none"

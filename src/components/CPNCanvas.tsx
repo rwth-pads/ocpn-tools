@@ -1535,7 +1535,16 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
         </Dialog>
         {/* Rename Subpage Dialog */}
         <Dialog open={renamePetriNetDialogOpen} onOpenChange={setRenamePetriNetDialogOpen}>
-          <DialogContent className="p-4">
+          <DialogContent className="p-4" onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            setTimeout(() => {
+              const input = document.getElementById('rename-petri-net-name') as HTMLInputElement | null;
+              if (input) {
+                input.focus();
+                input.select();
+              }
+            }, 50);
+          }}>
             <DialogHeader>
               <DialogTitle>Rename Subpage</DialogTitle>
             </DialogHeader>
@@ -1547,15 +1556,6 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
                   placeholder="Enter new name"
                   value={renamePetriNetValue}
                   onChange={(e) => setRenamePetriNetValue(e.target.value)}
-                  ref={(el) => {
-                    // Auto-focus and select text when the input mounts
-                    if (el) {
-                      requestAnimationFrame(() => {
-                        el.focus();
-                        el.select();
-                      });
-                    }
-                  }}
                 />
               </div>
               <Button type="submit" className="w-full">

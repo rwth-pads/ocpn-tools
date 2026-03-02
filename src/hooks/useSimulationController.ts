@@ -557,15 +557,10 @@ export function useSimulationController() {
     // Update the simulation time state
     setSimulationTime(simTime);
 
-    // Fetch monitor results from WASM simulator after each step
-    if (wasmSimulatorRef.current) {
-      try {
-        const results = wasmSimulatorRef.current.getMonitorResults() as MonitorResult[];
-        setMonitorResults(results ?? []);
-      } catch (e) {
-        console.warn('Failed to get monitor results:', e);
-      }
-    }
+    // NOTE: Monitor results are fetched AFTER run_step() returns (in _executeWasmStep
+    // and other callers) to avoid a RefCell double-borrow panic. The handleWasmEvent
+    // callback is invoked while run_step() still holds &mut self on the WASM simulator,
+    // so calling getMonitorResults() here would cause "recursive use of an object".
 
   // Keep dependencies stable: only include functions/setters
   }, [updateNodeMarking, findNodeById, setStepCounter, setEvents, setSimulationTime]);
@@ -796,6 +791,19 @@ export function useSimulationController() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Helper: fetch monitor results from WASM after a step completes.
+  // Must be called OUTSIDE the run_step callback to avoid RefCell double-borrow.
+  const _fetchMonitorResults = () => {
+    if (wasmSimulatorRef.current) {
+      try {
+        const results = wasmSimulatorRef.current.getMonitorResults() as MonitorResult[];
+        setMonitorResults(results ?? []);
+      } catch (e) {
+        console.warn('Failed to get monitor results:', e);
+      }
+    }
+  };
+
   // Core logic to execute a single WASM step
   // Assumes WASM is already initialized
   const _executeWasmStep = (): unknown => {
@@ -809,6 +817,8 @@ export function useSimulationController() {
             const result = wasmSimulatorRef.current.run_step();
             console.log(`Simulation step result:`, result);
             // Event handling (including state updates and step increment) happens in handleWasmEvent callback
+            // Fetch monitor results now that run_step() has released its borrow
+            _fetchMonitorResults();
             return result;
         } catch (error) {
             console.error("Error running simulation step:", error);
@@ -913,6 +923,8 @@ export function useSimulationController() {
           } finally {
             isSimulationUpdatingRef.current = false;
           }
+          // Fetch monitor results after batch execution
+          _fetchMonitorResults();
         } else {
           // Fallback: run steps one by one without delay
           for (let i = 0; i < steps; i++) {
@@ -958,6 +970,8 @@ export function useSimulationController() {
           const result = simulator.fireTransition(transitionId);
           console.log(`Fire transition ${transitionId} result:`, result);
           // Event handling happens via the event listener callback
+          // Fetch monitor results after the transition fires
+          _fetchMonitorResults();
         } catch (error) {
           console.error(`Error firing transition ${transitionId}:`, error);
         } finally {

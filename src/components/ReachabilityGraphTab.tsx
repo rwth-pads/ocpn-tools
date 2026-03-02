@@ -9,46 +9,38 @@ import {
   type Edge,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   MarkerType,
   ReactFlowProvider,
   Panel,
   type NodeProps,
 } from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { LayoutGrid, ChevronDown } from 'lucide-react';
 import type { StateSpaceGraph, StateSpaceResult } from '@/types';
 import useStore from '@/stores/store';
 
+type DagreDirection = 'TB' | 'BT' | 'LR' | 'RL';
+const DIRECTION_LABELS: Record<DagreDirection, string> = {
+  TB: 'Top → Bottom',
+  BT: 'Bottom → Top',
+  LR: 'Left → Right',
+  RL: 'Right → Left',
+};
+
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
-function layoutNodes(graph: StateSpaceGraph): { nodes: Node[]; edges: Edge[] } {
-  const cols = Math.max(1, Math.ceil(Math.sqrt(graph.nodes.length)));
-  const spacingX = 200;
-  const spacingY = 160;
+const NODE_SIZE = 80;
 
-  const nodes: Node[] = graph.nodes.map((sn, i) => {
-    const row = Math.floor(i / cols);
-    const col = i % cols;
-    const markingEntries = Object.entries(sn.marking);
-    const tokens =
-      markingEntries.length === 0
-        ? '∅'
-        : markingEntries.map(([, t]) => t.length).join(', ');
-
-    return {
-      id: String(sn.id),
-      position: { x: col * spacingX, y: row * spacingY },
-      data: {
-        label: `S${sn.id}`,
-        tokens,
-        marking: sn.marking,
-        time: sn.time,
-      },
-      type: 'stateNode',
-      style: { width: 80, height: 80 },
-    };
-  });
-
-  // Merge duplicate edges (same from→to) into one with combined label
+/** Build React Flow edges from the state space arcs (direction-independent). */
+function buildEdges(graph: StateSpaceGraph): Edge[] {
   const edgeMap = new Map<string, { from: number; to: number; labels: string[] }>();
   for (const arc of graph.arcs) {
     const key = `${arc.from}-${arc.to}`;
@@ -63,7 +55,7 @@ function layoutNodes(graph: StateSpaceGraph): { nodes: Node[]; edges: Edge[] } {
     }
   }
 
-  const edges: Edge[] = Array.from(edgeMap.entries()).map(
+  return Array.from(edgeMap.entries()).map(
     ([key, { from, to, labels }]) => ({
       id: `e-${key}`,
       source: String(from),
@@ -79,8 +71,76 @@ function layoutNodes(graph: StateSpaceGraph): { nodes: Node[]; edges: Edge[] } {
       labelStyle: { fontSize: 9, fill: '#666' },
     }),
   );
+}
 
-  return { nodes, edges };
+/** Build node data (without position) from a state space graph. */
+function buildNodeData(graph: StateSpaceGraph) {
+  return graph.nodes.map((sn) => {
+    const markingEntries = Object.entries(sn.marking);
+    const tokens =
+      markingEntries.length === 0
+        ? '∅'
+        : markingEntries.map(([, t]) => t.length).join(', ');
+    return { sn, tokens };
+  });
+}
+
+/** Simple grid layout (fallback). */
+function gridLayout(graph: StateSpaceGraph): Node[] {
+  const cols = Math.max(1, Math.ceil(Math.sqrt(graph.nodes.length)));
+  const spacingX = 200;
+  const spacingY = 160;
+
+  return buildNodeData(graph).map(({ sn, tokens }, i) => {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    return {
+      id: String(sn.id),
+      position: { x: col * spacingX, y: row * spacingY },
+      data: { label: `S${sn.id}`, tokens, marking: sn.marking, time: sn.time },
+      type: 'stateNode',
+      style: { width: NODE_SIZE, height: NODE_SIZE },
+    };
+  });
+}
+
+/** Dagre-based hierarchical layout. */
+async function dagreLayout(
+  graph: StateSpaceGraph,
+  direction: DagreDirection,
+): Promise<Node[]> {
+  const DagreModule = await import('@dagrejs/dagre');
+  const Dagre = DagreModule.default ?? DagreModule;
+  const g = new Dagre.graphlib.Graph();
+  g.setGraph({
+    rankdir: direction,
+    nodesep: 60,
+    ranksep: 80,
+    ranker: 'network-simplex',
+  });
+  g.setDefaultEdgeLabel(() => ({}));
+
+  const nodeData = buildNodeData(graph);
+
+  for (const { sn } of nodeData) {
+    g.setNode(String(sn.id), { width: NODE_SIZE, height: NODE_SIZE });
+  }
+  for (const arc of graph.arcs) {
+    g.setEdge(String(arc.from), String(arc.to));
+  }
+
+  Dagre.layout(g);
+
+  return nodeData.map(({ sn, tokens }) => {
+    const pos = g.node(String(sn.id));
+    return {
+      id: String(sn.id),
+      position: { x: pos.x - NODE_SIZE / 2, y: pos.y - NODE_SIZE / 2 },
+      data: { label: `S${sn.id}`, tokens, marking: sn.marking, time: sn.time },
+      type: 'stateNode',
+      style: { width: NODE_SIZE, height: NODE_SIZE },
+    };
+  });
 }
 
 // ─── Marking Popover ─────────────────────────────────────────────────────────
@@ -200,13 +260,12 @@ function ReachabilityGraphContent({
   graph: StateSpaceGraph;
   result: StateSpaceResult;
 }) {
-  const { nodes: initialNodes, edges: initialEdges } = useMemo(
-    () => layoutNodes(graph),
-    [graph],
-  );
+  const initialNodes = useMemo(() => gridLayout(graph), [graph]);
+  const initialEdges = useMemo(() => buildEdges(graph), [graph]);
 
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+  const { fitView } = useReactFlow();
   const petriNetsById = useStore((state) => state.petriNetsById);
 
   // Popover state
@@ -255,6 +314,15 @@ function ReachabilityGraphContent({
 
   const closePopover = useCallback(() => setPopover(null), []);
 
+  const applyDagreLayout = useCallback(
+    async (direction: DagreDirection) => {
+      const laid = await dagreLayout(graph, direction);
+      setNodes(laid);
+      requestAnimationFrame(() => fitView({ duration: 300 }));
+    },
+    [graph, setNodes, fitView],
+  );
+
   return (
     <div ref={containerRef} className="relative w-full h-full">
       <ReactFlow
@@ -273,10 +341,30 @@ function ReachabilityGraphContent({
         <Background />
         <Controls showInteractive={false} />
         <Panel position="top-right">
-          <Badge variant="outline" className="text-xs">
-            {graph.nodes.length} states, {graph.arcs.length} arcs
-            {!result.report.isFull && ' (partial)'}
-          </Badge>
+          <div className="flex items-center gap-1.5">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 gap-1 text-xs">
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  Layout
+                  <ChevronDown className="h-3 w-3 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {(Object.entries(DIRECTION_LABELS) as [DagreDirection, string][]).map(
+                  ([dir, label]) => (
+                    <DropdownMenuItem key={dir} onClick={() => applyDagreLayout(dir)}>
+                      {label}
+                    </DropdownMenuItem>
+                  ),
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Badge variant="outline" className="text-xs">
+              {graph.nodes.length} states, {graph.arcs.length} arcs
+              {!result.report.isFull && ' (partial)'}
+            </Badge>
+          </div>
         </Panel>
       </ReactFlow>
 

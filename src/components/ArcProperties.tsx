@@ -110,6 +110,35 @@ const ArcProperties = () => {
   }, [edgeId, lastEdgeId, edgeData]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  // Auto-focus the field requested via focusRequest (e.g. from "Resolve Non-determinism" panel)
+  const focusField = useStore((state) => state.focusRequest?.field);
+  useEffect(() => {
+    if (!focusField || !edgeId) return;
+    const fieldIdMap: Record<string, string> = {
+      label: 'inscription',
+      delay: 'delay-expression',
+    };
+    const domId = fieldIdMap[focusField];
+    if (!domId) return;
+
+    // If focusing the delay field, switch to expression mode so the textarea is visible
+    if (focusField === 'delay') {
+      setDelayMode('expression'); // eslint-disable-line react-hooks/set-state-in-effect -- Intentional: need expression tab visible to focus
+    }
+
+    // Wait for render, then focus
+    const timer = setTimeout(() => {
+      const el = document.getElementById(domId);
+      if (el) {
+        el.focus();
+        if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+          el.select();
+        }
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [focusField, edgeId]);
+
   if (!selectedElement) {
     return null;
   }
@@ -300,6 +329,7 @@ const ArcProperties = () => {
             </TabsContent>
             <TabsContent value="expression" className="mt-2">
               <Textarea
+                id="delay-expression"
                 placeholder="e.g.: delay_hours(2) + delay_min(30)"
                 value={delayExpression}
                 onChange={(e) => {

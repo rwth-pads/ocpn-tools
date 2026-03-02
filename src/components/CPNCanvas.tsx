@@ -52,7 +52,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Plus, GripVertical, Upload, Copy } from 'lucide-react';
+import { MoreVertical, Plus, GripVertical, Upload, Copy, Download } from 'lucide-react';
 import { GitGraph } from 'lucide-react';
 import { ReachabilityGraphTab } from '@/components/ReachabilityGraphTab';
 
@@ -244,6 +244,58 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       }
     }
   }, [nodesInitialized, activePetriNetId, fitView, setViewport]);
+
+  // Handle focusRequest: navigate to the element, zoom in, select it, switch to Model tab
+  const focusRequest = useStore(state => state.focusRequest);
+  useEffect(() => {
+    if (!focusRequest) return;
+    const { netId, elementId, elementType } = focusRequest;
+    const store = useStore.getState();
+
+    // Clear the request immediately to avoid re-triggering
+    store.requestFocus(null);
+
+    // Switch to the correct Petri net tab and dismiss any special tab
+    store.setActiveSpecialTab(null);
+    store.setActivePetriNet(netId);
+
+    // Switch to "model" mode so the properties panel is visible
+    store.setActiveMode('model');
+
+    // Select the element
+    const net = store.petriNetsById[netId];
+    if (!net) return;
+
+    if (elementType === 'node') {
+      const node = net.nodes.find(n => n.id === elementId);
+      if (node) {
+        store.setSelectedElement(netId, { type: 'node', element: node });
+        // Mark as selected in React Flow's node state (for visual highlight)
+        store.setNodes(netId, net.nodes.map(n => ({ ...n, selected: n.id === elementId })));
+        store.setEdges(netId, net.edges.map(e => ({ ...e, selected: false })));
+        // Zoom to the node after a short delay to let React Flow render
+        requestAnimationFrame(() => {
+          fitView({ nodes: [{ id: elementId }], padding: 0.5, maxZoom: 2, duration: 400 });
+        });
+      }
+    } else {
+      const edge = net.edges.find(e => e.id === elementId);
+      if (edge) {
+        store.setSelectedElement(netId, { type: 'edge', element: edge });
+        // Mark as selected in React Flow's edge state (for visual highlight)
+        store.setNodes(netId, net.nodes.map(n => ({ ...n, selected: false })));
+        store.setEdges(netId, net.edges.map(e => ({ ...e, selected: e.id === elementId })));
+        // For edges, zoom to the source node as a reasonable target
+        const sourceNode = net.nodes.find(n => n.id === edge.source);
+        const targetNode = net.nodes.find(n => n.id === edge.target);
+        if (sourceNode && targetNode) {
+          requestAnimationFrame(() => {
+            fitView({ nodes: [{ id: sourceNode.id }, { id: targetNode.id }], padding: 0.5, maxZoom: 2, duration: 400 });
+          });
+        }
+      }
+    }
+  }, [focusRequest, fitView]);
 
   // Keyboard shortcuts for simulation controls
   useEffect(() => {
@@ -1013,7 +1065,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
   const handleRenamePetriNet = (e: React.FormEvent) => {
     e.preventDefault();
     if (renamePetriNetId && renamePetriNetValue.trim()) {
-      useStore.getState().renamePetriNet(renamePetriNetId, renamePetriNetValue);
+      useStore.getState().renamePetriNet(renamePetriNetId, renamePetriNetValue.trim());
       setRenamePetriNetDialogOpen(false);
       setRenamePetriNetId(null);
       setRenamePetriNetValue('');
@@ -1066,6 +1118,61 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     };
     const content = convertToJSON(singleNetData);
     saveFile(content, `${petriNet.name.replace(/\s+/g, '_')}.ocpn`);
+  };
+
+  // Export the state space graph as a Graphviz DOT file
+  const handleSaveGraphviz = () => {
+    const graph = stateSpaceResult?.graph;
+    if (!graph) return;
+
+    // Build place name lookup from all nets
+    const placeNames = new Map<string, string>();
+    for (const net of Object.values(petriNetsById)) {
+      for (const node of net.nodes) {
+        if (node.type === 'place') {
+          const label = (node.data?.label as string) || node.id;
+          placeNames.set(node.id, label.replace(/\n/g, ' '));
+        }
+      }
+    }
+
+    // Format a state marking for DOT label
+    const formatMarking = (marking: Record<string, string[]>): string => {
+      const entries = Object.entries(marking);
+      if (entries.length === 0) return 'empty';
+      return entries
+        .map(([placeId, tokens]) => {
+          const name = placeNames.get(placeId) || placeId;
+          return `${name}: ${tokens.length}'(${tokens.join(', ')})`;
+        })
+        .join('\\n');
+    };
+
+    const lines: string[] = [];
+    lines.push('digraph StateSpace {');
+    lines.push('  rankdir=TB;');
+    lines.push('  node [shape=ellipse, style=filled, fillcolor="#f0f0f0", fontsize=10];');
+    lines.push('  edge [fontsize=9];');
+    lines.push('');
+
+    for (const sn of graph.nodes) {
+      const tooltip = formatMarking(sn.marking);
+      const timeStr = sn.time > 0 ? ` @${sn.time}` : '';
+      lines.push(`  s${sn.id} [label="S${sn.id}${timeStr}", tooltip="${tooltip}"];`);
+    }
+
+    lines.push('');
+
+    for (const arc of graph.arcs) {
+      const label = arc.transitionName.replace(/\n/g, ' ');
+      const binding = arc.binding ? ` [${arc.binding}]` : '';
+      lines.push(`  s${arc.from} -> s${arc.to} [label="${label}${binding}"];`);
+    }
+
+    lines.push('}');
+    lines.push('');
+
+    saveFile(lines.join('\n'), 'state-space.dot');
   };
 
   // Tab drag-to-reorder state
@@ -1353,21 +1460,25 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
               >
                 <GitGraph className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">State Space</span>
-                <button
-                  className={`
-                    ml-1 p-0.5 rounded hover:bg-foreground/10 transition-opacity shrink-0
-                    ${activeSpecialTab === 'stateSpaceGraph' ? 'opacity-60 hover:opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100'}
-                  `}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveSpecialTab(null);
-                  }}
-                  title="Close graph tab"
-                >
-                  <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 4l8 8M12 4l-8 8" />
-                  </svg>
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className={`
+                        ml-1 p-0.5 rounded hover:bg-foreground/10 transition-opacity shrink-0
+                        ${activeSpecialTab === 'stateSpaceGraph' ? 'opacity-60 hover:opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100'}
+                      `}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <MoreVertical className="h-3.5 w-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-52">
+                    <DropdownMenuItem onClick={() => handleSaveGraphviz()}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Save as Graphviz (.dot)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </>
           )}
@@ -1436,7 +1547,15 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
                   placeholder="Enter new name"
                   value={renamePetriNetValue}
                   onChange={(e) => setRenamePetriNetValue(e.target.value)}
-                  autoFocus
+                  ref={(el) => {
+                    // Auto-focus and select text when the input mounts
+                    if (el) {
+                      requestAnimationFrame(() => {
+                        el.focus();
+                        el.select();
+                      });
+                    }
+                  }}
                 />
               </div>
               <Button type="submit" className="w-full">

@@ -6,9 +6,21 @@ import * as VisuallyHidden from "@radix-ui/react-visually-hidden"
 import { cn } from "@/lib/utils"
 
 function Dialog({
+  onOpenChange,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />
+  const handleOpenChange = React.useCallback(
+    (open: boolean) => {
+      if (!open) {
+        // Schedule cleanup after the close animation completes
+        // (200ms matches the dialog's duration-200 animation)
+        setTimeout(cleanUpScrollLock, 250);
+      }
+      onOpenChange?.(open);
+    },
+    [onOpenChange]
+  );
+  return <DialogPrimitive.Root data-slot="dialog" onOpenChange={handleOpenChange} {...props} />
 }
 
 function DialogTrigger({
@@ -45,9 +57,29 @@ const DialogOverlay = React.forwardRef<
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
+/**
+ * Remove stale pointer-events lock classes left behind by react-remove-scroll
+ * when Radix Dialog's cleanup effect is disrupted (e.g. by a concurrent
+ * React re-render or Zustand store update during the close animation).
+ */
+function cleanUpScrollLock() {
+  // react-remove-scroll adds "block-interactivity-{id}" to document.body
+  // and injects a <style> with pointer-events: none. Remove them if stuck.
+  document.body.classList.forEach((cls) => {
+    if (cls.startsWith("block-interactivity-")) {
+      document.body.classList.remove(cls);
+    }
+  });
+  // Also clear any inline pointer-events that may have been set
+  if (document.body.style.pointerEvents === "none") {
+    document.body.style.pointerEvents = "";
+  }
+}
+
 function DialogContent({
   className,
   children,
+  onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content>) {
   return (
@@ -59,6 +91,11 @@ function DialogContent({
           "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg max-h-[85vh] overflow-y-auto",
           className
         )}
+        onCloseAutoFocus={(e) => {
+          // Clean up any stuck pointer-events lock from react-remove-scroll
+          cleanUpScrollLock();
+          onCloseAutoFocus?.(e);
+        }}
         {...props}
       >
         {/* Visually hidden description for accessibility */}

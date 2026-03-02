@@ -121,6 +121,37 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
   }, [nodeId, lastNodeId, nodeData]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  // Auto-focus the field requested via focusRequest (e.g. from "Resolve Non-determinism" panel)
+  const focusField = useStore((state) => state.focusRequest?.field);
+  useEffect(() => {
+    if (!focusField || !nodeId) return;
+    // Map field names to DOM element IDs
+    const fieldIdMap: Record<string, string> = {
+      guard: 'guard',
+      time: 'time-expression',
+      codeSegment: 'code-segment',
+    };
+    const domId = fieldIdMap[focusField];
+    if (!domId) return;
+
+    // If focusing the time field, switch to expression mode so the textarea is visible
+    if (focusField === 'time') {
+      setTimeMode('expression'); // eslint-disable-line react-hooks/set-state-in-effect -- Intentional: need expression tab visible to focus
+    }
+
+    // Wait for render, then focus
+    const timer = setTimeout(() => {
+      const el = document.getElementById(domId);
+      if (el) {
+        el.focus();
+        if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+          el.select();
+        }
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [focusField, nodeId]);
+
   // Ensure selectedElement is a node and has the correct data type
   if (!isValidNode || !nodeData) {
     return <div>No node selected</div>;

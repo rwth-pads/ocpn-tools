@@ -170,6 +170,15 @@ export interface StateSpaceResult {
   graph: StateSpaceGraph;
 }
 
+/** Request to focus on a specific element in the canvas (zoom + select + highlight field) */
+export type FocusRequest = {
+  netId: string;
+  elementId: string;
+  elementType: 'node' | 'edge';
+  /** Which property field to auto-focus (e.g. 'guard', 'time', 'codeSegment', 'label', 'delay') */
+  field?: string;
+} | null;
+
 export type AppState = {
   ocpnName: string; // Top-level name for the OCPN project
   petriNetsById: Record<string, PetriNet>;
@@ -189,6 +198,7 @@ export type AppState = {
   monitors: Monitor[]; // Defined monitors for analysis
   stateSpaceResult: StateSpaceResult | null; // Cached state space analysis result
   activeSpecialTab: 'stateSpaceGraph' | null; // Non-Petri-net tab currently displayed
+  focusRequest: FocusRequest; // Request to zoom to and focus on a specific element
 };
 
 export type AppActions = {
@@ -253,6 +263,9 @@ export type AppActions = {
   // State space
   setStateSpaceResult: (result: StateSpaceResult | null) => void;
   setActiveSpecialTab: (tab: 'stateSpaceGraph' | null) => void;
+
+  // Focus navigation
+  requestFocus: (request: FocusRequest) => void;
 
   // Hierarchy
   moveTransitionToSubpage: (petriNetId: string, transitionId: string) => void;

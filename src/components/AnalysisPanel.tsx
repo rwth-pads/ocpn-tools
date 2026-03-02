@@ -65,6 +65,16 @@ interface NonDeterminismSource {
   range?: [number, number];
   /** Smart default override value */
   defaultValue: number;
+  /** Context-qualified key for the WASM override map (e.g. "discrete@t:Landing:time") */
+  overrideKey?: string;
+  /** ID of the petri net containing this source */
+  netId?: string;
+  /** ID of the node or edge where this source occurs */
+  elementId?: string;
+  /** Whether the source is on a node or edge */
+  elementType?: 'node' | 'edge';
+  /** Which property field contains this source (e.g. 'guard', 'time', 'codeSegment', 'label', 'delay') */
+  field?: string;
 }
 
 /** Compute a smart default value for a distribution function */
@@ -142,26 +152,30 @@ export function AnalysisPanel() {
   /** Scan the model for all sources of non-determinism */
   const nonDetSources = useMemo(() => {
     const sources: NonDeterminismSource[] = [];
-    const distFnsSeen = new Set<string>();
 
     // Helper: scan an expression string for distribution function calls
-    const scanExpr = (expr: string, location: string) => {
+    // `evalContext` matches the Rust EVAL_CONTEXT format: "t:<name>:<field>" or "a:<id>:<field>"
+    const scanExpr = (expr: string, location: string, ref?: { netId: string; elementId: string; elementType: 'node' | 'edge'; field?: string }, evalContext?: string) => {
       if (!expr) return;
       let match: RegExpExecArray | null;
       DIST_REGEX.lastIndex = 0;
       while ((match = DIST_REGEX.exec(expr)) !== null) {
         const fnName = match[1].toLowerCase();
-        if (!distFnsSeen.has(fnName)) {
-          distFnsSeen.add(fnName);
-          sources.push({
-            id: `dist:${fnName}`,
-            type: 'distribution',
-            name: fnName,
-            location,
-            params: match[2],
-            defaultValue: getDistDefault(fnName, match[2]),
-          });
-        }
+        // Each call site gets its own entry with a context-qualified override key
+        const overrideKey = evalContext ? `${fnName}@${evalContext}` : fnName;
+        sources.push({
+          id: `dist:${overrideKey}`,
+          type: 'distribution',
+          name: fnName,
+          location,
+          params: match[2],
+          defaultValue: getDistDefault(fnName, match[2]),
+          overrideKey,
+          netId: ref?.netId,
+          elementId: ref?.elementId,
+          elementType: ref?.elementType,
+          field: ref?.field,
+        });
       }
     };
 
@@ -174,19 +188,19 @@ export function AnalysisPanel() {
         if (node.type === 'transition') {
           const data = node.data as unknown as TransitionNodeData;
           const tName = data.label || node.id;
-          if (data.guard) scanExpr(data.guard, `Guard: ${tName}`);
-          if (data.time) scanExpr(data.time, `Time: ${tName}`);
-          if (data.codeSegment) scanExpr(data.codeSegment, `Code: ${tName}`);
+          if (data.guard) scanExpr(data.guard, `Guard: ${tName}`, { netId, elementId: node.id, elementType: 'node', field: 'guard' }, `t:${tName}:guard`);
+          if (data.time) scanExpr(data.time, `Time: ${tName}`, { netId, elementId: node.id, elementType: 'node', field: 'time' }, `t:${tName}:time`);
+          if (data.codeSegment) scanExpr(data.codeSegment, `Code: ${tName}`, { netId, elementId: node.id, elementType: 'node', field: 'codeSegment' }, `t:${tName}:codeSegment`);
         }
       }
 
       for (const edge of net.edges) {
         const label = typeof edge.data?.label === 'string' ? edge.data.label : edge.id;
         if (edge.data?.label) {
-          scanExpr(String(edge.data.label), `Arc: ${label}`);
+          scanExpr(String(edge.data.label), `Arc: ${label}`, { netId, elementId: edge.id, elementType: 'edge', field: 'label' }, `a:${edge.id}:inscription`);
         }
         if (edge.data?.delay) {
-          scanExpr(String(edge.data.delay), `Delay: ${label}`);
+          scanExpr(String(edge.data.delay), `Delay: ${label}`, { netId, elementId: edge.id, elementType: 'edge', field: 'delay' }, `a:${edge.id}:delay`);
         }
       }
     }
@@ -245,7 +259,7 @@ export function AnalysisPanel() {
     for (const src of nonDetSources) {
       const val = overrideValues[src.id] ?? src.defaultValue;
       if (src.type === 'distribution') {
-        distOverrides[src.name] = val;
+        distOverrides[src.overrideKey ?? src.name] = val;
       } else {
         intRangeOverrides[src.name] = val;
       }
@@ -439,7 +453,7 @@ export function AnalysisPanel() {
                   onClick={handleAnalyze}
                 >
                   <Search className="h-3.5 w-3.5 mr-1" />
-                  Analyze Non-determinism ({nonDetSources.length})
+                  Resolve Non-determinism ({nonDetSources.length})
                 </Button>
               ) : (
                 <div className="space-y-1.5">
@@ -474,7 +488,19 @@ export function AnalysisPanel() {
                               }
                             </span>
                           </div>
-                          <div className="text-[10px] text-muted-foreground truncate">
+                          <div
+                            className={`text-[10px] text-muted-foreground truncate ${src.elementId ? 'cursor-pointer hover:text-foreground hover:underline' : ''}`}
+                            onClick={() => {
+                              if (src.netId && src.elementId && src.elementType) {
+                                useStore.getState().requestFocus({
+                                  netId: src.netId,
+                                  elementId: src.elementId,
+                                  elementType: src.elementType,
+                                  field: src.field,
+                                });
+                              }
+                            }}
+                          >
                             {src.location}
                           </div>
                         </div>

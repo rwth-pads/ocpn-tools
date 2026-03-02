@@ -39,6 +39,7 @@ const emptyState: AppState = {
   monitors: [],
   stateSpaceResult: null,
   activeSpecialTab: null,
+  focusRequest: null,
 }
 
 export type StoreState = AppState & AppActions;
@@ -110,6 +111,7 @@ const useStore = create<StoreState>()(temporal((set) => ({
   monitors: [],
   stateSpaceResult: null,
   activeSpecialTab: null,
+  focusRequest: null,
 
   // Actions
   setNodes: (petriNetId: string, nodes: Node[]) => {
@@ -823,6 +825,11 @@ const useStore = create<StoreState>()(temporal((set) => ({
   setActiveSpecialTab: (tab) =>
     set(() => ({
       activeSpecialTab: tab,
+    })),
+
+  requestFocus: (request) =>
+    set(() => ({
+      focusRequest: request,
     })),
 
   // Hierarchy: Move transition to subpage

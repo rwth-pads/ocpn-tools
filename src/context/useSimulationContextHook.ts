@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { SimulationEvent } from '@/components/EventLog';
+import type { MonitorResult, StateSpaceResult } from '@/types';
 
 // Configuration for simulation controls
 export interface SimulationConfig {
@@ -35,6 +36,14 @@ export type SimulationContextType = {
   setSimulationConfig: (config: SimulationConfig) => void;
   ensureInitialized: () => Promise<void>;
   _executeWasmStep: () => void;
+  monitorResults: MonitorResult[];
+  calculateStateSpace: (
+    maxStates?: number,
+    maxArcs?: number,
+    isTimed?: boolean,
+    distOverrides?: Record<string, number>,
+    intRangeOverrides?: Record<string, number>,
+  ) => Promise<StateSpaceResult | null>;
 };
 
 // Create the context with an initial value of null or a default object

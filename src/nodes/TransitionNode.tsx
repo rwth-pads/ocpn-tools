@@ -137,6 +137,12 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
 
   // Check if simulation is active and this substitution transition's subpage marking changed
   const activeMode = useStore((state) => state.activeMode);
+
+  // Check if any enabled monitor watches this transition
+  const hasMonitor = useStore((state) =>
+    state.monitors.some((m) => m.enabled && m.transitionIds.includes(id)),
+  );
+
   const hasSubpageActivity = useStore((state) => {
     if (!data.subPageId || activeMode !== 'simulation') return false;
     const subPage = state.petriNetsById[data.subPageId];
@@ -327,6 +333,26 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
             <circle cx="12" cy="12" r="11.5" fill="white" stroke="#b45309" strokeWidth="1" />
             <path d="M8 5v14M8 5h8l-3 4 3 4H8" fill="#b45309" fillOpacity="0.15" stroke="#b45309" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
+        </div>
+      )}
+
+      {/* Monitor indicator badge - top left */}
+      {hasMonitor && (
+        <div
+          style={{
+            position: 'absolute',
+            top: -2,
+            left: -2,
+          }}
+          className="nodrag pointer-events-none"
+          title="Monitored"
+        >
+          <div className="flex items-center justify-center w-[12px] h-[12px] rounded-full bg-blue-500 border border-blue-600">
+            <svg width="7" height="7" viewBox="0 0 16 16" fill="white" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="8" cy="4" r="2" />
+              <path d="M2 14 Q2 8 8 8 Q14 8 14 14" />
+            </svg>
+          </div>
         </div>
       )}
 

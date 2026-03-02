@@ -12,6 +12,9 @@
 - **Hierarchical nets** — Model hierarchical object-centric Petri nets with substitution transitions, subpages, and fusion places
 - **Declarations** — Define color sets (including record types that directly map to OCEL 2.0 objects), variables, priorities, and functions
 - **Simulation** — Step through or auto-run simulations powered by [cpnsim](https://github.com/rwth-pads/cpnsim), our own CPN simulator written in Rust and cross-compiled to WebAssembly, running entirely in the browser
+- **Monitors** — Define marking-size, transition-count, breakpoint, and custom data-collector monitors to observe simulation behavior and collect statistics
+- **State space analysis** — Compute the full state space with BFS exploration, SCC decomposition, dead/home markings, place bounds, and transition liveness — with deterministic overrides for models using stochastic distribution functions
+- **Reachability graph** — Visualize the state space as an interactive graph with clickable nodes showing full marking details
 - **OCEL 2.0 export** — Export simulated event logs in the OCEL 2.0 standard format for process mining
 - **File format support** — Open and save `.ocpn` (native JSON), `.cpn` (CPN Tools XML), and `.json` (CPNPy) files
 - **Auto-layout** — Arrange nets automatically using Dagre, ELK, or our own Sugiyama-based layouting algorithm developed in our research

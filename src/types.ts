@@ -57,7 +57,118 @@ export type SelectedElement =
   | { type: 'edge'; element: Edge }
   | null;
 
-export type ActiveMode = 'model' | 'simulation';
+export type ActiveMode = 'model' | 'simulation' | 'analysis';
+
+// Monitor types
+export type MonitorType =
+  | 'marking-size'
+  | 'transition-count'
+  | 'breakpoint-place'
+  | 'breakpoint-transition'
+  | 'data-collector';
+
+export interface Monitor {
+  id: string;
+  name: string;
+  type: MonitorType;
+  enabled: boolean;
+  // Target subnet
+  placeIds: string[];       // watched places
+  transitionIds: string[];  // watched transitions
+  // Type-specific config
+  config: {
+    stopCondition?: 'empty' | 'not-empty' | 'enabled' | 'not-enabled';
+  };
+  // Rhai scripts for DataCollector monitors
+  observationScript?: string;  // Rhai expression returning a numeric value
+  predicateScript?: string;    // Rhai expression returning bool (when to record)
+}
+
+export interface MonitorObservation {
+  step: number;
+  time: number;
+  value: number;
+}
+
+export interface MonitorStatistics {
+  count: number;
+  sum: number;
+  avg: number;
+  min: number;
+  max: number;
+  stdDev: number;
+}
+
+export interface MonitorResult {
+  monitorId: string;
+  monitorName?: string;
+  monitorType?: MonitorType;
+  observations: MonitorObservation[];
+  statistics: MonitorStatistics;
+  breakpointHit?: boolean;
+}
+
+// State Space types
+export interface StateNode {
+  id: number;
+  marking: Record<string, string[]>; // place_id -> token strings
+  time: number;
+}
+
+export interface StateArc {
+  from: number;
+  to: number;
+  transitionId: string;
+  transitionName: string;
+  binding: string;
+}
+
+export interface PlaceBounds {
+  placeId: string;
+  placeName: string;
+  upperBound: number;
+  lowerBound: number;
+  upperMultiSetBound: number;
+  lowerMultiSetBound: number;
+}
+
+export interface SccComponent {
+  id: number;
+  states: number[];
+}
+
+export interface TransitionFireCount {
+  transitionId: string;
+  transitionName: string;
+  fireCount: number;
+}
+
+export interface StateSpaceReport {
+  numStates: number;
+  numArcs: number;
+  numScc: number;
+  isFull: boolean;
+  limitReached: boolean;
+  calcTimeMs: number;
+  placeBounds: PlaceBounds[];
+  homeMarkings: number[];
+  deadMarkings: number[];
+  deadTransitions: string[];
+  liveTransitions: string[];
+  transitionFireCounts: TransitionFireCount[];
+  sccGraph: SccComponent[];
+  terminalScc: number[];
+}
+
+export interface StateSpaceGraph {
+  nodes: StateNode[];
+  arcs: StateArc[];
+}
+
+export interface StateSpaceResult {
+  report: StateSpaceReport;
+  graph: StateSpaceGraph;
+}
 
 export type AppState = {
   ocpnName: string; // Top-level name for the OCPN project
@@ -75,6 +186,9 @@ export type AppState = {
   isArcMode: boolean; // Whether arc connection mode is active
   activeArcType: ArcType; // The type of arc to create when connecting nodes
   fusionSets: FusionSet[]; // Named fusion sets for fusion places
+  monitors: Monitor[]; // Defined monitors for analysis
+  stateSpaceResult: StateSpaceResult | null; // Cached state space analysis result
+  activeSpecialTab: 'stateSpaceGraph' | null; // Non-Petri-net tab currently displayed
 };
 
 export type AppActions = {
@@ -129,6 +243,16 @@ export type AppActions = {
   setFusionSets: (fusionSets: FusionSet[]) => void;
   addFusionSet: (fusionSet: FusionSet) => void;
   deleteFusionSet: (id: string) => void;
+
+  // Monitors
+  setMonitors: (monitors: Monitor[]) => void;
+  addMonitor: (monitor: Monitor) => void;
+  updateMonitor: (id: string, monitor: Monitor) => void;
+  deleteMonitor: (id: string) => void;
+
+  // State space
+  setStateSpaceResult: (result: StateSpaceResult | null) => void;
+  setActiveSpecialTab: (tab: 'stateSpaceGraph' | null) => void;
 
   // Hierarchy
   moveTransitionToSubpage: (petriNetId: string, transitionId: string) => void;

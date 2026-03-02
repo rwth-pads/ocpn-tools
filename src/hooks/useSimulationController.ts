@@ -5,7 +5,7 @@ import { PetriNetData, convertToJSON } from '@/utils/FileOperations';
 import type { SimulationEvent } from '@/components/EventLog'; // Import SimulationEvent
 import { v4 as uuidv4 } from 'uuid'; // For generating unique event IDs
 import { type SimulationConfig, DEFAULT_SIMULATION_CONFIG } from '@/context/useSimulationContextHook';
-import type { PetriNet, FusionSet } from '@/types';
+import type { PetriNet, FusionSet, MonitorResult, Monitor, StateSpaceResult } from '@/types';
 import type { Node } from '@xyflow/react';
 
 // Define TokenMovement locally as it's not exported from EventLog
@@ -327,6 +327,25 @@ function flattenHierarchicalNet(
   return { flattenedNets, flattenedOrder };
 }
 
+/**
+ * Convert a frontend Monitor to the WASM MonitorConfig format.
+ * The WASM side expects: { id, name, type, enabled, placeIds, transitionIds,
+ *   observationScript, predicateScript, stopCondition }
+ */
+function monitorToWasmConfig(monitor: Monitor): Record<string, unknown> {
+  return {
+    id: monitor.id,
+    name: monitor.name,
+    type: monitor.type,
+    enabled: monitor.enabled,
+    placeIds: monitor.placeIds,
+    transitionIds: monitor.transitionIds,
+    observationScript: monitor.observationScript ?? '',
+    predicateScript: monitor.predicateScript ?? '',
+    stopCondition: monitor.config.stopCondition ?? null,
+  };
+}
+
 export function useSimulationController() {
   const wasmRef = useRef<InitOutput | null>(null); // Initialize as null
   const wasmSimulatorRef = useRef<WasmSimulator | null>(null);
@@ -341,6 +360,9 @@ export function useSimulationController() {
 
   // Socket-to-port mapping for synchronizing markings between parent and subpage places
   const socketToPortMapRef = useRef<Map<string, string[]>>(new Map());
+
+  // Monitor results from WASM simulator
+  const [monitorResults, setMonitorResults] = useState<MonitorResult[]>([]);
 
   // Refs for auto-invalidation: track whether simulation updates (not user edits) are causing store changes
   const isInitializedRef = useRef(false);
@@ -535,6 +557,16 @@ export function useSimulationController() {
     // Update the simulation time state
     setSimulationTime(simTime);
 
+    // Fetch monitor results from WASM simulator after each step
+    if (wasmSimulatorRef.current) {
+      try {
+        const results = wasmSimulatorRef.current.getMonitorResults() as MonitorResult[];
+        setMonitorResults(results ?? []);
+      } catch (e) {
+        console.warn('Failed to get monitor results:', e);
+      }
+    }
+
   // Keep dependencies stable: only include functions/setters
   }, [updateNodeMarking, findNodeById, setStepCounter, setEvents, setSimulationTime]);
 
@@ -726,6 +758,19 @@ export function useSimulationController() {
         console.log("WASM Simulator created successfully");
         // Set the event listener callback
         wasmSimulatorRef.current.setEventListener(handleWasmEvent);
+
+        // Register monitors from the store in the WASM simulator
+        const currentMonitors = useStore.getState().monitors;
+        for (const monitor of currentMonitors) {
+          if (monitor.enabled) {
+            try {
+              wasmSimulatorRef.current.addMonitor(monitorToWasmConfig(monitor));
+            } catch (e) {
+              console.warn(`Failed to register monitor '${monitor.name}':`, e);
+            }
+          }
+        }
+
         // Mark initialization as complete
         isInitializedRef.current = true;
         setIsInitialized(true);
@@ -742,13 +787,14 @@ export function useSimulationController() {
 
   // Ensure the WASM module is initialized before running steps
   // Exposed for external use (e.g., before running multiple steps)
-  const ensureInitialized = async () => {
+  const ensureInitialized = useCallback(async () => {
     // Initialize only if refs are null or initialization flag is false
-    if (!isInitialized || !wasmRef.current || !wasmSimulatorRef.current) {
+    if (!isInitializedRef.current || !wasmRef.current || !wasmSimulatorRef.current) {
         //console.log("Ensuring initialization...");
         await _initializeWasm();
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Core logic to execute a single WASM step
   // Assumes WASM is already initialized
@@ -809,6 +855,11 @@ export function useSimulationController() {
           console.log("No transitions enabled, stopping animation.");
           break;
         }
+        // Check for breakpoint hits from WASM monitors
+        if (wasmSimulatorRef.current?.hasBreakpointHit()) {
+          console.log("Breakpoint hit — stopping simulation.");
+          break;
+        }
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     } finally {
@@ -852,6 +903,11 @@ export function useSimulationController() {
                     produced?: Map<string, number[]>;
                   });
                 }
+                // Check for breakpoint hits after each event
+                if (wasmSimulatorRef.current?.hasBreakpointHit()) {
+                  console.log("Breakpoint hit during batch — stopping.");
+                  break;
+                }
               }
             }
           } finally {
@@ -864,6 +920,11 @@ export function useSimulationController() {
             const result = _executeWasmStep();
             if (result == null) {
               console.log("No transitions enabled, stopping fast run.");
+              break;
+            }
+            // Check for breakpoint hits
+            if (wasmSimulatorRef.current?.hasBreakpointHit()) {
+              console.log("Breakpoint hit — stopping simulation.");
               break;
             }
           }
@@ -937,6 +998,7 @@ export function useSimulationController() {
     stepCounterRef.current = 0; // Reset ref
     setSimulationTime(0.0); // Reset simulation time state
     setEvents([]); // Reset events state
+    setMonitorResults([]); // Clear monitor results state
     // Re-initializing effectively resets the simulation state in WASM
     await _initializeWasm();
   };
@@ -1005,6 +1067,33 @@ export function useSimulationController() {
     return unsub;
   }, []);
 
+  const calculateStateSpace = useCallback(
+    async (
+      maxStates?: number,
+      maxArcs?: number,
+      isTimed?: boolean,
+      distOverrides?: Record<string, number>,
+      intRangeOverrides?: Record<string, number>,
+    ): Promise<StateSpaceResult | null> => {
+      await ensureInitialized();
+      if (!wasmSimulatorRef.current) return null;
+      try {
+        const result = wasmSimulatorRef.current.calculateStateSpace(
+          maxStates ?? undefined,
+          maxArcs ?? undefined,
+          isTimed ?? undefined,
+          distOverrides ?? undefined,
+          intRangeOverrides ?? undefined,
+        );
+        return result as StateSpaceResult;
+      } catch (err) {
+        console.error('State space calculation failed:', err);
+        return null;
+      }
+    },
+    [ensureInitialized]
+  );
+
   // Return the state and functions needed by UI components
   return { 
     runStep, 
@@ -1023,6 +1112,8 @@ export function useSimulationController() {
     simulationConfig,
     setSimulationConfig,
     ensureInitialized, 
-    _executeWasmStep 
+    _executeWasmStep,
+    monitorResults,
+    calculateStateSpace,
   };
 }

@@ -1,0 +1,550 @@
+import { useState, useContext, useCallback, useMemo } from 'react';
+import useStore from '@/stores/store';
+import { useShallow } from 'zustand/react/shallow';
+import { SimulationContext } from '@/context/useSimulationContextHook';
+import type { Monitor } from '@/types';
+import type { TransitionNodeData } from '@/nodes/TransitionNode';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
+  Plus,
+  Trash2,
+  Edit,
+  ChevronRight,
+  ChevronDown,
+  Activity,
+  BarChart3,
+  Network,
+  ToggleLeft,
+  ToggleRight,
+  Play,
+  Loader2,
+  GitGraph,
+  Dice5,
+  Search,
+} from 'lucide-react';
+import { AddMonitorDialog } from '@/components/dialogs/AddMonitorDialog';
+import { PerformanceReport } from '@/components/PerformanceReport';
+import { StateSpaceReportView } from '@/components/StateSpaceReportView';
+
+/** Maximum number of states for which the graph visualization is enabled */
+const GRAPH_NODE_LIMIT = 500;
+
+/** Distribution function names recognized by cpnsim */
+const DIST_FUNCTIONS = [
+  'bernoulli', 'beta', 'binomial', 'chisq', 'discrete', 'erlang',
+  'exponential', 'gamma', 'normal', 'poisson', 'rayleigh', 'student',
+  'uniform', 'weibull',
+] as const;
+
+/** Regex to find distribution function calls with their arguments */
+const DIST_REGEX = new RegExp(
+  `\\b(${DIST_FUNCTIONS.join('|')})\\s*\\(([^)]*?)\\)`,
+  'gi'
+);
+
+/** Regex to detect IntRange colorset definitions: "int with X..Y" */
+const INT_RANGE_REGEX = /int\s+with\s+(-?\d+)\s*\.\.\s*(-?\d+)/i;
+
+/** A source of non-determinism found in the model */
+interface NonDeterminismSource {
+  id: string;
+  type: 'distribution' | 'intRange';
+  /** Distribution function name or variable name */
+  name: string;
+  /** Short description of where it occurs */
+  location: string;
+  /** Raw parameters string from the function call */
+  params?: string;
+  /** Range bounds for IntRange sources */
+  range?: [number, number];
+  /** Smart default override value */
+  defaultValue: number;
+}
+
+/** Compute a smart default value for a distribution function */
+function getDistDefault(fnName: string, paramsStr: string): number {
+  const nums = paramsStr.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+  switch (fnName.toLowerCase()) {
+    case 'bernoulli': return nums[0] !== undefined ? (nums[0] >= 0.5 ? 1 : 0) : 1;
+    case 'beta': return nums.length >= 2 ? nums[0] / (nums[0] + nums[1]) : 0.5;
+    case 'binomial': return nums.length >= 2 ? Math.round(nums[0] * nums[1]) : 1;
+    case 'chisq': return nums[0] !== undefined ? Math.max(nums[0] - 2, 0) : 1;
+    case 'discrete': return nums.length >= 2 ? Math.round((nums[0] + nums[1]) / 2) : 1;
+    case 'erlang': return nums.length >= 2 && nums[1] > 0 ? Math.round((nums[0] - 1) / nums[1]) : 1;
+    case 'exponential': return nums[0] !== undefined && nums[0] > 0 ? Math.round(1 / nums[0]) : 1;
+    case 'gamma': return nums.length >= 2 ? Math.round(nums[0] * nums[1]) : 1;
+    case 'normal': return nums[0] !== undefined ? Math.round(nums[0]) : 0;
+    case 'poisson': return nums[0] !== undefined ? Math.round(nums[0]) : 1;
+    case 'rayleigh': return nums[0] !== undefined ? Math.round(nums[0]) : 1;
+    case 'student': return 0;
+    case 'uniform': return nums.length >= 2 ? Math.round((nums[0] + nums[1]) / 2) : 1;
+    case 'weibull': return nums.length >= 2 && nums[1] > 1
+      ? Math.round(nums[0] * Math.pow((nums[1] - 1) / nums[1], 1 / nums[1])) : 1;
+    default: return 1;
+  }
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  'marking-size': 'Marking',
+  'transition-count': 'Count',
+  'breakpoint-place': 'BP Place',
+  'breakpoint-transition': 'BP Trans',
+};
+
+const TYPE_VARIANTS: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+  'marking-size': 'default',
+  'transition-count': 'secondary',
+  'breakpoint-place': 'destructive',
+  'breakpoint-transition': 'destructive',
+};
+
+export function AnalysisPanel() {
+  const { monitors, updateMonitor, deleteMonitor, stateSpaceResult, setStateSpaceResult, setActiveSpecialTab,
+    petriNetsById, petriNetOrder, colorSets, variables, functions: modelFunctions } = useStore(
+    useShallow((state) => ({
+      monitors: state.monitors,
+      updateMonitor: state.updateMonitor,
+      deleteMonitor: state.deleteMonitor,
+      stateSpaceResult: state.stateSpaceResult,
+      setStateSpaceResult: state.setStateSpaceResult,
+      setActiveSpecialTab: state.setActiveSpecialTab,
+      petriNetsById: state.petriNetsById,
+      petriNetOrder: state.petriNetOrder,
+      colorSets: state.colorSets,
+      variables: state.variables,
+      functions: state.functions,
+    })),
+  );
+
+  const simulationContext = useContext(SimulationContext);
+  const monitorResults = simulationContext?.monitorResults ?? [];
+
+  const [isMonitorsOpen, setIsMonitorsOpen] = useState(true);
+  const [isResultsOpen, setIsResultsOpen] = useState(true);
+  const [isStateSpaceOpen, setIsStateSpaceOpen] = useState(true);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editingMonitor, setEditingMonitor] = useState<Monitor | undefined>();
+
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [maxStates, setMaxStates] = useState(10000);
+  const [maxArcs, setMaxArcs] = useState(50000);
+
+  // Non-determinism override state
+  const [overrideValues, setOverrideValues] = useState<Record<string, number>>({});
+  const [showOverrides, setShowOverrides] = useState(false);
+
+  /** Scan the model for all sources of non-determinism */
+  const nonDetSources = useMemo(() => {
+    const sources: NonDeterminismSource[] = [];
+    const distFnsSeen = new Set<string>();
+
+    // Helper: scan an expression string for distribution function calls
+    const scanExpr = (expr: string, location: string) => {
+      if (!expr) return;
+      let match: RegExpExecArray | null;
+      DIST_REGEX.lastIndex = 0;
+      while ((match = DIST_REGEX.exec(expr)) !== null) {
+        const fnName = match[1].toLowerCase();
+        if (!distFnsSeen.has(fnName)) {
+          distFnsSeen.add(fnName);
+          sources.push({
+            id: `dist:${fnName}`,
+            type: 'distribution',
+            name: fnName,
+            location,
+            params: match[2],
+            defaultValue: getDistDefault(fnName, match[2]),
+          });
+        }
+      }
+    };
+
+    // Scan all petri nets
+    for (const netId of petriNetOrder) {
+      const net = petriNetsById[netId];
+      if (!net) continue;
+
+      for (const node of net.nodes) {
+        if (node.type === 'transition') {
+          const data = node.data as unknown as TransitionNodeData;
+          const tName = data.label || node.id;
+          if (data.guard) scanExpr(data.guard, `Guard: ${tName}`);
+          if (data.time) scanExpr(data.time, `Time: ${tName}`);
+          if (data.codeSegment) scanExpr(data.codeSegment, `Code: ${tName}`);
+        }
+      }
+
+      for (const edge of net.edges) {
+        const label = typeof edge.data?.label === 'string' ? edge.data.label : edge.id;
+        if (edge.data?.label) {
+          scanExpr(String(edge.data.label), `Arc: ${label}`);
+        }
+        if (edge.data?.delay) {
+          scanExpr(String(edge.data.delay), `Delay: ${label}`);
+        }
+      }
+    }
+
+    // Scan function definitions
+    for (const fn of modelFunctions) {
+      if (fn.code) scanExpr(fn.code, `Function: ${fn.name}`);
+    }
+
+    // Scan IntRange colorsets → find variables using them
+    const intRangeColorSets = new Map<string, [number, number]>();
+    for (const cs of colorSets) {
+      const rangeMatch = INT_RANGE_REGEX.exec(cs.definition);
+      if (rangeMatch) {
+        intRangeColorSets.set(cs.name, [parseInt(rangeMatch[1]), parseInt(rangeMatch[2])]);
+      }
+    }
+
+    if (intRangeColorSets.size > 0) {
+      for (const v of variables) {
+        const range = intRangeColorSets.get(v.colorSet);
+        if (range) {
+          sources.push({
+            id: `range:${v.name}`,
+            type: 'intRange',
+            name: v.name,
+            location: `Var ${v.name} : ${v.colorSet}`,
+            range,
+            defaultValue: Math.round((range[0] + range[1]) / 2),
+          });
+        }
+      }
+    }
+
+    return sources;
+  }, [petriNetsById, petriNetOrder, colorSets, variables, modelFunctions]);
+
+  /** Initialize override values with smart defaults when sources change */
+  const handleAnalyze = useCallback(() => {
+    const defaults: Record<string, number> = {};
+    for (const src of nonDetSources) {
+      defaults[src.id] = src.defaultValue;
+    }
+    setOverrideValues(defaults);
+    setShowOverrides(true);
+  }, [nonDetSources]);
+
+  /** Build override maps for the WASM call */
+  const buildOverrideMaps = useCallback((): {
+    distOverrides?: Record<string, number>;
+    intRangeOverrides?: Record<string, number>;
+  } => {
+    if (!showOverrides || nonDetSources.length === 0) return {};
+    const distOverrides: Record<string, number> = {};
+    const intRangeOverrides: Record<string, number> = {};
+    for (const src of nonDetSources) {
+      const val = overrideValues[src.id] ?? src.defaultValue;
+      if (src.type === 'distribution') {
+        distOverrides[src.name] = val;
+      } else {
+        intRangeOverrides[src.name] = val;
+      }
+    }
+    return {
+      distOverrides: Object.keys(distOverrides).length > 0 ? distOverrides : undefined,
+      intRangeOverrides: Object.keys(intRangeOverrides).length > 0 ? intRangeOverrides : undefined,
+    };
+  }, [showOverrides, nonDetSources, overrideValues]);
+
+  const toggleEnabled = (monitor: Monitor) => {
+    updateMonitor(monitor.id, { ...monitor, enabled: !monitor.enabled });
+  };
+
+  const handleEdit = (monitor: Monitor) => {
+    setEditingMonitor(monitor);
+    setAddDialogOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    deleteMonitor(id);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setAddDialogOpen(open);
+    if (!open) setEditingMonitor(undefined);
+  };
+
+  const handleCalculateStateSpace = useCallback(async () => {
+    if (!simulationContext) return;
+    setIsCalculating(true);
+    setStateSpaceResult(null);
+    try {
+      const { distOverrides, intRangeOverrides } = buildOverrideMaps();
+      const result = await simulationContext.calculateStateSpace(
+        maxStates, maxArcs, undefined, distOverrides, intRangeOverrides,
+      );
+      if (result) {
+        setStateSpaceResult(result);
+      }
+    } finally {
+      setIsCalculating(false);
+    }
+  }, [simulationContext, maxStates, maxArcs, setStateSpaceResult, buildOverrideMaps]);
+
+  return (
+    <div className="space-y-3 text-sm">
+      {/* Monitors Section */}
+      <Collapsible open={isMonitorsOpen} onOpenChange={setIsMonitorsOpen}>
+        <div className="flex items-center justify-between">
+          <CollapsibleTrigger className="flex items-center gap-1 font-semibold text-sm hover:underline">
+            {isMonitorsOpen ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+            <Activity className="h-4 w-4" />
+            Monitors
+            <span className="text-muted-foreground font-normal ml-1">({monitors.length})</span>
+          </CollapsibleTrigger>
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setAddDialogOpen(true)}>
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+
+        <CollapsibleContent className="mt-2 space-y-1">
+          {monitors.length === 0 ? (
+            <p className="text-xs text-muted-foreground px-1">
+              No monitors defined. Click + to add one.
+            </p>
+          ) : (
+            monitors.map((monitor) => (
+              <div
+                key={monitor.id}
+                className="flex items-center gap-1.5 px-1 py-1 rounded hover:bg-accent group"
+              >
+                {/* Enable/disable toggle */}
+                <button
+                  onClick={() => toggleEnabled(monitor)}
+                  className="text-muted-foreground hover:text-foreground flex-shrink-0"
+                  title={monitor.enabled ? 'Disable monitor' : 'Enable monitor'}
+                >
+                  {monitor.enabled ? (
+                    <ToggleRight className="h-4 w-4 text-primary" />
+                  ) : (
+                    <ToggleLeft className="h-4 w-4" />
+                  )}
+                </button>
+
+                {/* Name */}
+                <span
+                  className={`text-xs truncate flex-1 ${
+                    !monitor.enabled ? 'text-muted-foreground line-through' : ''
+                  }`}
+                >
+                  {monitor.name}
+                </span>
+
+                {/* Type badge */}
+                <Badge variant={TYPE_VARIANTS[monitor.type] ?? 'outline'} className="text-[10px] px-1 py-0 h-4 flex-shrink-0">
+                  {TYPE_LABELS[monitor.type] ?? monitor.type}
+                </Badge>
+
+                {/* Edit button */}
+                <button
+                  onClick={() => handleEdit(monitor)}
+                  className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  title="Edit monitor"
+                >
+                  <Edit className="h-3.5 w-3.5" />
+                </button>
+
+                {/* Delete button */}
+                <button
+                  onClick={() => handleDelete(monitor.id)}
+                  className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  title="Delete monitor"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))
+          )}
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Performance Report Section */}
+      <Collapsible open={isResultsOpen} onOpenChange={setIsResultsOpen}>
+        <CollapsibleTrigger className="flex items-center gap-1 font-semibold text-sm hover:underline">
+          {isResultsOpen ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+          <BarChart3 className="h-4 w-4" />
+          Performance Report
+        </CollapsibleTrigger>
+
+        <CollapsibleContent className="mt-2">
+          <PerformanceReport results={monitorResults} />
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* State Space Analysis */}
+      <Collapsible open={isStateSpaceOpen} onOpenChange={setIsStateSpaceOpen}>
+        <CollapsibleTrigger className="flex items-center gap-1 font-semibold text-sm hover:underline">
+          {isStateSpaceOpen ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+          <Network className="h-4 w-4" />
+          State Space
+        </CollapsibleTrigger>
+
+        <CollapsibleContent className="mt-2 space-y-3">
+          {/* Settings */}
+          <div className="grid grid-cols-2 gap-2 px-1">
+            <div>
+              <label className="text-xs text-muted-foreground">Max States</label>
+              <input
+                type="number"
+                value={maxStates}
+                onChange={(e) => setMaxStates(Number(e.target.value))}
+                className="w-full rounded border bg-background px-2 py-1 text-xs"
+                min={100}
+                max={1000000}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Max Arcs</label>
+              <input
+                type="number"
+                value={maxArcs}
+                onChange={(e) => setMaxArcs(Number(e.target.value))}
+                className="w-full rounded border bg-background px-2 py-1 text-xs"
+                min={100}
+                max={1000000}
+              />
+            </div>
+          </div>
+
+          {/* Non-determinism analysis */}
+          {nonDetSources.length > 0 && (
+            <div className="px-1 space-y-2">
+              {!showOverrides ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs w-full"
+                  onClick={handleAnalyze}
+                >
+                  <Search className="h-3.5 w-3.5 mr-1" />
+                  Analyze Non-determinism ({nonDetSources.length})
+                </Button>
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium flex items-center gap-1">
+                      <Dice5 className="h-3.5 w-3.5 text-amber-500" />
+                      Deterministic Overrides
+                    </span>
+                    <button
+                      onClick={() => setShowOverrides(false)}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                      title="Disable overrides"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="rounded border bg-muted/30 divide-y divide-border">
+                    {nonDetSources.map((src) => (
+                      <div key={src.id} className="flex items-center gap-2 px-2 py-1.5">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1">
+                            <Badge
+                              variant={src.type === 'distribution' ? 'secondary' : 'outline'}
+                              className="text-[9px] px-1 py-0 h-3.5 flex-shrink-0"
+                            >
+                              {src.type === 'distribution' ? 'dist' : 'range'}
+                            </Badge>
+                            <span className="text-xs font-mono font-medium truncate">
+                              {src.type === 'distribution'
+                                ? `${src.name}(${src.params ?? ''})`
+                                : `${src.name} [${src.range?.[0]}..${src.range?.[1]}]`
+                              }
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-muted-foreground truncate">
+                            {src.location}
+                          </div>
+                        </div>
+                        <input
+                          type="number"
+                          value={overrideValues[src.id] ?? src.defaultValue}
+                          onChange={(e) => setOverrideValues(prev => ({
+                            ...prev,
+                            [src.id]: Number(e.target.value),
+                          }))}
+                          className="w-16 rounded border bg-background px-1.5 py-0.5 text-xs text-right font-mono"
+                          step={src.type === 'intRange' ? 1 : 'any'}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex gap-2 px-1">
+            <Button
+              size="sm"
+              className="h-7 text-xs flex-1"
+              onClick={handleCalculateStateSpace}
+              disabled={isCalculating || !simulationContext}
+            >
+              {isCalculating ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+              ) : (
+                <Play className="h-3.5 w-3.5 mr-1" />
+              )}
+              {isCalculating ? 'Calculating…' : 'Calculate'}
+            </Button>
+
+            {stateSpaceResult && (stateSpaceResult.report.numStates <= GRAPH_NODE_LIMIT) && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                onClick={() => setActiveSpecialTab('stateSpaceGraph')}
+              >
+                <GitGraph className="h-3.5 w-3.5 mr-1" />
+                Graph
+              </Button>
+            )}
+          </div>
+
+          {/* Large state space warning */}
+          {stateSpaceResult && stateSpaceResult.report.numStates > GRAPH_NODE_LIMIT && (
+            <p className="text-xs text-muted-foreground px-1">
+              Graph visualization disabled for state spaces with more than {GRAPH_NODE_LIMIT} states.
+            </p>
+          )}
+
+          {/* Report */}
+          {stateSpaceResult && (
+            <StateSpaceReportView report={stateSpaceResult.report} />
+          )}
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Add/Edit Monitor Dialog */}
+      <AddMonitorDialog
+        open={addDialogOpen}
+        onOpenChange={handleDialogClose}
+        editMonitor={editingMonitor}
+      />
+    </div>
+  );
+}

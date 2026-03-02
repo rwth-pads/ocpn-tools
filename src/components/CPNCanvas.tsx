@@ -53,6 +53,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreVertical, Plus, GripVertical, Upload, Copy } from 'lucide-react';
+import { GitGraph } from 'lucide-react';
+import { ReachabilityGraphTab } from '@/components/ReachabilityGraphTab';
 
 import {
   convertToCPNToolsXML,
@@ -99,6 +101,7 @@ const selector = (state: StoreState) => ({
   setFunctions: state.setFunctions,
   setUses: state.setUses,
   setFusionSets: state.setFusionSets,
+  setMonitors: state.setMonitors,
   toggleArcMode: state.toggleArcMode,
   deletePetriNet: state.deletePetriNet,
   duplicatePetriNet: state.duplicatePetriNet,
@@ -165,6 +168,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     setFunctions,
     setUses,
     setFusionSets,
+    setMonitors,
     toggleArcMode,
     deletePetriNet,
     duplicatePetriNet,
@@ -175,6 +179,9 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
   );
 
   const petriNet = useStore(state => activePetriNetId ? state.petriNetsById[activePetriNetId] : null);
+  const activeSpecialTab = useStore(state => state.activeSpecialTab);
+  const setActiveSpecialTab = useStore(state => state.setActiveSpecialTab);
+  const stateSpaceResult = useStore(state => state.stateSpaceResult);
   const petriNetHandlers = usePetriNetHandlers(activePetriNetId || '');
   const { onNodesChange, onEdgesChange, onConnect } = activePetriNetId
     ? petriNetHandlers
@@ -364,6 +371,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       if (data.functions) setFunctions(data.functions);
       if (data.uses) setUses(data.uses);
       if (data.fusionSets) setFusionSets(data.fusionSets);
+      if (data.monitors) setMonitors(data.monitors);
       
       // Restore simulation settings if available
       if (data.simulationSettings) {
@@ -437,6 +445,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       functions,
       uses,
       fusionSets: useStore.getState().fusionSets,
+      monitors: useStore.getState().monitors,
       // Include simulation settings for JSON/OCPN format
       simulationSettings: {
         stepsPerRun: simulationContext?.simulationConfig?.stepsPerRun,
@@ -1242,7 +1251,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
         <div className="flex items-end w-full bg-muted/50 px-1 pt-1 gap-0 overflow-x-auto border-b border-border">
           {petriNetOrder.map((id, index) => {
             const isMain = index === 0;
-            const isActive = id === activePetriNetId;
+            const isActive = id === activePetriNetId && !activeSpecialTab;
             const isDragOver = id === dragOverTabId;
             return (
               <div
@@ -1263,7 +1272,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
                 onDragLeave={() => setDragOverTabId(null)}
                 onDrop={(e) => handleTabDrop(e, id)}
                 onDragEnd={handleTabDragEnd}
-                onClick={() => setActivePetriNet(id)}
+                onClick={() => { setActiveSpecialTab(null); setActivePetriNet(id); }}
               >
                 {/* Drag handle for non-main tabs */}
                 {!isMain && (
@@ -1324,6 +1333,44 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
           >
             <Plus className="h-3.5 w-3.5" />
           </button>
+
+          {/* State Space Graph tab (shown when a state space has been calculated) */}
+          {stateSpaceResult?.graph && (
+            <>
+              <div className="mx-1 self-stretch flex items-center">
+                <div className="h-4 w-px bg-border" />
+              </div>
+              <div
+                className={`
+                  group relative flex items-center gap-1 px-3 py-1.5 text-sm cursor-pointer select-none
+                  border border-b-0 rounded-t-md transition-colors
+                  ${activeSpecialTab === 'stateSpaceGraph'
+                    ? 'bg-background border-border text-foreground font-medium z-10 -mb-px'
+                    : 'bg-muted/60 border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }
+                `}
+                onClick={() => setActiveSpecialTab('stateSpaceGraph')}
+              >
+                <GitGraph className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">State Space</span>
+                <button
+                  className={`
+                    ml-1 p-0.5 rounded hover:bg-foreground/10 transition-opacity shrink-0
+                    ${activeSpecialTab === 'stateSpaceGraph' ? 'opacity-60 hover:opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100'}
+                  `}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveSpecialTab(null);
+                  }}
+                  title="Close graph tab"
+                >
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 4l8 8M12 4l-8 8" />
+                  </svg>
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* New Subpage Dialog */}
@@ -1426,6 +1473,9 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
         {/* ReactFlow Component Wrapper */}
         {/* Add w-full and h-full to ensure the wrapper takes available space */}
         {/* <div className="reactflow-wrapper w-full h-full" ref={reactFlowWrapper}> */}
+        {activeSpecialTab === 'stateSpaceGraph' ? (
+          <ReachabilityGraphTab />
+        ) : (
           <ReactFlow
             nodes={petriNet?.nodes || []}
             nodeTypes={nodeTypes}
@@ -1474,6 +1524,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
               size={200}
             />
           </ReactFlow>
+        )}
         {/* </div> */}
       </div>
     </div>

@@ -217,6 +217,11 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
     return state.fusionSets.find((fs) => fs.id === data.fusionSetId)?.name || null;
   });
 
+  // Check if any enabled monitor watches this place
+  const hasMonitor = useStore((state) =>
+    state.monitors.some((m) => m.enabled && m.placeIds.includes(id)),
+  );
+
   const isTarget = connection.inProgress && connection.fromNode.id !== id && connection.fromNode.type === 'transition';
 
   const hasMarking = data.marking && Array.isArray(data.marking) && data.marking.length > 0;
@@ -312,6 +317,26 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
             </tbody>
           </table>
         </DraggableInscription>
+      )}
+
+      {/* Monitor indicator badge - top left */}
+      {hasMonitor && (
+        <div
+          style={{
+            position: 'absolute',
+            top: -2,
+            left: -2,
+          }}
+          className="nodrag pointer-events-none"
+          title="Monitored"
+        >
+          <div className="flex items-center justify-center w-[12px] h-[12px] rounded-full bg-blue-500 border border-blue-600">
+            <svg width="7" height="7" viewBox="0 0 16 16" fill="white" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="8" cy="4" r="2" />
+              <path d="M2 14 Q2 8 8 8 Q14 8 14 14" />
+            </svg>
+          </div>
+        </div>
       )}
 
       {/* Port type hierarchy tag (In/Out/I/O) at bottom center */}

@@ -9,6 +9,7 @@ import AuxTextProperties from './AuxTextProperties';
 import ArcProperties from './ArcProperties';
 import { DeleteElementButton } from '@/components/DeleteElementButton';
 import { SimulationPanel } from '@/components/SimulationPanel';
+import { AnalysisPanel } from '@/components/AnalysisPanel';
 
 import { DeclarationManager } from '@/components/DeclarationManager';
 import { TabsContent } from '@radix-ui/react-tabs';
@@ -68,10 +69,10 @@ const Sidebar = () => {
       </div>
       <div className="px-4 py-2 flex-1 flex flex-col overflow-hidden">
         <Tabs value={activeMode} onValueChange={(v) => setActiveMode(v as ActiveMode)} className="flex flex-col flex-1 overflow-hidden">
-          <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+          <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
             <TabsTrigger value="model">Model</TabsTrigger>
             <TabsTrigger value="simulation">Simulation</TabsTrigger>
-            {/* <TabsTrigger value="analysis">Analysis</TabsTrigger> */}
+            <TabsTrigger value="analysis">Analysis</TabsTrigger>
           </TabsList>
           <TabsContent value="model" className="space-y-4 mt-2 flex-1 overflow-auto">
 
@@ -113,6 +114,9 @@ const Sidebar = () => {
             </TabsContent>
             <TabsContent value="simulation" className="mt-2 flex-1 overflow-hidden">
               <SimulationPanel />
+            </TabsContent>
+            <TabsContent value="analysis" className="mt-2 flex-1 overflow-auto">
+              <AnalysisPanel />
             </TabsContent>
           </Tabs>
 

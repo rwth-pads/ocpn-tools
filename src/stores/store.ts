@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { temporal } from 'zundo';
 import { Node, Edge } from '@xyflow/react';
 import { AppState, AppActions, PetriNet, SelectedElement } from '@/types';
-import type { FusionSet } from '@/types';
+import type { FusionSet, Monitor } from '@/types';
 
 import { v4 as uuidv4 } from 'uuid';
 
@@ -36,6 +36,9 @@ const emptyState: AppState = {
   isArcMode: false,
   activeArcType: 'normal' as ArcType,
   fusionSets: [],
+  monitors: [],
+  stateSpaceResult: null,
+  activeSpecialTab: null,
 }
 
 export type StoreState = AppState & AppActions;
@@ -104,6 +107,9 @@ const useStore = create<StoreState>()(temporal((set) => ({
   activeArcType: 'normal' as ArcType,
   activeMode: 'model',
   fusionSets: [],
+  monitors: [],
+  stateSpaceResult: null,
+  activeSpecialTab: null,
 
   // Actions
   setNodes: (petriNetId: string, nodes: Node[]) => {
@@ -790,6 +796,35 @@ const useStore = create<StoreState>()(temporal((set) => ({
       };
     }),
 
+  // Monitors
+  setMonitors: (monitors: Monitor[]) =>
+    set(() => ({ monitors })),
+
+  addMonitor: (monitor: Monitor) =>
+    set((state) => ({
+      monitors: [...state.monitors, { ...monitor, id: monitor.id || uuidv4() }],
+    })),
+
+  updateMonitor: (id: string, monitor: Monitor) =>
+    set((state) => ({
+      monitors: state.monitors.map((m) => (m.id === id ? monitor : m)),
+    })),
+
+  deleteMonitor: (id: string) =>
+    set((state) => ({
+      monitors: state.monitors.filter((m) => m.id !== id),
+    })),
+
+  setStateSpaceResult: (result) =>
+    set(() => ({
+      stateSpaceResult: result,
+    })),
+
+  setActiveSpecialTab: (tab) =>
+    set(() => ({
+      activeSpecialTab: tab,
+    })),
+
   // Hierarchy: Move transition to subpage
   moveTransitionToSubpage: (petriNetId: string, transitionId: string) =>
     set((state) => {
@@ -1377,6 +1412,7 @@ const useStore = create<StoreState>()(temporal((set) => ({
       functions: state.functions,
       uses: state.uses,
       fusionSets: state.fusionSets,
+      monitors: state.monitors,
     }),
     equality: (pastState, currentState) => {
       // Compare serialized snapshots to avoid recording no-op changes
@@ -1391,6 +1427,7 @@ const useStore = create<StoreState>()(temporal((set) => ({
         functions: pastState.functions,
         uses: pastState.uses,
         fusionSets: pastState.fusionSets,
+        monitors: pastState.monitors,
       }) === JSON.stringify({
         petriNetsById: stripTransientPetriNetFields(currentState.petriNetsById as Record<string, PetriNet>),
         petriNetOrder: currentState.petriNetOrder,
@@ -1401,6 +1438,7 @@ const useStore = create<StoreState>()(temporal((set) => ({
         functions: currentState.functions,
         uses: currentState.uses,
         fusionSets: currentState.fusionSets,
+        monitors: currentState.monitors,
       });
     },
     limit: 100,

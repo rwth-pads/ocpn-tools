@@ -1,4 +1,4 @@
-import type { PetriNet, FusionSet } from '@/types';
+import type { PetriNet, FusionSet, Monitor } from '@/types';
 import type { ColorSet, Variable, Priority, Function, Use } from '@/declarations';
 
 import { v4 as uuidv4 } from 'uuid';
@@ -15,6 +15,7 @@ export type PetriNetData = {
   functions: Function[]
   uses: Use[] // Added uses
   fusionSets?: FusionSet[] // Fusion sets for fusion places
+  monitors?: Monitor[] // Analysis monitors
   // Simulation settings (optional for backward compatibility)
   simulationSettings?: {
     stepsPerRun?: number;
@@ -286,6 +287,7 @@ export function convertToJSON(data: PetriNetData): string {
     functions: data.functions,
     uses: data.uses, // Include uses in JSON
     fusionSets: data.fusionSets || undefined, // Include fusion sets
+    monitors: data.monitors?.length ? data.monitors : undefined, // Include monitors
     simulationSettings: data.simulationSettings || undefined, // Include simulation settings if present
     simulationEpoch: data.simulationSettings?.simulationEpoch || undefined, // Top-level for WASM simulator
   };
@@ -414,6 +416,7 @@ export function parseJSON(content: string): PetriNetData {
   const functions: Function[] = parsedData.functions || [];
   const uses: Use[] = parsedData.uses || []; // Parse uses
   const fusionSets: FusionSet[] = parsedData.fusionSets || []; // Parse fusion sets
+  const monitors: Monitor[] = parsedData.monitors || []; // Parse monitors
   
   // Parse simulation settings if present
   const simulationSettings = parsedData.simulationSettings ? {
@@ -432,6 +435,7 @@ export function parseJSON(content: string): PetriNetData {
     functions,
     uses, // Include uses in the returned data
     fusionSets, // Include fusion sets
+    monitors, // Include monitors
     simulationSettings, // Include simulation settings in the returned data
   };
 }

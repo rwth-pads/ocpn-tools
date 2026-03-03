@@ -546,14 +546,21 @@ const useStore = create<StoreState>()(temporal((set) => ({
                       parsedMarking = []; // Default to empty if conditions aren't met
                     }
                   } else {
-                    // Attempt to parse as JSON for other cases
-                    const parsed = JSON.parse(node.data.initialMarking);
-                    // Ensure result is an array
-                    if (Array.isArray(parsed)) {
-                      parsedMarking = parsed;
-                    } else {
-                      // Single value - wrap in array
-                      parsedMarking = [parsed];
+                    // Try to parse as JSON; if it fails, treat as a Rhai expression
+                    // that WASM will evaluate (e.g., all_orders())
+                    try {
+                      const parsed = JSON.parse(node.data.initialMarking);
+                      // Ensure result is an array
+                      if (Array.isArray(parsed)) {
+                        parsedMarking = parsed;
+                      } else {
+                        // Single value - wrap in array
+                        parsedMarking = [parsed];
+                      }
+                    } catch {
+                      // Not valid JSON — it's a Rhai expression (e.g., function call).
+                      // Leave marking empty; WASM will evaluate initialMarking directly.
+                      parsedMarking = [];
                     }
                   }
                   marking = parsedMarking;

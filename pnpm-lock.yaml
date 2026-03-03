@@ -6,7 +6,6 @@ settings:
 
 overrides:
   rollup: '>=4.59.0'
-  cpnsim: link:../../rust/cpnsim/pkg
   '@rwth-pads/cpnsim': link:../../rust/cpnsim/pkg
 
 importers:
@@ -91,9 +90,6 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
-      cpnsim:
-        specifier: link:../../rust/cpnsim/pkg
-        version: link:../../rust/cpnsim/pkg
       elkjs:
         specifier: ^0.11.0
         version: 0.11.0

@@ -684,11 +684,25 @@ export function useSimulationController() {
                             if (im.startsWith('[') && im.endsWith(']')) {
                                 // Keep as-is - it's already an array expression
                             } else if (im.endsWith('.all()')) {
-                                // Keep as-is - it's a colorset.all() expression
+                                // Resolve .all() on the TypeScript side — Rhai doesn't support this syntax.
+                                // Look up the color set and expand the int range into a JSON array.
+                                const csName = im.substring(0, im.length - '.all()'.length).trim();
+                                const cs = currentColorSets.find(c => c.name === csName);
+                                if (cs && cs.definition.includes('int')) {
+                                    const rangeMatch = cs.definition.match(/with\s+(\d+)\.\.(\d+)/);
+                                    if (rangeMatch) {
+                                        const start = parseInt(rangeMatch[1], 10);
+                                        const end = parseInt(rangeMatch[2], 10);
+                                        if (!isNaN(start) && !isNaN(end)) {
+                                            const allValues = Array.from({ length: end - start + 1 }, (_, i) => start + i);
+                                            node.data.initialMarking = JSON.stringify(allValues);
+                                        }
+                                    }
+                                }
                             } else if (im.trim() === '') {
                                 node.data.initialMarking = '[]';
                             }
-                            // Otherwise keep the original expression (e.g., "1", "8")
+                            // Otherwise keep the original expression (e.g., "1", "8", "all_orders()")
                             // which Rhai can evaluate directly
                         } else if (Array.isArray(im)) {
                             node.data.initialMarking = JSON.stringify(im);
@@ -753,6 +767,28 @@ export function useSimulationController() {
         console.log("WASM Simulator created successfully");
         // Set the event listener callback
         wasmSimulatorRef.current.setEventListener(handleWasmEvent);
+
+        // Sync WASM-computed markings back to the frontend store.
+        // This is essential for expression-based initial markings (e.g., all_orders())
+        // which WASM/Rhai evaluates but applyInitialMarkings cannot parse as JSON.
+        try {
+          const wasmMarking = wasmSimulatorRef.current.getMarking();
+          if (wasmMarking && typeof wasmMarking === 'object') {
+            // wasmMarking is a Map or plain object: placeId → token[]
+            const entries: [string, unknown[]][] = wasmMarking instanceof Map
+              ? Array.from(wasmMarking.entries())
+              : Object.entries(wasmMarking);
+            for (const [placeId, tokens] of entries) {
+              if (Array.isArray(tokens)) {
+                // Normalize tokens (convert Maps to plain objects for consistent comparison)
+                const normalized = tokens.map(normalizeToken);
+                updateNodeMarking(placeId, normalized);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to sync WASM marking to frontend:", e);
+        }
 
         // Register monitors from the store in the WASM simulator
         const currentMonitors = useStore.getState().monitors;

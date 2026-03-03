@@ -4,6 +4,7 @@ import { pauseUndo, resumeUndo } from '@/stores/store';
 
 import { Label } from "@/components/ui/label";
 import { UndoableInput as Input, UndoableAutoExpandingInput } from "@/components/ui/undoable-input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 
@@ -371,39 +372,70 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
               </Button>
             </div>
           </div>
-        ) : (
-          /* Non-UNIT, non-timed type: show text input with Edit button */
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <Input
-                id="initialMarking"
-                value={data.initialMarking || ""}
-                placeholder="e.g., [1, 2, 3]"
-                onChange={(e) => {
-                  if (activePetriNetId) {
-                    updateNodeData(activePetriNetId, id, {
-                      ...data,
-                      label: data.label || "",
-                      initialMarking: e.target.value,
-                      isArcMode: data.isArcMode || false,
-                      type: data.type || "defaultType",
-                      colorSet: data.colorSet || "defaultColorSet",
-                    });
-                  }
-                }}
-              />
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSelectedPlace({ id, data: { ...data } });
-                  setIsRecordMarkingDialogOpen(true);
-                }}
-              >
-                Edit
-              </Button>
+        ) : (() => {
+          // Detect whether initialMarking is a valid JSON value or an expression
+          let isExpression = false;
+          if (data.initialMarking && typeof data.initialMarking === 'string' && data.initialMarking.trim() !== '') {
+            try {
+              JSON.parse(data.initialMarking);
+            } catch {
+              isExpression = true;
+            }
+          }
+          return isExpression ? (
+            /* Expression-based marking (e.g., all_orders()): show textarea only */
+            <Textarea
+              id="initialMarking"
+              value={data.initialMarking || ""}
+              placeholder="e.g., all_orders()"
+              rows={2}
+              onChange={(e) => {
+                if (activePetriNetId) {
+                  updateNodeData(activePetriNetId, id, {
+                    ...data,
+                    label: data.label || "",
+                    initialMarking: e.target.value,
+                    isArcMode: data.isArcMode || false,
+                    type: data.type || "defaultType",
+                    colorSet: data.colorSet || "defaultColorSet",
+                  });
+                }
+              }}
+            />
+          ) : (
+            /* JSON marking: show text input with Edit button */
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <Input
+                  id="initialMarking"
+                  value={data.initialMarking || ""}
+                  placeholder="e.g., [1, 2, 3]"
+                  onChange={(e) => {
+                    if (activePetriNetId) {
+                      updateNodeData(activePetriNetId, id, {
+                        ...data,
+                        label: data.label || "",
+                        initialMarking: e.target.value,
+                        isArcMode: data.isArcMode || false,
+                        type: data.type || "defaultType",
+                        colorSet: data.colorSet || "defaultColorSet",
+                      });
+                    }
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedPlace({ id, data: { ...data } });
+                    setIsRecordMarkingDialogOpen(true);
+                  }}
+                >
+                  Edit
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* Port Type (available on subpage places) */}

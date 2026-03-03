@@ -9,7 +9,7 @@
           "id": "p-aircraft-queue",
           "name": "Aircraft\nQueue",
           "colorSet": "Aircraft",
-          "initialMarking": "[{\"value\": {\"id\": 1, \"typeCode\": \"A320\", \"airline\": \"SkyWing\", \"carrierType\": \"full\"}, \"timestamp\": 0}, {\"value\": {\"id\": 2, \"typeCode\": \"B738\", \"airline\": \"BlueTail\", \"carrierType\": \"low\"}, \"timestamp\": 900000}, {\"value\": {\"id\": 3, \"typeCode\": \"A350\", \"airline\": \"NordJet\", \"carrierType\": \"full\"}, \"timestamp\": 1800000}, {\"value\": {\"id\": 4, \"typeCode\": \"B787\", \"airline\": \"SunHorizon\", \"carrierType\": \"full\"}, \"timestamp\": 3000000}, {\"value\": {\"id\": 5, \"typeCode\": \"A320\", \"airline\": \"ArcticAir\", \"carrierType\": \"low\"}, \"timestamp\": 3900000}, {\"value\": {\"id\": 6, \"typeCode\": \"B738\", \"airline\": \"CrestAir\", \"carrierType\": \"low\"}, \"timestamp\": 5100000}, {\"value\": {\"id\": 7, \"typeCode\": \"A380\", \"airline\": \"PeakFlyer\", \"carrierType\": \"full\"}, \"timestamp\": 6000000}, {\"value\": {\"id\": 8, \"typeCode\": \"B777\", \"airline\": \"OceanWing\", \"carrierType\": \"full\"}, \"timestamp\": 7200000}, {\"value\": {\"id\": 9, \"typeCode\": \"A321\", \"airline\": \"StarLine\", \"carrierType\": \"low\"}, \"timestamp\": 8400000}, {\"value\": {\"id\": 10, \"typeCode\": \"B738\", \"airline\": \"WindRose\", \"carrierType\": \"low\"}, \"timestamp\": 9600000}]",
+          "initialMarking": "[{\"value\": {\"id\": 1, \"typeCode\": \"A320\", \"airline\": \"SkyWing\", \"carrierType\": \"full\"}, \"timestamp\": 0}, {\"value\": {\"id\": 2, \"typeCode\": \"B738\", \"airline\": \"BlueTail\", \"carrierType\": \"low\"}, \"timestamp\": 300000}, {\"value\": {\"id\": 3, \"typeCode\": \"A350\", \"airline\": \"NordJet\", \"carrierType\": \"full\"}, \"timestamp\": 660000}, {\"value\": {\"id\": 4, \"typeCode\": \"B787\", \"airline\": \"SunHorizon\", \"carrierType\": \"full\"}, \"timestamp\": 1080000}, {\"value\": {\"id\": 5, \"typeCode\": \"A320\", \"airline\": \"ArcticAir\", \"carrierType\": \"low\"}, \"timestamp\": 1320000}, {\"value\": {\"id\": 6, \"typeCode\": \"B738\", \"airline\": \"CrestAir\", \"carrierType\": \"low\"}, \"timestamp\": 1740000}, {\"value\": {\"id\": 7, \"typeCode\": \"A380\", \"airline\": \"PeakFlyer\", \"carrierType\": \"full\"}, \"timestamp\": 1980000}, {\"value\": {\"id\": 8, \"typeCode\": \"B777\", \"airline\": \"OceanWing\", \"carrierType\": \"full\"}, \"timestamp\": 2400000}, {\"value\": {\"id\": 9, \"typeCode\": \"A321\", \"airline\": \"StarLine\", \"carrierType\": \"low\"}, \"timestamp\": 2700000}, {\"value\": {\"id\": 10, \"typeCode\": \"B738\", \"airline\": \"WindRose\", \"carrierType\": \"low\"}, \"timestamp\": 3120000}]",
           "marking": [
             {
               "value": {
@@ -27,7 +27,7 @@
                 "airline": "BlueTail",
                 "carrierType": "low"
               },
-              "timestamp": 900000
+              "timestamp": 300000
             },
             {
               "value": {
@@ -36,7 +36,7 @@
                 "airline": "NordJet",
                 "carrierType": "full"
               },
-              "timestamp": 1800000
+              "timestamp": 660000
             },
             {
               "value": {
@@ -45,7 +45,7 @@
                 "airline": "SunHorizon",
                 "carrierType": "full"
               },
-              "timestamp": 3000000
+              "timestamp": 1080000
             },
             {
               "value": {
@@ -54,7 +54,7 @@
                 "airline": "ArcticAir",
                 "carrierType": "low"
               },
-              "timestamp": 3900000
+              "timestamp": 1320000
             },
             {
               "value": {
@@ -63,7 +63,7 @@
                 "airline": "CrestAir",
                 "carrierType": "low"
               },
-              "timestamp": 5100000
+              "timestamp": 1740000
             },
             {
               "value": {
@@ -72,7 +72,7 @@
                 "airline": "PeakFlyer",
                 "carrierType": "full"
               },
-              "timestamp": 6000000
+              "timestamp": 1980000
             },
             {
               "value": {
@@ -81,7 +81,7 @@
                 "airline": "OceanWing",
                 "carrierType": "full"
               },
-              "timestamp": 7200000
+              "timestamp": 2400000
             },
             {
               "value": {
@@ -90,7 +90,7 @@
                 "airline": "StarLine",
                 "carrierType": "low"
               },
-              "timestamp": 8400000
+              "timestamp": 2700000
             },
             {
               "value": {
@@ -99,7 +99,7 @@
                 "airline": "WindRose",
                 "carrierType": "low"
               },
-              "timestamp": 9600000
+              "timestamp": 3120000
             }
           ],
           "position": {

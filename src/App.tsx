@@ -19,36 +19,28 @@ export default function App() {
 
   return (
     <SimulationProvider>
-      <div className="h-screen">
-        <ResizablePanelGroup orientation="horizontal">
-          {/* Left Panel */}
-          <Sidebar />
-          <ResizableHandle />
+      <div className="h-screen flex">
+        {/* Left Panel - fixed pixel width, outside of ResizablePanelGroup */}
+        <Sidebar />
 
-          {/* Center Panel */}
-          <ResizablePanel>
-            <ResizablePanelGroup orientation="vertical">
-              <ResizablePanel className="flex flex-col">
-                <ReactFlowProvider>
-                  <DnDProvider>
-                    <CPNCanvas onToggleAIAssistant={onToggleAIAssistant} />
-                  </DnDProvider>
-                </ReactFlowProvider>
-              </ResizablePanel>
-              <ResizableHandle />
-              <ResizablePanel defaultSize="0%" collapsedSize="0%" collapsible minSize="10%">
-                <ObjectEvolutionPanel simulationTimeRange={simulationTimeRange}/>
-              </ResizablePanel>
-            </ResizablePanelGroup>
+        {/* Center + Bottom panels */}
+        <ResizablePanelGroup orientation="vertical" className="flex-1">
+          <ResizablePanel className="flex flex-col">
+            <ReactFlowProvider>
+              <DnDProvider>
+                <CPNCanvas onToggleAIAssistant={onToggleAIAssistant} />
+              </DnDProvider>
+            </ReactFlowProvider>
           </ResizablePanel>
-
-          {isSidebarOpen && (
-            <>
-              {/* <ResizableHandle /> */}
-              <AISidebar />
-            </>
-          )}
+          <ResizableHandle />
+          <ResizablePanel defaultSize="0%" collapsedSize="0%" collapsible minSize="10%">
+            <ObjectEvolutionPanel simulationTimeRange={simulationTimeRange}/>
+          </ResizablePanel>
         </ResizablePanelGroup>
+
+        {isSidebarOpen && (
+          <AISidebar />
+        )}
       </div>
     </SimulationProvider>
   );

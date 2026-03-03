@@ -1,5 +1,5 @@
+import { useCallback, useRef, useState } from 'react';
 import useStore from '@/stores/store';
-import { ResizablePanel } from '@/components/ui/resizable';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -16,6 +16,8 @@ import { TabsContent } from '@radix-ui/react-tabs';
 
 import type { ActiveMode } from '@/types';
 
+const SIDEBAR_MIN_PX = 400;
+
 const Sidebar = () => {
   // Access selectedElement from the store
   const selectedElement = useStore((state) => {
@@ -27,6 +29,35 @@ const Sidebar = () => {
   const priorities = useStore((state) => state.priorities);
   const activeMode = useStore((state) => state.activeMode);
   const setActiveMode = useStore((state) => state.setActiveMode);
+
+  // Pixel-based sidebar width with drag-to-resize handle
+  const [width, setWidth] = useState(SIDEBAR_MIN_PX);
+  const isDragging = useRef(false);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    const startX = e.clientX;
+    const startWidth = width;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const newWidth = Math.max(SIDEBAR_MIN_PX, startWidth + (moveEvent.clientX - startX));
+      setWidth(newWidth);
+    };
+
+    const onMouseUp = () => {
+      isDragging.current = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, [width]);
 
   const renderElementProperties = () => {
     if (!selectedElement) {
@@ -63,7 +94,7 @@ const Sidebar = () => {
   };
 
   return (
-    <ResizablePanel defaultSize="20%" minSize="400px" className="flex flex-col h-full overflow-hidden">
+    <div className="relative flex flex-col h-full overflow-hidden shrink-0 border-r" style={{ width }}>
       <div className="px-4 py-2 flex-shrink-0">
         <h3 className="text-lg font-medium">OCPN Tools</h3>
       </div>
@@ -122,7 +153,12 @@ const Sidebar = () => {
 
 
         </div>
-    </ResizablePanel>
+      {/* Drag handle for resizing */}
+      <div
+        onMouseDown={handleMouseDown}
+        className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-border active:bg-blue-400 transition-colors z-10"
+      />
+    </div>
   );
 };
 

@@ -336,23 +336,24 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
         </div>
       )}
 
-      {/* Monitor indicator badge - top left */}
+      {/* Monitor indicator badge - top center (moves out upward when selected) */}
       {hasMonitor && (
         <div
           style={{
             position: 'absolute',
             top: -2,
-            left: -2,
+            left: '50%',
+            transform: selected ? 'translate(-50%, -100%)' : 'translate(-50%, -50%)',
+            transition: 'transform 0.15s ease-out',
           }}
           className="nodrag pointer-events-none"
           title="Monitored"
         >
-          <div className="flex items-center justify-center w-[12px] h-[12px] rounded-full bg-blue-500 border border-blue-600">
-            <svg width="7" height="7" viewBox="0 0 16 16" fill="white" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="8" cy="4" r="2" />
-              <path d="M2 14 Q2 8 8 8 Q14 8 14 14" />
-            </svg>
-          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="11.5" fill="white" stroke="#2563eb" strokeWidth="1" />
+            <circle cx="12" cy="8" r="2.5" fill="#2563eb" fillOpacity="0.2" stroke="#2563eb" strokeWidth="1.2" />
+            <path d="M6 19 Q6 13 12 13 Q18 13 18 19" fill="#2563eb" fillOpacity="0.15" stroke="#2563eb" strokeWidth="1.2" strokeLinecap="round" />
+          </svg>
         </div>
       )}
 

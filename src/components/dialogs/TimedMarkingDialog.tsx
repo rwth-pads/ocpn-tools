@@ -687,7 +687,7 @@ export function TimedMarkingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={isRecordType ? 'max-w-[90vw] xl:max-w-6xl' : 'max-w-3xl'}>
+      <DialogContent className={isRecordType ? 'max-w-[90vw] sm:max-w-[90vw] xl:max-w-6xl' : 'max-w-3xl sm:max-w-3xl'}>
         <DialogHeader>
           <DialogTitle>Edit Timed Marking for {colorSetName}</DialogTitle>
         </DialogHeader>

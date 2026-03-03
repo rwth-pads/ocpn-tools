@@ -757,7 +757,25 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
     formattedLabel = null;
   } else if (hasDelay) {
     const baseLabel = isDefaultUnitInscription ? '' : (label || '');
-    formattedLabel = baseLabel ? `${baseLabel}@+${arcDelay}` : `@+${arcDelay}`;
+    // Show a timer icon instead of the full delay text
+    const timerIcon = (
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        style={{ display: 'inline-block', verticalAlign: 'middle', marginLeft: 2, marginTop: -2 }}
+        aria-hidden="true"
+      >
+        <title>{`@+${arcDelay}`}</title>
+        <circle cx="12" cy="12" r="11.5" fill="white" stroke="#8B4513" strokeWidth="1" />
+        <circle cx="12" cy="12" r="8" fill="#8B4513" fillOpacity="0.12" stroke="#8B4513" strokeWidth="1.2" />
+        <line x1="12" y1="7" x2="12" y2="12" stroke="#8B4513" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="12" y1="12" x2="16" y2="12" stroke="#8B4513" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    );
+    formattedLabel = baseLabel ? <>{baseLabel}{timerIcon}</> : timerIcon;
   } else {
     formattedLabel = label;
   }

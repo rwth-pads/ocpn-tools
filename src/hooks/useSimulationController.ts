@@ -1127,7 +1127,9 @@ export function useSimulationController() {
       distOverrides?: Record<string, number>,
       intRangeOverrides?: Record<string, number>,
     ): Promise<StateSpaceResult | null> => {
-      await ensureInitialized();
+      // Always re-initialize so state space starts from initial markings,
+      // not the current simulation state.
+      await _initializeWasm();
       if (!wasmSimulatorRef.current) return null;
       try {
         const result = wasmSimulatorRef.current.calculateStateSpace(
@@ -1143,7 +1145,8 @@ export function useSimulationController() {
         return null;
       }
     },
-    [ensureInitialized]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
   );
 
   // Return the state and functions needed by UI components

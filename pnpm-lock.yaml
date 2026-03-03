@@ -6,6 +6,8 @@ settings:
 
 overrides:
   rollup: '>=4.59.0'
+  cpnsim: link:../../rust/cpnsim/pkg
+  '@rwth-pads/cpnsim': link:../../rust/cpnsim/pkg
 
 importers:
 
@@ -75,8 +77,8 @@ importers:
         specifier: ^1.2.4
         version: 1.2.4(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@rwth-pads/cpnsim':
-        specifier: ^0.3.6
-        version: 0.3.6
+        specifier: link:../../rust/cpnsim/pkg
+        version: link:../../rust/cpnsim/pkg
       '@tailwindcss/vite':
         specifier: ^4.1.18
         version: 4.1.18(vite@7.3.1(jiti@2.6.1)(lightningcss@1.30.2)(yaml@2.8.2))
@@ -89,6 +91,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      cpnsim:
+        specifier: link:../../rust/cpnsim/pkg
+        version: link:../../rust/cpnsim/pkg
       elkjs:
         specifier: ^0.11.0
         version: 0.11.0
@@ -1220,9 +1225,6 @@ packages:
     resolution: {integrity: sha512-2HRCml6OztYXyJXAvdDXPKcawukWY2GpR5/nxKp4iBgiO3wcoEGkAaqctIbZcNB6KlUQBIqt8VYkNSj2397EfA==}
     cpu: [x64]
     os: [win32]
-
-  '@rwth-pads/cpnsim@0.3.6':
-    resolution: {integrity: sha512-Ge9om91viJFfq/FTb/CmdphiuV0kifkAmJBNdpOYCog/YsvPtJ12xP84JCg906ahlj3tGCwdQ+VKAMOVZIwxqA==}
 
   '@tailwindcss/node@4.1.18':
     resolution: {integrity: sha512-DoR7U1P7iYhw16qJ49fgXUlry1t4CpXeErJHnQ44JgTSKMaZUdf17cfn5mHchfJ4KRBZRFA/Coo+MUF5+gOaCQ==}
@@ -4613,8 +4615,6 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.59.0':
     optional: true
-
-  '@rwth-pads/cpnsim@0.3.6': {}
 
   '@tailwindcss/node@4.1.18':
     dependencies:

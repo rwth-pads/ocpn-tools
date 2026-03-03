@@ -1041,7 +1041,8 @@ export function useSimulationController() {
         state.fusionSets !== prevState.fusionSets;
 
       // For petriNetsById, we need to check if nodes or edges actually changed
-      // (ignoring selectedElement changes which happen on tab switch/selection)
+      // (ignoring selectedElement changes which happen on tab switch/selection,
+      //  and position-only changes which happen when moving nodes)
       let netsStructurallyChanged = false;
       if (state.petriNetsById !== prevState.petriNetsById) {
         const curIds = Object.keys(state.petriNetsById);
@@ -1052,9 +1053,46 @@ export function useSimulationController() {
           for (const id of curIds) {
             const cur = state.petriNetsById[id];
             const prev = prevState.petriNetsById[id];
-            if (!prev || cur.nodes !== prev.nodes || cur.edges !== prev.edges || cur.name !== prev.name) {
+            if (!prev || cur.edges !== prev.edges || cur.name !== prev.name) {
               netsStructurallyChanged = true;
               break;
+            }
+            // For nodes, distinguish layout-only changes (position moves, inscription
+            // offset drags) from structural changes that affect simulation semantics.
+            if (cur.nodes !== prev.nodes) {
+              if (cur.nodes.length !== prev.nodes.length) {
+                netsStructurallyChanged = true;
+                break;
+              }
+              for (let i = 0; i < cur.nodes.length; i++) {
+                const cn = cur.nodes[i];
+                const pn = prev.nodes[i];
+                if (cn.id !== pn.id || cn.type !== pn.type) {
+                  netsStructurallyChanged = true;
+                  break;
+                }
+                // If data ref changed, check whether only layout offsets differ.
+                // Inscription offset properties (e.g. markingOffset, guardOffset) are
+                // purely visual and should not invalidate the simulation.
+                if (cn.data !== pn.data) {
+                  const layoutKeys = new Set([
+                    'colorSetOffset', 'tokenCountOffset', 'markingOffset',
+                    'guardOffset', 'timeOffset',
+                  ]);
+                  const cData = cn.data as Record<string, unknown>;
+                  const pData = pn.data as Record<string, unknown>;
+                  const allKeys = new Set([...Object.keys(cData), ...Object.keys(pData)]);
+                  for (const key of allKeys) {
+                    if (layoutKeys.has(key)) continue;
+                    if (cData[key] !== pData[key]) {
+                      netsStructurallyChanged = true;
+                      break;
+                    }
+                  }
+                  if (netsStructurallyChanged) break;
+                }
+              }
+              if (netsStructurallyChanged) break;
             }
           }
         }

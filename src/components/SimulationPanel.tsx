@@ -471,8 +471,10 @@ export function SimulationPanel() {
       : events;
     const ocelData = convertToOCEL2(exportEvents, colorSets, transitions, places, simulationEpoch || null);
     
+    const ocpnName = useStore.getState().ocpnName || 'simulation';
+    const prefix = ocpnName.replace(/\s+/g, '');
     let content = "";
-    let filename = `simulation_ocel2_${stepCounter}_events`;
+    let filename = `${prefix}_simulation_${stepCounter}_events_ocel2`;
     let mimeType = "application/octet-stream";
 
     switch (format) {

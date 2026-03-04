@@ -1461,6 +1461,37 @@ const useStore = create<StoreState>()(temporal((set) => ({
 
 export default useStore;
 
+// --- Dirty tracking (has-unsaved-changes detection) ---
+
+/** Compute a serialised snapshot of the model-relevant store fields. */
+function getSnapshotString(): string {
+  const s = useStore.getState();
+  return JSON.stringify({
+    ocpnName: s.ocpnName,
+    petriNetsById: stripTransientPetriNetFields(s.petriNetsById),
+    petriNetOrder: s.petriNetOrder,
+    colorSets: s.colorSets,
+    variables: s.variables,
+    priorities: s.priorities,
+    functions: s.functions,
+    uses: s.uses,
+    fusionSets: s.fusionSets,
+    monitors: s.monitors,
+  });
+}
+
+let _lastCleanSnapshot: string = getSnapshotString();
+
+/** Mark the current state as "clean" (just saved / just loaded / just created). */
+export const markClean = () => {
+  _lastCleanSnapshot = getSnapshotString();
+};
+
+/** Return true if the store has unsaved changes since the last markClean(). */
+export const isStoreDirty = (): boolean => {
+  return getSnapshotString() !== _lastCleanSnapshot;
+};
+
 /**
  * Begin an undo batch. All state changes until the matching `resumeUndo()`
  * are collapsed into a single undo entry. Nestable (e.g., dialog inside drag).

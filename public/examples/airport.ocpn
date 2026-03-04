@@ -3,118 +3,8 @@
   "petriNets": [
     {
       "id": "airport-net",
-      "name": "Main",
+      "name": "Airport",
       "places": [
-        {
-          "id": "p-aircraft-queue",
-          "name": "Aircraft\nQueue",
-          "colorSet": "Aircraft",
-          "initialMarking": "[{\"value\": {\"id\": 1, \"typeCode\": \"A320\", \"airline\": \"SkyWing\", \"carrierType\": \"full\"}, \"timestamp\": 0}, {\"value\": {\"id\": 2, \"typeCode\": \"B738\", \"airline\": \"BlueTail\", \"carrierType\": \"low\"}, \"timestamp\": 300000}, {\"value\": {\"id\": 3, \"typeCode\": \"A350\", \"airline\": \"NordJet\", \"carrierType\": \"full\"}, \"timestamp\": 660000}, {\"value\": {\"id\": 4, \"typeCode\": \"B787\", \"airline\": \"SunHorizon\", \"carrierType\": \"full\"}, \"timestamp\": 1080000}, {\"value\": {\"id\": 5, \"typeCode\": \"A320\", \"airline\": \"ArcticAir\", \"carrierType\": \"low\"}, \"timestamp\": 1320000}, {\"value\": {\"id\": 6, \"typeCode\": \"B738\", \"airline\": \"CrestAir\", \"carrierType\": \"low\"}, \"timestamp\": 1740000}, {\"value\": {\"id\": 7, \"typeCode\": \"A380\", \"airline\": \"PeakFlyer\", \"carrierType\": \"full\"}, \"timestamp\": 1980000}, {\"value\": {\"id\": 8, \"typeCode\": \"B777\", \"airline\": \"OceanWing\", \"carrierType\": \"full\"}, \"timestamp\": 2400000}, {\"value\": {\"id\": 9, \"typeCode\": \"A321\", \"airline\": \"StarLine\", \"carrierType\": \"low\"}, \"timestamp\": 2700000}, {\"value\": {\"id\": 10, \"typeCode\": \"B738\", \"airline\": \"WindRose\", \"carrierType\": \"low\"}, \"timestamp\": 3120000}]",
-          "marking": [
-            {
-              "value": {
-                "id": 1,
-                "typeCode": "A320",
-                "airline": "SkyWing",
-                "carrierType": "full"
-              },
-              "timestamp": 0
-            },
-            {
-              "value": {
-                "id": 2,
-                "typeCode": "B738",
-                "airline": "BlueTail",
-                "carrierType": "low"
-              },
-              "timestamp": 300000
-            },
-            {
-              "value": {
-                "id": 3,
-                "typeCode": "A350",
-                "airline": "NordJet",
-                "carrierType": "full"
-              },
-              "timestamp": 660000
-            },
-            {
-              "value": {
-                "id": 4,
-                "typeCode": "B787",
-                "airline": "SunHorizon",
-                "carrierType": "full"
-              },
-              "timestamp": 1080000
-            },
-            {
-              "value": {
-                "id": 5,
-                "typeCode": "A320",
-                "airline": "ArcticAir",
-                "carrierType": "low"
-              },
-              "timestamp": 1320000
-            },
-            {
-              "value": {
-                "id": 6,
-                "typeCode": "B738",
-                "airline": "CrestAir",
-                "carrierType": "low"
-              },
-              "timestamp": 1740000
-            },
-            {
-              "value": {
-                "id": 7,
-                "typeCode": "A380",
-                "airline": "PeakFlyer",
-                "carrierType": "full"
-              },
-              "timestamp": 1980000
-            },
-            {
-              "value": {
-                "id": 8,
-                "typeCode": "B777",
-                "airline": "OceanWing",
-                "carrierType": "full"
-              },
-              "timestamp": 2400000
-            },
-            {
-              "value": {
-                "id": 9,
-                "typeCode": "A321",
-                "airline": "StarLine",
-                "carrierType": "low"
-              },
-              "timestamp": 2700000
-            },
-            {
-              "value": {
-                "id": 10,
-                "typeCode": "B738",
-                "airline": "WindRose",
-                "carrierType": "low"
-              },
-              "timestamp": 3120000
-            }
-          ],
-          "position": {
-            "x": 0,
-            "y": 450
-          },
-          "size": {
-            "width": 60,
-            "height": 40
-          },
-          "markingOffset": {
-            "x": -95.67513757480285,
-            "y": 59.04187843937007
-          }
-        },
         {
           "id": "p-runway-avail",
           "name": "Runway\nAvailable",
@@ -167,8 +57,8 @@
             "height": 40
           },
           "markingOffset": {
-            "x": -8,
-            "y": -90
+            "x": -113.05844974161491,
+            "y": -398.6834968575306
           }
         },
         {
@@ -325,16 +215,16 @@
           "initialMarking": "[{\"value\":{\"id\":1},\"timestamp\":0},{\"value\":{\"id\":2},\"timestamp\":0}]",
           "marking": [
             {
+              "timestamp": 0,
               "value": {
                 "id": 1
-              },
-              "timestamp": 0
+              }
             },
             {
+              "timestamp": 0,
               "value": {
                 "id": 2
-              },
-              "timestamp": 0
+              }
             }
           ],
           "position": {
@@ -481,6 +371,25 @@
           "markingOffset": {
             "x": 67,
             "y": -74
+          }
+        },
+        {
+          "id": "node_1772612396224",
+          "name": "Approach",
+          "colorSet": "Aircraft",
+          "initialMarking": "",
+          "marking": [],
+          "position": {
+            "x": 48.752432610777205,
+            "y": 452
+          },
+          "size": {
+            "width": 69,
+            "height": 36
+          },
+          "colorSetOffset": {
+            "x": 7.296762752629331,
+            "y": 23.142760526977337
           }
         }
       ],
@@ -660,17 +569,32 @@
             "width": 60,
             "height": 40
           }
+        },
+        {
+          "id": "node_1772612363563",
+          "name": "Aircraft Generator",
+          "guard": "",
+          "time": "",
+          "priority": "",
+          "codeSegment": "",
+          "position": {
+            "x": -86.01025768909659,
+            "y": 454
+          },
+          "size": {
+            "width": 60,
+            "height": 32
+          },
+          "subPageId": "8defc62c-c968-4ac6-8862-1f6c28231b3b",
+          "socketAssignments": [
+            {
+              "portPlaceId": "6759e5d0-19b7-4754-bf51-ede993d0d2c0",
+              "socketPlaceId": "node_1772612396224"
+            }
+          ]
         }
       ],
       "arcs": [
-        {
-          "id": "e1",
-          "source": "p-aircraft-queue",
-          "target": "t-landing",
-          "inscription": "ac",
-          "delay": "",
-          "isBidirectional": false
-        },
         {
           "id": "e2",
           "source": "p-runway-avail",
@@ -1040,6 +964,219 @@
             "x": -4.25,
             "y": 1.5
           }
+        },
+        {
+          "id": "eb030338-f21e-4762-a1e8-3251101b6f87",
+          "source": "node_1772612363563",
+          "target": "node_1772612396224",
+          "inscription": "ac",
+          "delay": "",
+          "isBidirectional": false
+        },
+        {
+          "id": "42da91ad-33a9-4e4a-b948-bbc166a10b0a",
+          "source": "node_1772612396224",
+          "target": "t-landing",
+          "inscription": "ac",
+          "delay": "",
+          "isBidirectional": false
+        }
+      ]
+    },
+    {
+      "id": "8defc62c-c968-4ac6-8862-1f6c28231b3b",
+      "name": "Aircraft Generator",
+      "places": [
+        {
+          "id": "2a23951a-49a7-45c4-a0aa-7f1a132cb4a7",
+          "name": "tick",
+          "colorSet": "UNIT",
+          "initialMarking": "[{\"value\":null,\"timestamp\":0}]",
+          "marking": [
+            {
+              "timestamp": 0,
+              "value": null
+            }
+          ],
+          "position": {
+            "x": 106,
+            "y": 0
+          },
+          "size": {
+            "width": 30,
+            "height": 30
+          },
+          "colorSetOffset": {
+            "x": -33.49973900541693,
+            "y": -26.033771064663718
+          },
+          "tokenCountOffset": {
+            "x": 25,
+            "y": -5
+          },
+          "markingOffset": {
+            "x": 48.46023688663283,
+            "y": -22.84263959390863
+          }
+        },
+        {
+          "id": "6759e5d0-19b7-4754-bf51-ede993d0d2c0",
+          "name": "airport",
+          "colorSet": "Aircraft",
+          "initialMarking": "",
+          "marking": [],
+          "position": {
+            "x": 29,
+            "y": 527
+          },
+          "size": {
+            "width": 50,
+            "height": 30
+          },
+          "colorSetOffset": {
+            "x": 5.047905877528579,
+            "y": 19.856282367414266
+          },
+          "markingOffset": {
+            "x": 51.97863977226168,
+            "y": -16.54193111407565
+          },
+          "portType": "out"
+        },
+        {
+          "id": "5283847e-ef4d-4bcd-913c-1b35c856635f",
+          "name": "place",
+          "colorSet": "UNIT",
+          "initialMarking": "",
+          "marking": [],
+          "position": {
+            "x": 102.5,
+            "y": 263
+          },
+          "size": {
+            "width": 37,
+            "height": 30
+          },
+          "colorSetOffset": {
+            "x": 24.31763239434752,
+            "y": 0.16663467836706758
+          },
+          "markingOffset": {
+            "x": 55.100008972117614,
+            "y": 0
+          }
+        }
+      ],
+      "transitions": [
+        {
+          "id": "3ae759c5-410d-4189-a29f-f9bd4ee727f0",
+          "name": "Spawn Tokens",
+          "guard": "",
+          "time": "",
+          "priority": "NONE",
+          "codeSegment": "",
+          "position": {
+            "x": 90,
+            "y": 130
+          },
+          "size": {
+            "width": 62,
+            "height": 33
+          }
+        },
+        {
+          "id": "920a6f78-8c18-4f61-b8a1-49d24c823bb7",
+          "name": "Curfews",
+          "guard": "let t = current_time(); is_workday(t) && hour_of_day(t) >= 8 && hour_of_day(t) < 17",
+          "time": "",
+          "priority": "P_HIGH",
+          "codeSegment": "let carriers = [\n    #{ name: \"AuroraSkies Air\",    carrierType: \"full\", acronym: \"AS\" },\n    #{ name: \"BorealJet\",          carrierType: \"low\",  acronym: \"BJ\" },\n    #{ name: \"Cobalt Wings\",       carrierType: \"full\", acronym: \"CW\" },\n    #{ name: \"DawnLine Airways\",   carrierType: \"full\", acronym: \"DL\" },\n    #{ name: \"EmberAir\",           carrierType: \"low\",  acronym: \"EA\" },\n    #{ name: \"FableFly\",           carrierType: \"low\",  acronym: \"FF\" },\n    #{ name: \"GlimmerJet\",         carrierType: \"full\", acronym: \"GJ\" },\n    #{ name: \"HorizonVale Air\",    carrierType: \"full\", acronym: \"HV\" },\n    #{ name: \"IvoryCloud\",         carrierType: \"low\",  acronym: \"IC\" },\n    #{ name: \"Juniper Airlines\",   carrierType: \"full\", acronym: \"JA\" },\n    #{ name: \"Keystone Air\",       carrierType: \"low\",  acronym: \"KA\" },\n    #{ name: \"LumenWings\",         carrierType: \"full\", acronym: \"LW\" },\n    #{ name: \"MirageAir\",          carrierType: \"low\",  acronym: \"MA\" },\n    #{ name: \"Nimbus Coast\",       carrierType: \"full\", acronym: \"NC\" },\n    #{ name: \"OrchidJet\",          carrierType: \"low\",  acronym: \"OJ\" },\n    #{ name: \"PrairieSky\",         carrierType: \"full\", acronym: \"PS\" },\n    #{ name: \"QuartzAir\",          carrierType: \"low\",  acronym: \"QA\" },\n    #{ name: \"SilverKite\",         carrierType: \"full\", acronym: \"SK\" },\n    #{ name: \"TitanAir\",           carrierType: \"low\",  acronym: \"TA\" },\n    #{ name: \"VioletVoyage\",       carrierType: \"full\", acronym: \"VV\" }\n];\n\nlet idx = discrete(0, carriers.len() - 1);\nlet c = carriers[idx];\n\n// e.g., \"AS482\"\nlet flight_nr = c.acronym + to_string(discrete(100, 999));\n\nlet aircraft = #{\n    flightNr: flight_nr,\n    airline: c.name,\n    carrierType: c.carrierType\n};",
+          "position": {
+            "x": 23,
+            "y": 394.31678486997635
+          },
+          "size": {
+            "width": 62,
+            "height": 32
+          }
+        },
+        {
+          "id": "36214c02-ff94-4690-bffc-fbe79627ae15",
+          "name": "Trash",
+          "guard": "",
+          "time": "",
+          "priority": "P_LOW",
+          "codeSegment": "",
+          "position": {
+            "x": 158,
+            "y": 395
+          },
+          "size": {
+            "width": 60,
+            "height": 30
+          }
+        }
+      ],
+      "arcs": [
+        {
+          "id": "471d6c59-900e-4340-a575-5744dd4e3aa3",
+          "source": "2a23951a-49a7-45c4-a0aa-7f1a132cb4a7",
+          "target": "3ae759c5-410d-4189-a29f-f9bd4ee727f0",
+          "inscription": "x",
+          "delay": "",
+          "isBidirectional": false,
+          "labelOffset": {
+            "x": -5.965706946170138,
+            "y": 4.589005343207798
+          }
+        },
+        {
+          "id": "96146f57-f8f0-48c6-b1e1-6bef1e9620dd",
+          "source": "3ae759c5-410d-4189-a29f-f9bd4ee727f0",
+          "target": "2a23951a-49a7-45c4-a0aa-7f1a132cb4a7",
+          "inscription": "x",
+          "delay": "delay_ms(discrete(180000, 360000))",
+          "isBidirectional": false,
+          "labelOffset": {
+            "x": -11.933414763556371,
+            "y": 2.2427405101800564
+          }
+        },
+        {
+          "id": "adfdb119-d68e-48d6-a80a-265f0d36beef",
+          "source": "920a6f78-8c18-4f61-b8a1-49d24c823bb7",
+          "target": "6759e5d0-19b7-4754-bf51-ede993d0d2c0",
+          "inscription": "aircraft",
+          "delay": "",
+          "isBidirectional": false
+        },
+        {
+          "id": "103676cd-0f8d-45c5-a1d0-bab3b7d49f14",
+          "source": "3ae759c5-410d-4189-a29f-f9bd4ee727f0",
+          "target": "5283847e-ef4d-4bcd-913c-1b35c856635f",
+          "inscription": "x",
+          "delay": "",
+          "isBidirectional": false
+        },
+        {
+          "id": "ce4e3a2e-a446-46dc-ab22-d88e4a08c545",
+          "source": "5283847e-ef4d-4bcd-913c-1b35c856635f",
+          "target": "920a6f78-8c18-4f61-b8a1-49d24c823bb7",
+          "inscription": "x",
+          "delay": "",
+          "isBidirectional": false,
+          "labelOffset": {
+            "x": -5.417059291027753,
+            "y": 2.1790881597381855
+          }
+        },
+        {
+          "id": "673ac942-2dc4-48e2-84d6-8714ac15ed74",
+          "source": "5283847e-ef4d-4bcd-913c-1b35c856635f",
+          "target": "36214c02-ff94-4690-bffc-fbe79627ae15",
+          "inscription": "x",
+          "delay": "",
+          "isBidirectional": false
         }
       ]
     }
@@ -1151,6 +1288,34 @@
       "color": "#475569",
       "timed": true,
       "id": "6cb478f2-7ab2-46df-b899-3c73f11919a0"
+    },
+    {
+      "id": "36bb6644-4bd5-418f-9bff-23b1e4ce0c11",
+      "name": "BOOL",
+      "type": "basic",
+      "definition": "colset BOOL = bool;",
+      "color": "#10b981"
+    },
+    {
+      "id": "377c00c9-8e85-4dfd-8243-5337e86e7880",
+      "name": "INTINF",
+      "type": "basic",
+      "definition": "colset INTINF = intinf;",
+      "color": "#3b82f6"
+    },
+    {
+      "id": "095ed0c9-a7ab-49e2-9fa5-2f712590c43a",
+      "name": "TIME",
+      "type": "basic",
+      "definition": "colset TIME = time;",
+      "color": "#8b5cf6"
+    },
+    {
+      "id": "f9791c97-b8b2-4788-aafd-9bf7a9a43d36",
+      "name": "REAL",
+      "type": "basic",
+      "definition": "colset REAL = real;",
+      "color": "#ef4444"
     }
   ],
   "variables": [
@@ -1183,13 +1348,24 @@
       "id": "var-crew",
       "name": "crew",
       "colorSet": "Crew"
+    },
+    {
+      "id": "19fc8162-f953-4a19-b79f-3457228ddd16",
+      "name": "x",
+      "colorSet": "UNIT"
+    },
+    {
+      "name": "aircraft",
+      "colorSet": "Aircraft",
+      "id": "d8fd9290-89f9-4a64-a6e5-fb7c97f2f428"
     }
   ],
   "priorities": [],
   "functions": [],
   "uses": [],
+  "fusionSets": [],
   "simulationSettings": {
-    "stepsPerRun": 100,
+    "stepsPerRun": 200,
     "animationDelayMs": 250,
     "simulationEpoch": "2026-01-15T11:00:00.000Z"
   },

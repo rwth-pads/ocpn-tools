@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useContext, useRef, useEffect, useSyncExternalStore } from 'react';
-import useStore, { pauseUndo, resumeUndo } from '@/stores/store';
+import useStore, { pauseUndo, resumeUndo, markClean, isStoreDirty } from '@/stores/store';
 import { usePetriNetHandlers } from '@/hooks/usePetriNetHandlers';
 
 import {
@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 
 import { BoomerDial, type Slice } from "@/components/BoomerDial";
 
-import { Save, FolderOpen, Undo2, Redo2 } from "lucide-react";
+import { Save, FolderOpen, Undo2, Redo2, FilePlus2 } from "lucide-react";
 
 import CustomConnectionLine from '../edges/CustomConnectionLine';
 import { useDnD } from '../utils/DnDContext';
@@ -44,7 +44,7 @@ import {
 
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +52,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { initialColorSets, initialPriorities } from '@/declarations';
 import { MoreVertical, Plus, GripVertical, Upload, Copy, Download } from 'lucide-react';
 import { GitGraph } from 'lucide-react';
 import { ReachabilityGraphTab } from '@/components/ReachabilityGraphTab';
@@ -123,6 +124,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [openDialogOpen, setOpenDialogOpen] = useState(false);
   const [newPetriNetDialogOpen, setNewPetriNetDialogOpen] = useState(false);
+  const [confirmNewDialogOpen, setConfirmNewDialogOpen] = useState(false);
   const [newPetriNetName, setNewPetriNetName] = useState('');
   const [renamePetriNetDialogOpen, setRenamePetriNetDialogOpen] = useState(false);
   const [renamePetriNetId, setRenamePetriNetId] = useState<string | null>(null);
@@ -462,6 +464,9 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
           fitView({ padding: 0.35, maxZoom: 4 });
         });
       }
+
+      // Mark the store as clean (no unsaved changes)
+      markClean();
     }
   };
 
@@ -471,7 +476,6 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       simulationContext.reset(); // Call simulation reset
     } else {
       console.error("Simulation context not found, cannot reset simulation state.");
-      // Optionally, handle the case where context is not available, though it should be if setup correctly.
     }
 
     const data = parseFileContent(fileContent, fileName)
@@ -480,6 +484,50 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     } else {
       // Show error notification
       alert("Failed to parse the file. Please check the file format.")
+    }
+  }
+
+  /** Create a blank OCPN with just a "Main" subpage and default declarations. */
+  const handleNewOCPN = () => {
+    // Reset simulation
+    if (simulationContext) {
+      simulationContext.reset();
+    }
+
+    // Reset the store to empty state
+    reset();
+
+    // Set up the fresh OCPN
+    setOcpnName('Untitled Petri Net');
+    setColorSets(initialColorSets.map(cs => ({ ...cs, id: uuidv4() })));
+    setPriorities(initialPriorities.map(p => ({ ...p, id: uuidv4() })));
+    setVariables([]);
+    setFunctions([]);
+    setUses([]);
+    setFusionSets([]);
+    setMonitors([]);
+
+    // Create the "Main" subpage
+    createPetriNet('Main');
+
+    // Mark as clean (no unsaved changes)
+    markClean();
+
+    // Clear undo history
+    useStore.temporal.getState().clear();
+
+    // Fit view
+    window.requestAnimationFrame(() => {
+      fitView({ padding: 0.35, maxZoom: 4 });
+    });
+  }
+
+  /** Handle the "New" toolbar button: ask to confirm if dirty. */
+  const handleNewClick = () => {
+    if (isStoreDirty()) {
+      setConfirmNewDialogOpen(true);
+    } else {
+      handleNewOCPN();
     }
   }
 
@@ -543,6 +591,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     }
 
     saveFile(content, filename);
+    markClean();
   }
 
   const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
@@ -1232,6 +1281,22 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span>
+                    <Button variant="ghost" size="icon" title="New" onClick={handleNewClick}>
+                      <FilePlus2 className="h-5 w-5" />
+                      <span className="sr-only">New Petri Net</span>
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>New Petri Net</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
                     <Button variant="ghost" size="icon" title="Open" onClick={() => setOpenDialogOpen(true)}>
                       <FolderOpen className="h-5 w-5" />
                       <span className="sr-only">Open Petri Net</span>
@@ -1353,6 +1418,26 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
           onSave={handleSave}
           petriNetName={ocpnName}
         />
+
+        {/* Confirm discard dialog for New Petri Net */}
+        <Dialog open={confirmNewDialogOpen} onOpenChange={setConfirmNewDialogOpen}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Unsaved Changes</DialogTitle>
+              <DialogDescription>
+                You have unsaved changes. Creating a new Petri net will discard them.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmNewDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={() => { setConfirmNewDialogOpen(false); handleNewOCPN(); }}>
+                Discard &amp; Create New
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Subpage tab bar */}
         <div className="flex items-end w-full bg-muted/50 px-1 pt-1 gap-0 overflow-x-auto border-b border-border">

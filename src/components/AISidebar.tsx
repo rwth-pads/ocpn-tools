@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator"
 import { Send, Settings } from "lucide-react"
 import { cn } from "@/lib/utils";
 
-import { ResizablePanel } from "@/components/ui/resizable";
+
 
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog';
 
@@ -158,19 +158,8 @@ export function AISidebar() {
       // Generate a description of the current Petri Net
       const petriNetDescription = generatePetriNetDescription()
 
-      // Prepare the messages for the API
-      const messagesToSend = [
-        {
-          role: "system",
-          content: `You are an AI assistant specialized in Colored Petri Nets (CPN). 
-          Help the user understand and analyze their Petri Net model.
-          Here is the current state of the Petri Net:
-          
-          ${petriNetDescription}
-          
-          Be concise but informative in your responses. If asked about concepts, explain them clearly.
-          If asked to analyze the model, provide insights based on the structure and properties.`,
-        },
+      // Prepare the conversation input for the Responses API
+      const inputMessages = [
         ...messages
           .filter((msg) => msg.id !== "welcome") // Skip the welcome message
           .map((msg) => ({
@@ -183,42 +172,60 @@ export function AISidebar() {
         },
       ]
 
-      // Call OpenAI API
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      // Call OpenAI Responses API
+      const response = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: "gpt-4o",
-          messages: messagesToSend,
-          temperature: 0.7,
-          max_tokens: 1000,
+          model: "gpt-5-mini",
+          instructions: `You are an AI assistant specialized in Colored Petri Nets (CPN). 
+Help the user understand and analyze their Petri Net model.
+Here is the current state of the Petri Net:
+
+${petriNetDescription}
+
+Be concise but informative in your responses. If asked about concepts, explain them clearly.
+If asked to analyze the model, provide insights based on the structure and properties.`,
+          input: inputMessages,
+          max_output_tokens: 4096,
+          store: false,
         }),
       })
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
+        const errorData = await response.json().catch(() => null)
+        const errorMsg = errorData?.error?.message || `HTTP ${response.status}`
+        throw new Error(errorMsg)
       }
 
       const data = await response.json()
+      // Extract text from the output array (output_text is only in the SDK)
+      const outputText = data.output
+        ?.filter((item: { type: string }) => item.type === "message")
+        .flatMap((item: { content: { type: string; text: string }[] }) => item.content)
+        .filter((c: { type: string }) => c.type === "output_text")
+        .map((c: { text: string }) => c.text)
+        .join("") || "No response generated."
       const assistantMessage = {
         id: Date.now().toString() + "-response",
         role: "assistant" as const,
-        content: data.choices[0].message.content,
+        content: outputText,
         timestamp: new Date(),
       }
 
       setMessages((prev) => [...prev, assistantMessage])
     } catch (error) {
       console.error("Error calling OpenAI API:", error)
+      const errorMessage = error instanceof Error ? error.message : "Unknown error"
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now().toString() + "-error",
           role: "assistant",
-          content: "Sorry, there was an error processing your request. Please try again later.",
+          content: `Error: ${errorMessage}`,
           timestamp: new Date(),
         },
       ])
@@ -235,8 +242,7 @@ export function AISidebar() {
   }
 
   return (
-    <ResizablePanel defaultSize="20%" minSize="400px" className="border-l h-screen">
-      <div className="flex flex-col h-full overflow-y-auto">
+    <div className="border-l h-screen w-[400px] shrink-0 flex flex-col overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center">
             {/* <Sparkles className="h-5 w-5 text-primary mr-2" /> */}
@@ -304,7 +310,6 @@ export function AISidebar() {
             </p>
           )}
         </div>
-      </div>
 
       
       <SettingsDialog
@@ -313,6 +318,6 @@ export function AISidebar() {
         apiKey={apiKey}
         onApiKeyChange={handleApiKeyChange}
       />
-    </ResizablePanel>
+    </div>
   )
 }

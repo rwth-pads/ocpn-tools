@@ -3,6 +3,7 @@ import { Handle, Position, NodeResizer, useConnection, useReactFlow } from '@xyf
 import useStore from '@/stores/store'; // Import Zustand store
 import { isTimedToken } from '@/types';
 import { formatDateTimeFull } from '@/utils/timeFormat';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Export the interface so it can be imported elsewhere
 export interface PlaceNodeData {
@@ -222,6 +223,11 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
     state.monitors.some((m) => m.enabled && m.placeIds.includes(id)),
   );
 
+  // Get validation errors for this place
+  const validationErrors = useStore((state) => state.validationErrors[id]);
+  const hasValidationIssues = validationErrors && validationErrors.length > 0;
+  const errorTooltip = validationErrors?.map(e => e.message).join('\n') || '';
+
   const isTarget = connection.inProgress && connection.fromNode.id !== id && connection.fromNode.type === 'transition';
 
   const hasMarking = data.marking && Array.isArray(data.marking) && data.marking.length > 0;
@@ -386,6 +392,46 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
             {fusionSetName}
           </div>
         </div>
+      )}
+
+      {/* Validation caution badge - bottom center (moves down when selected), below fusion/port tags */}
+      {hasValidationIssues && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              style={{
+                position: 'absolute',
+                bottom: -2,
+                left: '50%',
+                transform: selected
+                  ? `translate(-50%, calc(100% + ${data.portType && fusionSetName ? '36px' : data.portType || fusionSetName ? '20px' : '4px'}))`
+                  : `translate(-50%, calc(100% + ${data.portType && fusionSetName ? '30px' : data.portType || fusionSetName ? '14px' : '-1px'}))`,
+                transition: 'transform 0.15s ease-out',
+                zIndex: 10,
+              }}
+              className="nodrag pointer-events-auto cursor-help"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L1 21h22L12 2z" fill="#f59e0b" stroke="#b45309" strokeWidth="1.5" strokeLinejoin="round" />
+                <text x="12" y="19" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#000">!</text>
+              </svg>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={4}>
+            <div className="flex items-start gap-1.5">
+              <svg className="shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L1 21h22L12 2z" fill="#f59e0b" stroke="#b45309" strokeWidth="1.5" strokeLinejoin="round" />
+                <text x="12" y="19" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#000">!</text>
+              </svg>
+              <div>
+                <p className="font-semibold">Warning</p>
+                {errorTooltip.split('\n').map((line, i) => (
+                  <p key={i} className="text-xs opacity-90">{line}</p>
+                ))}
+              </div>
+            </div>
+          </TooltipContent>
+        </Tooltip>
       )}
 
       <Handle

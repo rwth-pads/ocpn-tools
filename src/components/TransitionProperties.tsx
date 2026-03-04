@@ -205,7 +205,7 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
       </div>
 
       <div className="grid w-full items-center gap-1.5">
-        <Label>Time</Label>
+        <Label>Time Delay</Label>
         <Tabs value={timeMode} onValueChange={(v) => setTimeMode(v as 'relative' | 'expression')} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="relative">Relative</TabsTrigger>

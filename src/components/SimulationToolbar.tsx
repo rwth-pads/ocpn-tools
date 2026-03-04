@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { RotateCcw, Square, SkipForward, Play, FastForward } from "lucide-react";
-import { useContext } from 'react';
+import { RotateCcw, Square, SkipForward, Play, FastForward, Loader2 } from "lucide-react";
+import { useContext, useEffect } from 'react';
 
 import {
   Tooltip,
@@ -25,6 +25,22 @@ export function SimulationToolbar() {
     isRunning,
     simulationConfig
   } = context;
+
+  // Show wait cursor globally while the simulation is running
+  useEffect(() => {
+    if (isRunning) {
+      document.body.style.cursor = 'wait';
+      // Also force wait cursor on all interactive elements
+      const style = document.createElement('style');
+      style.id = 'simulation-busy-cursor';
+      style.textContent = '* { cursor: wait !important; }';
+      document.head.appendChild(style);
+      return () => {
+        document.body.style.cursor = '';
+        style.remove();
+      };
+    }
+  }, [isRunning]);
 
   const handleReset = () => {
     reset();
@@ -144,7 +160,11 @@ export function SimulationToolbar() {
                 disabled={isRunning}
                 className="relative"
               >
-                <FastForward className="h-5 w-5" />
+                {isRunning ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <FastForward className="h-5 w-5" />
+                )}
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground font-medium">
                   {simulationConfig.stepsPerRun}
                 </span>

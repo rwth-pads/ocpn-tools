@@ -2,6 +2,7 @@ import React, { memo, useCallback } from 'react';
 import { Handle, Position, NodeResizer, useConnection, useReactFlow } from '@xyflow/react';
 import useStore from '@/stores/store';
 import type { Node } from '@xyflow/react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Export the interface so it can be imported elsewhere
 export interface TransitionNodeData {
@@ -142,6 +143,11 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
   const hasMonitor = useStore((state) =>
     state.monitors.some((m) => m.enabled && m.transitionIds.includes(id)),
   );
+
+  // Get validation errors for this transition
+  const validationErrors = useStore((state) => state.validationErrors[id]);
+  const hasValidationIssues = validationErrors && validationErrors.length > 0;
+  const errorTooltip = validationErrors?.map(e => e.message).join('\n') || '';
 
   const hasSubpageActivity = useStore((state) => {
     if (!data.subPageId || activeMode !== 'simulation') return false;
@@ -393,6 +399,47 @@ export const TransitionNode: React.FC<TransitionNodeProps> = ({ id, data, select
             pointerEvents: 'none',
           }}
         />
+      )}
+
+      {/* Validation error/warning border overlay */}
+      {/* Validation caution badge - bottom center (below hierarchy tag if present) */}
+      {hasValidationIssues && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: '50%',
+                transform: selected
+                  ? `translate(-50%, calc(100% + ${data.subPageId ? '20px' : '4px'}))`
+                  : `translate(-50%, calc(100% + ${data.subPageId ? '15px' : '-1px'}))`,
+                transition: 'transform 0.15s ease-out',
+                zIndex: 10,
+              }}
+              className="nodrag pointer-events-auto cursor-help"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L1 21h22L12 2z" fill="#f59e0b" stroke="#b45309" strokeWidth="1.5" strokeLinejoin="round" />
+                <text x="12" y="19" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#000">!</text>
+              </svg>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={4}>
+            <div className="flex items-start gap-1.5">
+              <svg className="shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L1 21h22L12 2z" fill="#f59e0b" stroke="#b45309" strokeWidth="1.5" strokeLinejoin="round" />
+                <text x="12" y="19" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#000">!</text>
+              </svg>
+              <div>
+                <p className="font-semibold">Warning</p>
+                {errorTooltip.split('\n').map((line, i) => (
+                  <p key={i} className="text-xs opacity-90">{line}</p>
+                ))}
+              </div>
+            </div>
+          </TooltipContent>
+        </Tooltip>
       )}
       
       <Handle

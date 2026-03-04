@@ -6,6 +6,7 @@ import {
 // import { TransitionNodeProps } from '@/nodes/TransitionNode'; // Import TransitionNodeData
 
 import type { ColorSet, Variable, Priority, Function, Use } from '@/declarations';
+import type { ValidationErrors } from '@/utils/validation';
 import { PlaceNodeData } from './nodes/PlaceNode';
 import { TransitionNodeData } from './nodes/TransitionNode';
 import { AuxTextNodeData } from './nodes/AuxTextNode';
@@ -199,6 +200,7 @@ export type AppState = {
   stateSpaceResult: StateSpaceResult | null; // Cached state space analysis result
   activeSpecialTab: 'stateSpaceGraph' | null; // Non-Petri-net tab currently displayed
   focusRequest: FocusRequest; // Request to zoom to and focus on a specific element
+  validationErrors: ValidationErrors; // Computed validation errors keyed by element ID
 };
 
 export type AppActions = {

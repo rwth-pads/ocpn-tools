@@ -7,6 +7,7 @@ import { DnDProvider } from './utils/DnDContext';
 import { AISidebar } from './components/AISidebar';
 import { SimulationProvider } from '@/context/SimulationContext';
 import { ObjectEvolutionPanel } from './components/ObjectEvolutionPanel';
+import { Toaster } from 'sonner';
 
 export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -19,6 +20,7 @@ export default function App() {
 
   return (
     <SimulationProvider>
+      <Toaster position="bottom-right" richColors closeButton />
       <div className="h-screen flex">
         {/* Left Panel - fixed pixel width, outside of ResizablePanelGroup */}
         <Sidebar />

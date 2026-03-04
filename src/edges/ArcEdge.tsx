@@ -3,6 +3,7 @@ import { useInternalNode, EdgeLabelRenderer, useReactFlow } from '@xyflow/react'
 import { getEdgeParams, getNodeIntersectionToPoint } from '../utils.js';
 import useStore from '@/stores/store'; // Import Zustand store
 import type { ArcType } from '@/types';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 /**
  * Calculate the distance from a point to a line segment
@@ -197,6 +198,11 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
     
     return '#000';
   });
+
+  // Get validation errors for this arc
+  const validationErrors = useStore((state) => state.validationErrors[id]);
+  const hasArcErrors = validationErrors && validationErrors.length > 0;
+  const arcErrorTooltip = validationErrors?.map(e => e.message).join('\n') || '';
 
   // Check if this edge is currently selected
   const isSelected = useStore((state) => {
@@ -850,6 +856,8 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
           onLabelDragEnd={handleLabelDragEnd}
           isSelected={isSelected}
           colorSetColor={colorSetColor}
+          hasError={!!hasArcErrors}
+          errorTooltip={arcErrorTooltip}
         />
       )}
     </>
@@ -993,6 +1001,8 @@ function DraggableArcLabel({
   onLabelDragEnd,
   isSelected,
   colorSetColor,
+  hasError,
+  errorTooltip,
 }: {
   id: string;
   label: React.ReactNode;
@@ -1002,6 +1012,8 @@ function DraggableArcLabel({
   onLabelDragEnd: (offset: { x: number; y: number }) => void;
   isSelected?: boolean;
   colorSetColor?: string;
+  hasError?: boolean;
+  errorTooltip?: string;
 }) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(labelOffset);
@@ -1079,21 +1091,59 @@ function DraggableArcLabel({
   const finalX = baseLabelX + dragOffset.x;
   const finalY = baseLabelY + dragOffset.y;
 
+  const inscriptionContent = (
+    <div
+      style={{
+        transform: `translate(-50%, -100%) translate(${finalX}px,${finalY}px)`,
+        cursor: isDragging ? 'grabbing' : 'grab',
+        pointerEvents: 'auto',
+        ...(hasError
+          ? { backgroundColor: '#fef3c7', outline: '1.5px solid #f59e0b', borderRadius: '3px' }
+          : isSelected && colorSetColor
+            ? { backgroundColor: `${colorSetColor}1A`, outline: `1.5px solid ${colorSetColor}4D`, borderRadius: '3px' }
+            : {}),
+      }}
+      className={`nodrag nopan edge-label-renderer__custom-edge text-[10px] font-mono whitespace-pre-wrap ${isDragging ? '' : 'hover:bg-accent/50'} px-1 rounded`}
+      onMouseDown={handleMouseDown}
+      onClick={handleClick}
+    >
+      {hasError && (
+        <span className="inline-flex align-middle mr-0.5">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L1 21h22L12 2z" fill="#f59e0b" stroke="#b45309" strokeWidth="1.5" strokeLinejoin="round" />
+            <text x="12" y="19" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#000">!</text>
+          </svg>
+        </span>
+      )}
+      {label}
+    </div>
+  );
+
   return (
     <EdgeLabelRenderer>
-      <div
-        style={{
-          transform: `translate(-50%, -100%) translate(${finalX}px,${finalY}px)`,
-          cursor: isDragging ? 'grabbing' : 'grab',
-          pointerEvents: 'auto',
-          ...(isSelected && colorSetColor ? { backgroundColor: `${colorSetColor}1A`, outline: `1.5px solid ${colorSetColor}4D`, borderRadius: '3px' } : {}),
-        }}
-        className={`nodrag nopan edge-label-renderer__custom-edge text-[10px] font-mono whitespace-pre-wrap ${isDragging ? '' : 'hover:bg-accent/50'} px-1 rounded`}
-        onMouseDown={handleMouseDown}
-        onClick={handleClick}
-      >
-        {label}
-      </div>
+      {hasError ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {inscriptionContent}
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={4}>
+            <div className="flex items-start gap-1.5">
+              <svg className="shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L1 21h22L12 2z" fill="#f59e0b" stroke="#b45309" strokeWidth="1.5" strokeLinejoin="round" />
+                <text x="12" y="19" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#000">!</text>
+              </svg>
+              <div>
+                <p className="font-semibold">Warning</p>
+                {errorTooltip.split('\n').map((line, i) => (
+                  <p key={i} className="text-xs opacity-90">{line}</p>
+                ))}
+              </div>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        inscriptionContent
+      )}
     </EdgeLabelRenderer>
   );
 }

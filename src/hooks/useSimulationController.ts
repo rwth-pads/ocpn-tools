@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid'; // For generating unique event IDs
 import { type SimulationConfig, DEFAULT_SIMULATION_CONFIG } from '@/context/useSimulationContextHook';
 import type { PetriNet, FusionSet, MonitorResult, Monitor, StateSpaceResult } from '@/types';
 import type { Node } from '@xyflow/react';
+import { toast } from 'sonner';
 
 // Define TokenMovement locally as it's not exported from EventLog
 export interface TokenMovement {
@@ -810,6 +811,11 @@ export function useSimulationController() {
     } catch (error) {
         // Log errors during initialization
         console.error("Error initializing WASM Simulator:", error);
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        toast.error('Simulation initialization failed', {
+          description: errorMsg,
+          duration: 10000,
+        });
         setIsInitialized(false); // Ensure state reflects failure
         wasmRef.current = null;
         wasmSimulatorRef.current = null;
@@ -858,6 +864,11 @@ export function useSimulationController() {
             return result;
         } catch (error) {
             console.error("Error running simulation step:", error);
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            toast.error('Simulation step failed', {
+              description: errorMsg,
+              duration: 8000,
+            });
             return null;
         } finally {
             isSimulationUpdatingRef.current = false;
@@ -922,6 +933,10 @@ export function useSimulationController() {
     stopRequestedRef.current = false;
     pauseUndo();
     
+    // Yield to the browser so React can repaint (show busy cursor / disabled buttons)
+    // before the synchronous WASM call blocks the JS thread
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    
     try {
       await ensureInitialized();
       if (wasmSimulatorRef.current) {
@@ -956,6 +971,13 @@ export function useSimulationController() {
                 }
               }
             }
+          } catch (error) {
+            console.error("Error running batch simulation steps:", error);
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            toast.error('Simulation failed', {
+              description: errorMsg,
+              duration: 8000,
+            });
           } finally {
             isSimulationUpdatingRef.current = false;
           }
@@ -1178,6 +1200,11 @@ export function useSimulationController() {
         return result as StateSpaceResult;
       } catch (err) {
         console.error('State space calculation failed:', err);
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        toast.error('State space calculation failed', {
+          description: errorMsg,
+          duration: 8000,
+        });
         return null;
       }
     },

@@ -1284,7 +1284,7 @@
     {
       "name": "AircraftxRunway",
       "type": "product",
-      "definition": "colset AircraftxRunway = product Aircraft * UNIT timed;",
+      "definition": "colset AircraftxRunway = product Aircraft * Runway timed;",
       "color": "#475569",
       "timed": true,
       "id": "6cb478f2-7ab2-46df-b899-3c73f11919a0"

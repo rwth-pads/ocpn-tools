@@ -18,6 +18,7 @@ import type { PlaceNodeData } from '@/nodes/PlaceNode';
 import { TransitionNodeData } from '@/nodes/TransitionNode';
 import { AuxTextNodeData } from '@/nodes/AuxTextNode';
 import type { ArcType } from '@/types';
+import { validateModel, type ValidationErrors } from '@/utils/validation';
 
 // define the initial state
 const emptyState: AppState = {
@@ -40,6 +41,7 @@ const emptyState: AppState = {
   stateSpaceResult: null,
   activeSpecialTab: null,
   focusRequest: null,
+  validationErrors: {} as ValidationErrors,
 }
 
 export type StoreState = AppState & AppActions;
@@ -112,6 +114,7 @@ const useStore = create<StoreState>()(temporal((set) => ({
   stateSpaceResult: null,
   activeSpecialTab: null,
   focusRequest: null,
+  validationErrors: {} as ValidationErrors,
 
   // Actions
   setNodes: (petriNetId: string, nodes: Node[]) => {
@@ -1460,6 +1463,54 @@ const useStore = create<StoreState>()(temporal((set) => ({
 ));
 
 export default useStore;
+
+// --- Auto-revalidation subscriber ---
+// Re-runs validation whenever model-relevant state changes.
+{
+  let prevFingerprint = '';
+  useStore.subscribe((state) => {
+    // Build a lightweight fingerprint of validation-relevant fields only
+    const fp = `${Object.keys(state.petriNetsById).length}:` +
+      Object.values(state.petriNetsById).map(pn =>
+        `${pn.nodes.length}:${pn.edges.length}:` +
+        pn.nodes.map(n => {
+          const d = n.data as Record<string, unknown>;
+          // Only include fields relevant to validation
+          return `${n.id}:${n.type}:${d.colorSet || ''}:${d.guard || ''}:${d.priority || ''}:${d.portType || ''}:${d.subPageId || ''}`;
+        }).join(',') + '|' +
+        pn.edges.map(e => `${e.id}:${e.label}`).join(',')
+      ).join(';') +
+      `:cs${state.colorSets.length}:${state.colorSets.map(cs => `${cs.name}:${cs.definition}`).join(',')}` +
+      `:v${state.variables.length}:${state.variables.map(v => `${v.name}:${v.colorSet}`).join(',')}` +
+      `:p${state.priorities.length}:${state.priorities.map(p => p.name).join(',')}`;
+
+    if (fp !== prevFingerprint) {
+      prevFingerprint = fp;
+      const errors = validateModel(
+        state.petriNetsById,
+        state.colorSets,
+        state.variables,
+        state.priorities,
+      );
+      // Only update store if errors actually changed
+      const currentErrors = useStore.getState().validationErrors;
+      const errorsJson = JSON.stringify(errors);
+      if (JSON.stringify(currentErrors) !== errorsJson) {
+        useStore.setState({ validationErrors: errors });
+      }
+    }
+  });
+  // Run initial validation
+  const initState = useStore.getState();
+  useStore.setState({
+    validationErrors: validateModel(
+      initState.petriNetsById,
+      initState.colorSets,
+      initState.variables,
+      initState.priorities,
+    ),
+  });
+}
 
 // --- Dirty tracking (has-unsaved-changes detection) ---
 

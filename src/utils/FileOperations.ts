@@ -1,5 +1,5 @@
 import type { PetriNet, FusionSet, Monitor } from '@/types';
-import type { ColorSet, Variable, Priority, Function, Use } from '@/declarations';
+import type { ColorSet, Variable, Priority, Function, Use, Value } from '@/declarations';
 
 import { v4 as uuidv4 } from 'uuid';
 import { PlaceNodeProps } from '@/nodes/PlaceNode';
@@ -14,6 +14,7 @@ export type PetriNetData = {
   priorities: Priority[]
   functions: Function[]
   uses: Use[] // Added uses
+  values: Value[] // Named constants (val declarations)
   fusionSets?: FusionSet[] // Fusion sets for fusion places
   monitors?: Monitor[] // Analysis monitors
   // Simulation settings (optional for backward compatibility)
@@ -22,6 +23,8 @@ export type PetriNetData = {
     animationDelayMs?: number;
     simulationEpoch?: string | null;
   }
+  /** Warnings generated during CPN Tools XML import (SML expressions that could not be translated, etc.) */
+  importWarnings?: string[];
 }
 
 // Convert Petri Net data to CPN Tools XML format
@@ -286,6 +289,7 @@ export function convertToJSON(data: PetriNetData): string {
     priorities: data.priorities,
     functions: data.functions,
     uses: data.uses, // Include uses in JSON
+    values: data.values, // Include values in JSON
     fusionSets: data.fusionSets || undefined, // Include fusion sets
     monitors: data.monitors?.length ? data.monitors : undefined, // Include monitors
     simulationSettings: data.simulationSettings || undefined, // Include simulation settings if present
@@ -415,6 +419,7 @@ export function parseJSON(content: string): PetriNetData {
   const priorities: Priority[] = parsedData.priorities || [];
   const functions: Function[] = parsedData.functions || [];
   const uses: Use[] = parsedData.uses || []; // Parse uses
+  const values: Value[] = parsedData.values || []; // Parse values
   const fusionSets: FusionSet[] = parsedData.fusionSets || []; // Parse fusion sets
   const monitors: Monitor[] = parsedData.monitors || []; // Parse monitors
   
@@ -434,6 +439,7 @@ export function parseJSON(content: string): PetriNetData {
     priorities,
     functions,
     uses, // Include uses in the returned data
+    values, // Include values in the returned data
     fusionSets, // Include fusion sets
     monitors, // Include monitors
     simulationSettings, // Include simulation settings in the returned data
@@ -492,8 +498,204 @@ function generateRandomColor(): string {
   return color;
 }
 
+// ─── SML-to-Rhai best-effort translation ──────────────────────────────────
+
+/** Warnings collected during SML→Rhai translation of a CPN import. */
+const importWarnings: string[] = [];
+
+/**
+ * Best-effort translation of Standard ML (CPN ML) expressions to Rhai syntax.
+ * Returns the translated string, or the original if no translation rules apply.
+ * Adds a warning to importWarnings if untranslatable SML syntax is detected.
+ */
+function translateSMLExpr(expr: string, context: string): string {
+  let result = expr;
+
+  // Track whether we made any changes
+  const original = expr;
+
+  // ── List operations ──
+  // SML list cons: x::xs  →  Rhai: [x] + xs  (prepend element to list)
+  // Must handle nested cons like a::b::l  →  [a, b] + l
+  // Process right-to-left for proper nesting
+  if (result.includes('::')) {
+    const parts = result.split('::').map(s => s.trim());
+    if (parts.length >= 2) {
+      // Last part is the list tail, everything before is cons'ed elements
+      const tail = parts[parts.length - 1];
+      const heads = parts.slice(0, -1);
+      result = `[${heads.join(', ')}] + ${tail}`;
+    }
+  }
+
+  // SML list concatenation: l1^^l2  →  Rhai: l1 + l2
+  result = result.replace(/\^\^/g, ' + ');
+
+  // SML function definition: fun name(args) = body;  →  Rhai: fn name(args) { body }
+  // This is for function code, not arc inscriptions
+  result = result.replace(
+    /^\s*fun\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*?)\)\s*=\s*(.+?)\s*;?\s*$/,
+    (_match, name: string, args: string, body: string) => {
+      const translatedBody = translateSMLExpr(body.trim(), context);
+      return `fn ${name}(${args}) { ${translatedBody} }`;
+    }
+  );
+
+  // SML if-then-else: if cond then e1 else e2  →  Rhai: if cond { e1 } else { e2 }
+  result = result.replace(
+    /\bif\s+(.+?)\s+then\s+(.+?)\s+else\s+(.+)/g,
+    (_match, cond: string, thenExpr: string, elseExpr: string) => {
+      return `if ${cond.trim()} { ${thenExpr.trim()} } else { ${elseExpr.trim()} }`;
+    }
+  );
+
+  // SML boolean operators: andalso → &&, orelse → ||
+  result = result.replace(/\bandalso\b/g, '&&');
+  result = result.replace(/\borelse\b/g, '||');
+
+  // SML not  →  Rhai: !
+  result = result.replace(/\bnot\s*\(/g, '!(');
+  result = result.replace(/\bnot\s+([a-zA-Z_])/g, '!$1');
+
+  // SML integer division: div  →  Rhai: /
+  result = result.replace(/\bdiv\b/g, '/');
+
+  // SML modulo: mod  →  Rhai: %
+  result = result.replace(/\bmod\b/g, '%');
+
+  // SML string concatenation: ^  →  Rhai: +  (only when not part of ^^)
+  // This is tricky since ^ alone is string concat in SML
+  // We skip this to avoid conflicts with ^^ list concat already handled
+
+  // SML list functions: hd(l)  →  l[0], tl(l)  →  l.split(1)[1]
+  // These are complex — mark as warning
+  if (/\bhd\s*\(/.test(result) || /\btl\s*\(/.test(result)) {
+    importWarnings.push(`${context}: SML list function (hd/tl) may need manual translation: "${expr}"`);
+  }
+
+  // SML let-in-end  →  mark as needing manual translation
+  if (/\blet\b/.test(result) && /\bin\b/.test(result)) {
+    importWarnings.push(`${context}: SML let-in expression may need manual translation: "${expr}"`);
+  }
+
+  // SML case-of  →  mark as needing manual translation
+  if (/\bcase\b/.test(result) && /\bof\b/.test(result)) {
+    importWarnings.push(`${context}: SML case-of expression needs manual translation: "${expr}"`);
+  }
+
+  // Detect remaining untranslatable SML syntax
+  // Check for SML-style pattern matching, type annotations, etc.
+  if (/\bfn\s+[a-zA-Z]/.test(result) && !result.startsWith('fn ')) {
+    importWarnings.push(`${context}: SML anonymous function may need manual translation: "${expr}"`);
+  }
+
+  // If nothing changed and there's complex SML syntax remaining, warn
+  if (result === original) {
+    // Detect potential untranslated SML
+    if (/\b(val|fun)\s/.test(result) && !result.startsWith('fn ')) {
+      importWarnings.push(`${context}: SML syntax may need manual translation: "${expr}"`);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Translates an SML function definition to Rhai.
+ * Handles the common pattern: fun name(args) = body;
+ */
+function translateSMLFunction(code: string, funcName: string): string {
+  // Handle multiple function definitions in same code block (duplicates from CPN Tools)
+  // Take only the first definition
+  const lines = code.split(/\n/).map(s => s.trim()).filter(s => s.length > 0);
+  const firstDef = lines[0] || code;
+  
+  return translateSMLExpr(firstDef, `Function "${funcName}"`);
+}
+
+/**
+ * Translates an SML guard expression for Rhai.
+ */
+function translateSMLGuard(guard: string, transitionName: string): string {
+  if (!guard.trim()) return guard;
+  
+  // Guards in CPN Tools are enclosed in [...] brackets — strip them
+  let result = guard.trim();
+  if (result.startsWith('[') && result.endsWith(']')) {
+    result = result.slice(1, -1).trim();
+  }
+  
+  return translateSMLExpr(result, `Guard of transition "${transitionName}"`);
+}
+
+/**
+ * Translates an SML arc inscription to Rhai.
+ */
+function translateSMLInscription(inscription: string, context: string): string {
+  if (!inscription.trim()) return inscription;
+  return translateSMLExpr(inscription, context);
+}
+
+/**
+ * Translates an SML initial marking expression.
+ * Handles UNIT markings and common SML patterns.
+ */
+function translateSMLInitialMarking(
+  marking: string,
+  placeName: string,
+  colorSetName: string,
+  colorSets: Array<{ id: string; name: string; type: string; definition: string; color: string }>,
+): string {
+  const trimmed = marking.trim();
+  if (!trimmed) return '';
+
+  // Handle UNIT place markings
+  // The UI stores UNIT markings in array format: "[(), (), ...]" parsed by parseUnitMarkingCount
+  if (colorSetName === 'UNIT' || colorSetName === 'unit') {
+    // "()" means one unit token
+    if (trimmed === '()') return '[()]';
+    // N`() or N'() means N unit tokens → convert to array format
+    const multiUnitMatch = trimmed.match(/^(\d+)[`']\(\)$/);
+    if (multiUnitMatch) {
+      const n = parseInt(multiUnitMatch[1], 10);
+      if (n <= 0) return '';
+      const units = Array(n).fill('()').join(', ');
+      return `[${units}]`;
+    }
+    // If it's just a number like "1" for a UNIT place, it means that many unit tokens
+    if (/^\d+$/.test(trimmed)) {
+      const n = parseInt(trimmed, 10);
+      if (n <= 0) return ''; // No tokens
+      const units = Array(n).fill('()').join(', ');
+      return `[${units}]`;
+    }
+  }
+
+  // Handle list type markings — check if color set is a list type
+  const cs = colorSets.find(c => c.name === colorSetName);
+  if (cs && cs.definition.includes('= list ')) {
+    // Empty list markings: [] means ONE token whose value is the empty list
+    // We store this as [[]] to distinguish from "no tokens" which would be ""
+    if (trimmed === '[]' || trimmed === 'nil' || trimmed === 'empty') return '[[]]';
+    // N`[] or N'[] means N empty-list tokens
+    const multiListMatch = trimmed.match(/^(\d+)[`']\[\]$/);
+    if (multiListMatch) {
+      const n = parseInt(multiListMatch[1], 10);
+      if (n <= 0) return '';
+      const lists = Array(n).fill('[]').join(', ');
+      return `[${lists}]`;
+    }
+  }
+
+  // Apply general SML→Rhai translation
+  return translateSMLExpr(trimmed, `Initial marking of place "${placeName}"`);
+}
+
 // Parse CPN Tools XML
 function parseCPNToolsXML(content: string): PetriNetData {
+  // Clear any previous import warnings
+  importWarnings.length = 0;
+
   const parser = new DOMParser();
   const cpnXML = parser.parseFromString(content, 'text/xml');
 
@@ -504,17 +706,22 @@ function parseCPNToolsXML(content: string): PetriNetData {
   const colorSets = Array.from(cpnXML.querySelectorAll('globbox color')).map((color) => {
     const id = color.querySelector('id')?.textContent || '';
     
+    // Detect timed suffix (applies to all color set types)
+    const isTimed = !!color.querySelector('timed');
+    const timedSuffix = isTimed ? ' timed' : '';
+
     // Check for product type
     const productElement = color.querySelector('product');
     if (productElement) {
       const productIds = Array.from(productElement.querySelectorAll(':scope > id')).map(el => el.textContent || '');
-      const definition = `colset ${id} = product ${productIds.join(' * ')};`;
+      const definition = `colset ${id} = product ${productIds.join(' * ')}${timedSuffix};`;
       return {
         id,
         name: id,
         type: 'product',
         definition,
         color: generateRandomColor(),
+        ...(isTimed ? { timed: true } : {}),
       };
     }
     
@@ -527,13 +734,14 @@ function parseCPNToolsXML(content: string): PetriNetData {
         if (mlElements.length >= 2) {
           const rangeStart = mlElements[0].textContent || '0';
           const rangeEnd = mlElements[1].textContent || '0';
-          const definition = `colset ${id} = int with ${rangeStart}..${rangeEnd};`;
+          const definition = `colset ${id} = int with ${rangeStart}..${rangeEnd}${timedSuffix};`;
           return {
             id,
             name: id,
             type: 'basic',
             definition,
             color: generateRandomColor(),
+            ...(isTimed ? { timed: true } : {}),
           };
         }
       }
@@ -542,8 +750,24 @@ function parseCPNToolsXML(content: string): PetriNetData {
         id,
         name: id,
         type: 'basic',
-        definition: `colset ${id} = int;`,
+        definition: `colset ${id} = int${timedSuffix};`,
         color: generateRandomColor(),
+        ...(isTimed ? { timed: true } : {}),
+      };
+    }
+    
+    // Check for list type (e.g., <list><id>CityCat</id></list>)
+    const listElement = color.querySelector('list');
+    if (listElement) {
+      const elementType = listElement.querySelector('id')?.textContent || '';
+      const definition = `colset ${id} = list ${elementType}${timedSuffix};`;
+      return {
+        id,
+        name: id,
+        type: 'list',
+        definition,
+        color: generateRandomColor(),
+        ...(isTimed ? { timed: true } : {}),
       };
     }
     
@@ -554,7 +778,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
     });
     const basicType = basicTypeElement ? basicTypeElement.tagName.toLowerCase() : null;
     const layout = color.querySelector('layout')?.textContent || '';
-    const definition = basicType ? `colset ${id} = ${basicType};` : (layout || `colset ${id} = complex;`);
+    const definition = basicType ? `colset ${id} = ${basicType}${timedSuffix};` : (layout || `colset ${id} = complex;`);
 
     return {
       id,
@@ -562,6 +786,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
       type: basicType ? 'basic' : 'complex',
       definition,
       color: generateRandomColor(),
+      ...(isTimed ? { timed: true } : {}),
     };
   });
 
@@ -599,58 +824,62 @@ function parseCPNToolsXML(content: string): PetriNetData {
     }));
   });
 
-  // Parse priorities
-  const priorities = Array.from(cpnXML.querySelectorAll('globbox ml')).reduce((acc, ml) => {
-    const layout = ml.querySelector('layout')?.textContent || '';
-    const match = layout.match(/val\s+(\w+)\s*=\s*(\d+);/); // Extract name and value
-    if (match) {
-      acc.push({
-        id: uuidv4(),
-        name: match[1],
-        level: parseInt(match[2], 10),
-      });
-    }
-    return acc;
-  }, [] as { id: string; name: string; level: number }[]);
-
-  // Parse functions - from both block ml elements and top-level ml elements
+  // Parse all <ml> elements (functions, val constants)
+  // Collect from both top-level and block-nested ml elements, deduplicating by id
+  const valDeclarations: { id: string; name: string; value: string }[] = [];
   const functions: Function[] = [];
-  
-  // Parse from block ml elements
-  Array.from(cpnXML.querySelectorAll('globbox block ml')).forEach((ml) => {
-    const layout = ml.querySelector('layout')?.textContent || '';
+  const seenMlIds = new Set<string>();
+
+  const processMlElement = (ml: Element) => {
     const id = ml.getAttribute('id') || uuidv4();
+    if (seenMlIds.has(id)) return;
+    seenMlIds.add(id);
 
-    // Check if it looks like a function definition (starts with 'fun')
-    if (layout.trim().startsWith('fun ')) {
-      const nameMatch = layout.match(/^fun\s+([a-zA-Z0-9_]+)/);
+    // Get content from layout or text content
+    const layout = ml.querySelector('layout')?.textContent?.trim() || '';
+    const textContent = ml.textContent?.trim() || '';
+    const content = layout || textContent;
+    if (!content) return;
+
+    // Check if it's a function definition (starts with 'fun')
+    if (content.startsWith('fun ')) {
+      const nameMatch = content.match(/^fun\s+([a-zA-Z0-9_]+)/);
       const functionName = nameMatch ? nameMatch[1] : `func_${id}`;
-
       functions.push({
-        id: id,
+        id,
         name: functionName,
-        code: layout,
+        code: translateSMLFunction(content, functionName),
       });
+      return;
     }
-  });
-  
-  // Also parse top-level ml elements in globbox (not inside blocks)
-  Array.from(cpnXML.querySelectorAll('globbox > ml')).forEach((ml) => {
-    const mlContent = ml.textContent?.trim() || '';
-    const id = ml.getAttribute('id') || uuidv4();
 
-    // Check if it looks like a function definition (starts with 'fun')
-    if (mlContent.startsWith('fun ')) {
-      const nameMatch = mlContent.match(/^fun\s+([a-zA-Z0-9_]+)/);
-      const functionName = nameMatch ? nameMatch[1] : `func_${id}`;
-
-      functions.push({
-        id: id,
-        name: functionName,
-        code: mlContent,
+    // Check if it's a val declaration — store for later processing
+    const valMatch = content.match(/^val\s+(\w+)\s*=\s*(.+?)\s*;?\s*$/);
+    if (valMatch) {
+      valDeclarations.push({
+        id,
+        name: valMatch[1],
+        value: valMatch[2].trim(),
       });
+      return;
     }
-  });
+
+    // Other ml content (e.g., globref, arbitrary SML) — store as function
+    const nameMatch = content.match(/^(?:fun|val)?\s*([a-zA-Z0-9_]+)/);
+    const name = nameMatch ? nameMatch[1] : `ml_${id}`;
+    functions.push({
+      id,
+      name,
+      code: translateSMLExpr(content, `ML declaration "${name}"`),
+    });
+  };
+
+  // Process ml elements that are direct children of globbox or block (not nested in color/int/with)
+  const mlElements = [
+    ...Array.from(cpnXML.querySelectorAll('globbox > ml')),
+    ...Array.from(cpnXML.querySelectorAll('globbox > block > ml')),
+  ];
+  mlElements.forEach(processMlElement);
 
   // Parse <use> declarations
   const uses = Array.from(cpnXML.querySelectorAll('globbox use')).map((use) => {
@@ -664,6 +893,17 @@ function parseCPNToolsXML(content: string): PetriNetData {
       content: '', // Content is not parsed but can be edited later
     };
   });
+
+  // Add val declarations as values (named constants)
+  const values: Value[] = [];
+  for (const valDecl of valDeclarations) {
+    const translatedValue = translateSMLExpr(valDecl.value, `val ${valDecl.name}`);
+    values.push({
+      id: valDecl.id,
+      name: valDecl.name,
+      expression: translatedValue,
+    });
+  }
 
   // Parse pages
   const pages = Array.from(cpnXML.querySelectorAll('page'));
@@ -762,6 +1002,9 @@ function parseCPNToolsXML(content: string): PetriNetData {
         }
       }
       
+      const placeName = place.querySelector('text')?.textContent || '';
+      const placeColorSet = place.querySelector('type text')?.textContent || '';
+      
       const placeNode = {
         id: placeId,
         type: 'place',
@@ -772,9 +1015,9 @@ function parseCPNToolsXML(content: string): PetriNetData {
         width,
         height,
         data: {
-          label: place.querySelector('text')?.textContent || '',
-          colorSet: place.querySelector('type text')?.textContent || '',
-          initialMarking: rawInitialMarking,
+          label: placeName,
+          colorSet: placeColorSet,
+          initialMarking: translateSMLInitialMarking(rawInitialMarking, placeName, placeColorSet, colorSets),
           colorSetOffset,
           markingOffset,
         },
@@ -796,6 +1039,9 @@ function parseCPNToolsXML(content: string): PetriNetData {
       
       const transId = transition.getAttribute('id') || uuidv4();
       
+      const transName = transition.querySelector('text')?.textContent || '';
+      const rawGuard = transition.querySelector('cond text')?.textContent || '';
+      
       const transNode = {
         id: transId,
         type: 'transition',
@@ -806,8 +1052,8 @@ function parseCPNToolsXML(content: string): PetriNetData {
         width,
         height,
         data: {
-          label: transition.querySelector('text')?.textContent || '',
-          guard: transition.querySelector('cond text')?.textContent || '',
+          label: transName,
+          guard: translateSMLGuard(rawGuard, transName),
           time: transition.querySelector('time text')?.textContent || '',
           priority: transition.querySelector('priority text')?.textContent || '',
         },
@@ -840,6 +1086,12 @@ function parseCPNToolsXML(content: string): PetriNetData {
       if (atPlusIndex !== -1) {
         label = rawLabel.substring(0, atPlusIndex).trim();
         arcDelay = rawLabel.substring(atPlusIndex + 2).trim();
+      }
+      
+      // Translate SML arc inscription to Rhai
+      label = translateSMLInscription(label, `Arc inscription (arc ${id})`);
+      if (arcDelay) {
+        arcDelay = translateSMLExpr(arcDelay, `Arc delay (arc ${id})`);
       }
       
       // Parse bendpoints for curved/bent arcs
@@ -928,6 +1180,26 @@ function parseCPNToolsXML(content: string): PetriNetData {
     petriNetOrder.push(pageId);
   });
 
+  // Build priorities from val declarations that are referenced as transition priorities
+  const priorities: { id: string; name: string; level: number }[] = [];
+  const referencedPriorityNames = new Set<string>();
+  for (const net of Object.values(petriNetsById)) {
+    for (const node of net.nodes) {
+      if (node.type === 'transition' && node.data?.priority && typeof node.data.priority === 'string') {
+        referencedPriorityNames.add(node.data.priority);
+      }
+    }
+  }
+  for (const valDecl of valDeclarations) {
+    if (referencedPriorityNames.has(valDecl.name) && /^\d+$/.test(valDecl.value)) {
+      priorities.push({
+        id: uuidv4(),
+        name: valDecl.name,
+        level: parseInt(valDecl.value, 10),
+      });
+    }
+  }
+
   return {
     petriNetsById,
     petriNetOrder,
@@ -936,6 +1208,8 @@ function parseCPNToolsXML(content: string): PetriNetData {
     priorities,
     functions,
     uses, // Add uses to the returned data
+    values, // Add values (named constants) to the returned data
+    importWarnings: importWarnings.length > 0 ? [...importWarnings] : undefined,
   };
 }
 
@@ -1015,6 +1289,7 @@ function parseCPNPyJSON(content: string): PetriNetData {
     priorities: [], // Priorities are not defined in cpn-py JSON
     functions: [], // Functions are not defined in cpn-py JSON
     uses: [], // Uses are not defined in cpn-py JSON
+    values: [], // Values are not defined in cpn-py JSON
   };
 }
 

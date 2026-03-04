@@ -232,7 +232,7 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
                         type: data.type || "defaultType",
                         colorSet: data.colorSet,
                         initialMarking: data.initialMarking,
-                        priority: data.priority || "NONE",
+                        priority: data.priority,
                         codeSegment: data.codeSegment || "",
                         guard: data.guard || "",
                       });
@@ -262,7 +262,7 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
                         type: data.type || "defaultType",
                         colorSet: data.colorSet,
                         initialMarking: data.initialMarking,
-                        priority: data.priority || "NONE",
+                        priority: data.priority,
                         codeSegment: data.codeSegment || "",
                         guard: data.guard || "",
                       });
@@ -292,7 +292,7 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
                         type: data.type || "defaultType",
                         colorSet: data.colorSet,
                         initialMarking: data.initialMarking,
-                        priority: data.priority || "NONE",
+                        priority: data.priority,
                         codeSegment: data.codeSegment || "",
                         guard: data.guard || "",
                       });
@@ -322,7 +322,7 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
                         type: data.type || "defaultType",
                         colorSet: data.colorSet,
                         initialMarking: data.initialMarking,
-                        priority: data.priority || "NONE",
+                        priority: data.priority,
                         codeSegment: data.codeSegment || "",
                         guard: data.guard || "",
                       });
@@ -352,7 +352,7 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
                         type: data.type || "defaultType",
                         colorSet: data.colorSet,
                         initialMarking: data.initialMarking,
-                        priority: data.priority || "NONE",
+                        priority: data.priority,
                         codeSegment: data.codeSegment || "",
                         guard: data.guard || "",
                       });
@@ -381,7 +381,7 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
                     type: data.type || "defaultType",
                     colorSet: data.colorSet,
                     initialMarking: data.initialMarking,
-                    priority: data.priority || "NONE",
+                    priority: data.priority,
                     codeSegment: data.codeSegment || "",
                     guard: data.guard || "",
                   });
@@ -405,7 +405,7 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
               updateNodeData(activePetriNetId, id, {
                 ...data,
                 label: data.label || "",
-                priority: value,
+                priority: value === "NONE" ? undefined : value,
                 isArcMode: data.isArcMode || false,
                 type: data.type || "defaultType",
                 colorSet: data.colorSet,
@@ -448,7 +448,7 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
                 initialMarking: data.initialMarking,
                 guard: data.guard || "",
                 time: data.time || "",
-                priority: data.priority || "NONE",
+                priority: data.priority,
               })}
             }
           }

@@ -191,12 +191,26 @@ function validateGuardVariables(
 
   // Remove string literals before extracting identifiers
   const withoutStrings = guard.replace(/"[^"]*"/g, '').replace(/'[^']*'/g, '');
+
+  // Extract locally-defined variables from let bindings (e.g., "let t = ...")
+  const localVars = new Set<string>();
+  const letPattern = /\blet\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=/g;
+  let letMatch;
+  while ((letMatch = letPattern.exec(withoutStrings)) !== null) {
+    localVars.add(letMatch[1]);
+  }
+
   const identifiers = withoutStrings.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) || [];
+  const reported = new Set<string>();
 
   for (const ident of identifiers) {
     if (keywords.has(ident)) continue;
+    // Skip if already reported (deduplicate)
+    if (reported.has(ident)) continue;
     // Skip if it's a known variable
     if (variableByName.has(ident)) continue;
+    // Skip if it's a locally-defined let binding
+    if (localVars.has(ident)) continue;
     // Skip if it looks like a color set name (used in type checks)
     if (colorSetByName.has(ident)) continue;
     // Skip if it looks like a record field access (preceded by a dot)
@@ -213,6 +227,7 @@ function validateGuardVariables(
     const standalonePattern = new RegExp(`(?<![.])\\b${ident}\\b`);
     if (standalonePattern.test(withoutStrings) && !variableByName.has(ident)) {
       // Only report as warning since we can't perfectly parse CPN ML
+      reported.add(ident);
       addError(nodeId, 'warning', `Guard may reference undefined variable "${ident}"`);
     }
   }

@@ -5,7 +5,7 @@ import {
 // import { PlaceNodeProps } from '@/nodes/PlaceNode'; // Import PlaceNodeData
 // import { TransitionNodeProps } from '@/nodes/TransitionNode'; // Import TransitionNodeData
 
-import type { ColorSet, Variable, Priority, Function, Use } from '@/declarations';
+import type { ColorSet, Variable, Priority, Function, Use, Value } from '@/declarations';
 import type { ValidationErrors } from '@/utils/validation';
 import { PlaceNodeData } from './nodes/PlaceNode';
 import { TransitionNodeData } from './nodes/TransitionNode';
@@ -191,6 +191,7 @@ export type AppState = {
   priorities: Priority[];
   functions: Function[];
   uses: Use[];
+  values: Value[];
   simulationEpoch?: string | null; // ISO 8601 date string for simulation epoch
   showMarkingDisplay: boolean; // Toggle for showing/hiding marking rectangles
   isArcMode: boolean; // Whether arc connection mode is active
@@ -230,12 +231,14 @@ export type AppActions = {
   setPriorities: (priorities: Priority[]) => void;
   setFunctions: (functions: Function[]) => void;
   setUses: (uses: Use[]) => void;
+  setValues: (values: Value[]) => void;
 
   addColorSet: (newColorSet: ColorSet) => void;
   addVariable: (newVariable: Variable) => void;
   addPriority: (newPriority: Priority) => void;
   addFunction: (newFunction: Function) => void;
   addUse: (newUse: Use) => void;
+  addValue: (newValue: Value) => void;
   renameColorSet: (id: string, newName: string) => void;
   deleteColorSet: (id: string) => void;
   deleteVariable: (id: string) => void;
@@ -243,6 +246,8 @@ export type AppActions = {
   deleteFunction: (id: string) => void;
   updateUse: (id: string, newUse: Use) => void;
   deleteUse: (id: string) => void;
+  updateValue: (id: string, newValue: Value) => void;
+  deleteValue: (id: string) => void;
 
   toggleArcMode: (state: boolean, arcType?: ArcType) => void;
   setActiveArcType: (arcType: ArcType) => void;

@@ -213,12 +213,9 @@ function ArcEdge({ id, source, target, style, label, data }: FloatingEdgeProps) 
   // Handler for when label is dragged - must be before early return
   const handleLabelDragEnd = useCallback((newOffset: { x: number; y: number }) => {
     if (activePetriNetId) {
-      updateEdgeData(activePetriNetId, id, {
-        ...data,
-        labelOffset: newOffset,
-      });
+      updateEdgeData(activePetriNetId, id, { labelOffset: newOffset });
     }
-  }, [activePetriNetId, id, data, updateEdgeData]);
+  }, [activePetriNetId, id, updateEdgeData]);
 
   // Handler for starting a bendpoint drag
   const handleBendpointDragStart = useCallback((e: React.MouseEvent, index: number) => {

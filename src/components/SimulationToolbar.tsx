@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Square, SkipForward, Play, FastForward, Loader2 } from "lucide-react";
-import { useContext, useEffect } from 'react';
+import { useContext, useEffect, useState } from 'react';
 
 import {
   Tooltip,
@@ -10,6 +10,8 @@ import {
 } from '@/components/ui/tooltip';
 
 import { SimulationContext } from '@/context/useSimulationContextHook';
+
+type RunMode = 'animated' | 'fast' | null;
 
 export function SimulationToolbar() {
   const context = useContext(SimulationContext);
@@ -26,11 +28,13 @@ export function SimulationToolbar() {
     simulationConfig
   } = context;
 
+  // Track which button started the current run
+  const [runMode, setRunMode] = useState<RunMode>(null);
+
   // Show wait cursor globally while the simulation is running
   useEffect(() => {
     if (isRunning) {
       document.body.style.cursor = 'wait';
-      // Also force wait cursor on all interactive elements
       const style = document.createElement('style');
       style.id = 'simulation-busy-cursor';
       style.textContent = '* { cursor: wait !important; }';
@@ -55,10 +59,12 @@ export function SimulationToolbar() {
   };
 
   const handleRunAnimated = () => {
+    setRunMode('animated');
     runMultipleStepsAnimated(simulationConfig.stepsPerRun, simulationConfig.animationDelayMs);
   };
 
   const handleRunFast = () => {
+    setRunMode('fast');
     runMultipleStepsFast(simulationConfig.stepsPerRun);
   };
 
@@ -136,7 +142,11 @@ export function SimulationToolbar() {
                 disabled={isRunning}
                 className="relative"
               >
-                <Play className="h-5 w-5" />
+                {isRunning && runMode === 'animated' ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Play className="h-5 w-5" />
+                )}
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground font-medium">
                   {simulationConfig.stepsPerRun}
                 </span>
@@ -160,7 +170,7 @@ export function SimulationToolbar() {
                 disabled={isRunning}
                 className="relative"
               >
-                {isRunning ? (
+                {isRunning && runMode === 'fast' ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <FastForward className="h-5 w-5" />

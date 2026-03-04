@@ -328,11 +328,11 @@ function TimestampCellEditor({ timestamp, epoch, onChange }: TimestampCellEditor
   // Display value when not editing
   const displayValue = timeMode === 'absolute' && epoch
     ? new Date(epoch.getTime() + timestamp).toLocaleString()
-    : formatRelativeTime(timestamp);
+    : epoch ? formatRelativeTime(timestamp) : String(timestamp);
 
   const tooltip = timeMode === 'absolute'
-    ? formatRelativeTime(timestamp)
-    : (epoch ? new Date(epoch.getTime() + timestamp).toLocaleString() : `${timestamp}ms`);
+    ? (epoch ? formatRelativeTime(timestamp) : String(timestamp))
+    : (epoch ? new Date(epoch.getTime() + timestamp).toLocaleString() : String(timestamp));
 
   if (!editing) {
     return (

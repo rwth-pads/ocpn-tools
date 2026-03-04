@@ -596,6 +596,7 @@ export function useSimulationController() {
         const currentPriorities = useStore.getState().priorities;
         const currentFunctions = useStore.getState().functions;
         const currentUses = useStore.getState().uses;
+        const currentValues = useStore.getState().values;
         const currentSimulationEpoch = useStore.getState().simulationEpoch;
         const currentFusionSets = useStore.getState().fusionSets;
 
@@ -646,6 +647,13 @@ export function useSimulationController() {
         }
 
         // Prepare the data structure for the WASM simulator
+        // Merge values into uses as "val name = expression;" since the Rust simulator
+        // processes them from the uses array via scope.push_constant()
+        const valuesAsUses = currentValues.map((v) => ({
+          id: v.id,
+          name: v.name,
+          content: `val ${v.name} = ${v.expression};`,
+        }));
         const petriNetData: PetriNetData = {
           petriNetsById: structuredClone(flattenedNets), // Use flattened nets
           petriNetOrder: flattenedOrder,
@@ -653,7 +661,8 @@ export function useSimulationController() {
           variables: currentVariables,
           priorities: currentPriorities,
           functions: currentFunctions,
-          uses: currentUses,
+          uses: [...currentUses, ...valuesAsUses],
+          values: currentValues,
           simulationSettings: {
             simulationEpoch: currentSimulationEpoch,
           },
@@ -861,6 +870,12 @@ export function useSimulationController() {
             // Event handling (including state updates and step increment) happens in handleWasmEvent callback
             // Fetch monitor results now that run_step() has released its borrow
             _fetchMonitorResults();
+            // Update simulation time to post-step model time (may differ from event's
+            // firing time if the simulator eagerly advanced to the next enabled time)
+            if (result !== null && result !== undefined) {
+              const postStepTime = wasmSimulatorRef.current.getCurrentTime();
+              setSimulationTime(Number(postStepTime));
+            }
             return result;
         } catch (error) {
             console.error("Error running simulation step:", error);
@@ -983,6 +998,11 @@ export function useSimulationController() {
           }
           // Fetch monitor results after batch execution
           _fetchMonitorResults();
+          // Update simulation time to post-batch model time
+          if (wasmSimulatorRef.current) {
+            const postBatchTime = wasmSimulatorRef.current.getCurrentTime();
+            setSimulationTime(Number(postBatchTime));
+          }
         } else {
           // Fallback: run steps one by one without delay
           for (let i = 0; i < steps; i++) {
@@ -1111,9 +1131,40 @@ export function useSimulationController() {
           for (const id of curIds) {
             const cur = state.petriNetsById[id];
             const prev = prevState.petriNetsById[id];
-            if (!prev || cur.edges !== prev.edges || cur.name !== prev.name) {
+            if (!prev || cur.name !== prev.name) {
               netsStructurallyChanged = true;
               break;
+            }
+            // For edges, distinguish layout-only changes (label offset, bendpoints)
+            // from structural changes that affect simulation semantics.
+            if (cur.edges !== prev.edges) {
+              if (cur.edges.length !== prev.edges.length) {
+                netsStructurallyChanged = true;
+                break;
+              }
+              const edgeLayoutKeys = new Set(['labelOffset', 'bendpoints']);
+              for (let i = 0; i < cur.edges.length; i++) {
+                const ce = cur.edges[i];
+                const pe = prev.edges[i];
+                if (ce.id !== pe.id || ce.source !== pe.source || ce.target !== pe.target || ce.label !== pe.label) {
+                  netsStructurallyChanged = true;
+                  break;
+                }
+                if (ce.data !== pe.data) {
+                  const cData = (ce.data ?? {}) as Record<string, unknown>;
+                  const pData = (pe.data ?? {}) as Record<string, unknown>;
+                  const allKeys = new Set([...Object.keys(cData), ...Object.keys(pData)]);
+                  for (const key of allKeys) {
+                    if (edgeLayoutKeys.has(key)) continue;
+                    if (cData[key] !== pData[key]) {
+                      netsStructurallyChanged = true;
+                      break;
+                    }
+                  }
+                  if (netsStructurallyChanged) break;
+                }
+              }
+              if (netsStructurallyChanged) break;
             }
             // For nodes, distinguish layout-only changes (position moves, inscription
             // offset drags) from structural changes that affect simulation semantics.

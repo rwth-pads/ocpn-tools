@@ -123,16 +123,8 @@ export function EventLog({ events, onClearLog, onExport, canExport, exportDisabl
       const absoluteDate = new Date(epoch.getTime() + timeMs)
       return { time: formatDateTimeFull(absoluteDate) }
     }
-    // Relative time display
-    if (timeMs === 0) return { time: '0' }
-    const seconds = timeMs / 1000
-    if (seconds < 60) return { time: `${seconds.toFixed(seconds % 1 === 0 ? 0 : 1)}s` }
-    const minutes = seconds / 60
-    if (minutes < 60) return { time: `${minutes.toFixed(minutes % 1 === 0 ? 0 : 1)}m` }
-    const hours = minutes / 60
-    if (hours < 24) return { time: `${hours.toFixed(hours % 1 === 0 ? 0 : 1)}h` }
-    const days = hours / 24
-    return { time: `${days.toFixed(days % 1 === 0 ? 0 : 1)}d` }
+    // No epoch - show plain integer time
+    return { time: String(timeMs) }
   }
 
   return (

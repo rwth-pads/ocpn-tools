@@ -17,7 +17,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 
-import { ColorSet, Variable, Priority, Function, Use } from "@/declarations"
+import { ColorSet, Variable, Priority, Function, Use, Value } from "@/declarations"
 
 export function DeclarationManager() {
   const [isPrioritiesOpen, setIsPrioritiesOpen] = useState(false);
@@ -25,6 +25,7 @@ export function DeclarationManager() {
   const [isVariablesOpen, setIsVariablesOpen] = useState(false);
   const [isFunctionsOpen, setIsFunctionsOpen] = useState(false);
   const [isUsesOpen, setIsUsesOpen] = useState(false);
+  const [isValuesOpen, setIsValuesOpen] = useState(false);
 
   const colorSets = useStore((state) => state.colorSets);
   const setColorSets = useStore((state) => state.setColorSets);
@@ -47,6 +48,10 @@ export function DeclarationManager() {
   const setUses = useStore((state) => state.setUses);
   const onAddUse = useStore((state) => state.addUse);
   const onDeleteUse = useStore((state) => state.deleteUse);
+  const values = useStore((state) => state.values);
+  const onAddValue = useStore((state) => state.addValue);
+  const onUpdateValue = useStore((state) => state.updateValue);
+  const onDeleteValue = useStore((state) => state.deleteValue);
 
   const [newVariable, setNewVariable] = useState({ name: "", colorSet: "INT" })
   const [newPriority, setNewPriority] = useState({ name: "", level: 250 })
@@ -64,6 +69,11 @@ export function DeclarationManager() {
 
   const [selectedUse, setSelectedUse] = useState<Use | undefined>(undefined);
   const [useEditorOpen, setUseEditorOpen] = useState(false);
+
+  const [newValue, setNewValue] = useState({ name: "", expression: "" });
+  const [editingValueId, setEditingValueId] = useState<string | null>(null);
+  const [editingValueName, setEditingValueName] = useState("");
+  const [editingValueExpression, setEditingValueExpression] = useState("");
 
   // Drag and drop state
   const [draggedItem, setDraggedItem] = useState<ColorSet | Variable | Priority | Function | Use | null>(null)
@@ -88,6 +98,33 @@ export function DeclarationManager() {
       setNewPriority({ name: "", level: 100 })
     }
   }
+
+  const handleAddValue = () => {
+    if (newValue.name && newValue.expression) {
+      onAddValue({
+        name: newValue.name,
+        expression: newValue.expression,
+      });
+      setNewValue({ name: "", expression: "" });
+    }
+  };
+
+  const handleStartEditValue = (v: Value) => {
+    setEditingValueId(v.id || null);
+    setEditingValueName(v.name);
+    setEditingValueExpression(v.expression);
+  };
+
+  const handleSaveEditValue = () => {
+    if (editingValueId && editingValueName) {
+      onUpdateValue(editingValueId, { name: editingValueName, expression: editingValueExpression });
+      setEditingValueId(null);
+    }
+  };
+
+  const handleCancelEditValue = () => {
+    setEditingValueId(null);
+  };
 
   const handleEditColorSet = (colorSet: ColorSet) => {
     setSelectedColorSet(colorSet)
@@ -469,6 +506,93 @@ export function DeclarationManager() {
                 />
               </DialogContent>
             </Dialog>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+
+      {/* Values Section */}
+      <div className="space-y-3">
+        <Collapsible open={isValuesOpen} onOpenChange={setIsValuesOpen}>
+          <CollapsibleTrigger asChild>
+            <div className="flex items-center -ml-3 mb-2 cursor-pointer">
+              <Button variant="ghost" size="sm">
+                {isValuesOpen ? (
+                  <ChevronDown className="h-4 w-4" strokeWidth={4} />
+                ) : (
+                  <ChevronRight className="h-4 w-4" strokeWidth={4} />
+                )}
+                <span className="sr-only">Toggle</span>
+              </Button>
+              <h2 className="font-bold flex-1">Values</h2>
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3">
+            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              {values.map((v) => (
+                <div
+                  key={v.id}
+                  className="border rounded-md p-3 bg-muted/20 transition-colors"
+                >
+                  {editingValueId === v.id ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          className="flex-1 font-mono text-sm"
+                          value={editingValueName}
+                          onChange={(e) => setEditingValueName(e.target.value)}
+                          placeholder="Name"
+                        />
+                        <span className="text-muted-foreground">=</span>
+                        <Input
+                          className="flex-1 font-mono text-sm"
+                          value={editingValueExpression}
+                          onChange={(e) => setEditingValueExpression(e.target.value)}
+                          placeholder="Expression"
+                        />
+                      </div>
+                      <div className="flex gap-1 justify-end">
+                        <Button size="sm" variant="outline" onClick={handleCancelEditValue}>Cancel</Button>
+                        <Button size="sm" onClick={handleSaveEditValue}>Save</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center">
+                      <div className="font-mono text-sm">
+                        val {v.name} = {v.expression}
+                      </div>
+                      <div className="flex items-center">
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleStartEditValue(v)}>
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => v.id && onDeleteValue(v.id)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Name (e.g., ds)"
+                className="flex-1"
+                value={newValue.name}
+                onChange={(e) => setNewValue({ ...newValue, name: e.target.value })}
+              />
+              <span className="text-muted-foreground">=</span>
+              <Input
+                placeholder="Expression (e.g., 10)"
+                className="flex-1"
+                value={newValue.expression}
+                onChange={(e) => setNewValue({ ...newValue, expression: e.target.value })}
+              />
+            </div>
+
+            <Button size="sm" variant="outline" onClick={handleAddValue}>
+              Add Value
+            </Button>
           </CollapsibleContent>
         </Collapsible>
       </div>

@@ -112,7 +112,7 @@ function DraggableInscription({
 }
 
 // Format a single token value for display (handles objects/records, arrays, strings, numbers)
-function formatTokenValue(token: unknown, isUnitType: boolean = false): string {
+function formatTokenValue(token: unknown, isUnitType: boolean = false, isListType: boolean = false): string {
   if (token === null || token === undefined) {
     return isUnitType ? '•' : '()';
   } else if (token instanceof Map) {
@@ -123,12 +123,16 @@ function formatTokenValue(token: unknown, isUnitType: boolean = false): string {
     });
     return `{${entries.join(', ')}}`; 
   } else if (Array.isArray(token)) {
+    if (isListType) {
+      // List type — display with brackets
+      return `[${token.map(t => formatTokenValue(t)).join(',')}]`;
+    }
     // Product/tuple type
     return `(${token.map(t => formatTokenValue(t)).join(',')})`; 
   } else if (typeof token === 'object') {
     // Check if it's a timed token - don't format the wrapper, just the value
     if (isTimedToken(token)) {
-      return formatTokenValue(token.value, isUnitType);
+      return formatTokenValue(token.value, isUnitType, isListType);
     }
     // Plain object (record type)
     const entries = Object.entries(token).map(([k, v]) => `${k}=${formatTokenValue(v)}`);
@@ -147,16 +151,8 @@ function formatTimeDisplay(timestampMs: number, epoch: Date | null): string {
     const date = new Date(epoch.getTime() + timestampMs);
     return formatDateTimeFull(date);
   }
-  // Relative time display
-  if (timestampMs === 0) return '@0';
-  const seconds = timestampMs / 1000;
-  if (seconds < 60) return `@${seconds.toFixed(seconds % 1 === 0 ? 0 : 1)}s`;
-  const minutes = seconds / 60;
-  if (minutes < 60) return `@${minutes.toFixed(minutes % 1 === 0 ? 0 : 1)}m`;
-  const hours = minutes / 60;
-  if (hours < 24) return `@${hours.toFixed(hours % 1 === 0 ? 0 : 1)}h`;
-  const days = hours / 24;
-  return `@${days.toFixed(days % 1 === 0 ? 0 : 1)}d`;
+  // No epoch - show plain integer model time
+  return `@${timestampMs}`;
 }
 
 // Get grouped marking data for table display
@@ -167,7 +163,7 @@ export interface MarkingEntry {
   timeDisplay: string;
 }
 
-function getMarkingTableData(marking: unknown[], isUnitType: boolean = false, isTimed: boolean = false, epoch: Date | null = null): MarkingEntry[] {
+function getMarkingTableData(marking: unknown[], isUnitType: boolean = false, isTimed: boolean = false, epoch: Date | null = null, isListType: boolean = false): MarkingEntry[] {
   if (isUnitType && !isTimed) {
     return [{ count: marking.length, value: '•', timestamp: 0, timeDisplay: '' }];
   }
@@ -176,7 +172,7 @@ function getMarkingTableData(marking: unknown[], isUnitType: boolean = false, is
   const tokenCounts = new Map<string, MarkingEntry>();
   for (const token of marking) {
     const timestamp = isTimedToken(token) ? token.timestamp : 0;
-    const value = isTimedToken(token) ? formatTokenValue(token.value, isUnitType) : formatTokenValue(token, isUnitType);
+    const value = isTimedToken(token) ? formatTokenValue(token.value, isUnitType, isListType) : formatTokenValue(token, isUnitType, isListType);
     const key = isTimed ? `${value}@${timestamp}` : value;
     const existing = tokenCounts.get(key);
     if (existing) {
@@ -204,6 +200,8 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
   const colorSetColor = colorSet?.color || '#000000';
   // Check if this is a UNIT type colorset
   const isUnitType = colorSet?.type === 'basic' && colorSet?.definition?.includes('= unit;');
+  // Check if this is a list type colorset
+  const isListType = colorSet?.type === 'list' || (colorSet?.definition?.includes('= list ') ?? false);
   // Check if this is a timed colorset
   const isTimed = colorSet?.timed === true;
   const activePetriNetId = useStore((state) => state.activePetriNetId);
@@ -232,7 +230,7 @@ export const PlaceNode: React.FC<PlaceNodeProps> = ({ id, data, selected }) => {
 
   const hasMarking = data.marking && Array.isArray(data.marking) && data.marking.length > 0;
   const tokenCount = hasMarking ? data.marking.length : 0;
-  const markingTableData = hasMarking ? getMarkingTableData(data.marking as unknown[], isUnitType, isTimed, epoch) : [];
+  const markingTableData = hasMarking ? getMarkingTableData(data.marking as unknown[], isUnitType, isTimed, epoch, isListType) : [];
   const visibleRows = markingTableData.slice(0, MAX_VISIBLE_ROWS);
   const hasMoreRows = markingTableData.length > MAX_VISIBLE_ROWS;
 

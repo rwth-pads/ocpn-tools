@@ -545,27 +545,8 @@ ${evt.relationships.map(r => `      <relationship objectId="${r.objectId}" quali
       return formatDateTimeFull(absoluteDate);
     }
     
-    // No epoch - show relative time
-    if (time === 0) return '0ms';
-    
-    // For small times (< 1 minute), show milliseconds or seconds
-    if (time < 1000) {
-      return `${time}ms`;
-    } else if (time < 60000) {
-      const seconds = time / 1000;
-      return `${seconds.toFixed(1)}s`;
-    } else if (time < 3600000) {
-      // Less than 1 hour - show minutes:seconds
-      const minutes = Math.floor(time / 60000);
-      const seconds = Math.floor((time % 60000) / 1000);
-      return `${minutes}m ${seconds}s`;
-    } else {
-      // Show hours:minutes:seconds
-      const hours = Math.floor(time / 3600000);
-      const minutes = Math.floor((time % 3600000) / 60000);
-      const seconds = Math.floor((time % 60000) / 1000);
-      return `${hours}h ${minutes}m ${seconds}s`;
-    }
+    // No epoch - show plain integer time
+    return String(time);
   };
 
   return (

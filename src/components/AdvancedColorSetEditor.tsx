@@ -126,7 +126,9 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
       setName(colorSet.name);
       setType(colorSet.type);
       setDefinition(colorSet.definition);
-      setTimed(colorSet.timed || false); // Set timed from existing color set
+      // Set timed from the timed property, or detect from definition string as fallback
+      const timedFromDef = /\btimed\b/.test(colorSet.definition.replace(/colset\s+\w+\s*=/, ''));
+      setTimed(colorSet.timed || timedFromDef);
 
       // Try to parse the definition based on type
       if (colorSet.type === "basic") {

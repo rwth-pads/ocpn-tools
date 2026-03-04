@@ -121,7 +121,7 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
     return JSON.stringify(tokens.map((t) => ({ value: t.value, timestamp: t.timestamp })));
   };
 
-  // Helper to parse UNIT marking to count (handles both array format and number)
+  // Helper to parse UNIT marking to count (handles array format, number, and legacy formats)
   const parseUnitMarkingCount = (marking: string): number => {
     if (!marking) return 0;
     const trimmed = marking.trim();
@@ -139,6 +139,11 @@ const PlaceProperties = ({ colorSets }: { colorSets: ColorSet[] }) => {
         return 0;
       }
     }
+    // Handle legacy "()" format (single unit token)
+    if (trimmed === '()') return 1;
+    // Handle N`() or N'() format
+    const multiMatch = trimmed.match(/^(\d+)[`']\(\)$/);
+    if (multiMatch) return parseInt(multiMatch[1], 10);
     return 0;
   };
 

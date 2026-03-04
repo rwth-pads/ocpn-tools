@@ -215,16 +215,16 @@
           "initialMarking": "[{\"value\":{\"id\":1},\"timestamp\":0},{\"value\":{\"id\":2},\"timestamp\":0}]",
           "marking": [
             {
-              "timestamp": 0,
               "value": {
                 "id": 1
-              }
+              },
+              "timestamp": 0
             },
             {
-              "timestamp": 0,
               "value": {
                 "id": 2
-              }
+              },
+              "timestamp": 0
             }
           ],
           "position": {
@@ -994,8 +994,8 @@
           "initialMarking": "[{\"value\":null,\"timestamp\":0}]",
           "marking": [
             {
-              "timestamp": 0,
-              "value": null
+              "value": null,
+              "timestamp": 0
             }
           ],
           "position": {
@@ -1034,8 +1034,8 @@
             "height": 30
           },
           "colorSetOffset": {
-            "x": 5.047905877528579,
-            "y": 19.856282367414266
+            "x": 16.07760884782561,
+            "y": 15.917102735165328
           },
           "markingOffset": {
             "x": 51.97863977226168,
@@ -1073,7 +1073,7 @@
           "name": "Spawn Tokens",
           "guard": "",
           "time": "",
-          "priority": "NONE",
+          "priority": "",
           "codeSegment": "",
           "position": {
             "x": 90,
@@ -1138,7 +1138,7 @@
           "delay": "delay_ms(discrete(180000, 360000))",
           "isBidirectional": false,
           "labelOffset": {
-            "x": -11.933414763556371,
+            "x": -6.418563278407857,
             "y": 2.2427405101800564
           }
         },
@@ -1360,9 +1360,26 @@
       "id": "d8fd9290-89f9-4a64-a6e5-fb7c97f2f428"
     }
   ],
-  "priorities": [],
+  "priorities": [
+    {
+      "name": "P_HIGH",
+      "level": 100,
+      "id": "07106063-aa23-45aa-baa0-6c26a37be842"
+    },
+    {
+      "name": "P_NORMAL",
+      "level": 1000,
+      "id": "5f0dbb92-6f84-4b2c-89c3-ad950e7ddcf4"
+    },
+    {
+      "name": "P_LOW",
+      "level": 10000,
+      "id": "9d469e77-17c6-4939-ae97-f4dd88da95c3"
+    }
+  ],
   "functions": [],
   "uses": [],
+  "values": [],
   "fusionSets": [],
   "simulationSettings": {
     "stepsPerRun": 200,

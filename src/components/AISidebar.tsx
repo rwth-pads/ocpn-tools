@@ -70,6 +70,7 @@ export function AISidebar() {
       priorities: useStore.getState().priorities,
       functions: useStore.getState().functions,
       uses: useStore.getState().uses,
+      values: useStore.getState().values,
     }
     const petriNetJSON = convertToJSON(petriNetData);
 

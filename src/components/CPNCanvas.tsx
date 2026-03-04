@@ -68,6 +68,7 @@ import {
 
 import { nodeTypes } from '../nodes';
 import { edgeTypes } from '../edges';
+import { toast } from 'sonner';
 import { applySugiyamaLayout } from '@/utils/sugiyamaAdapter';
 
 import { v4 as uuidv4 } from 'uuid';
@@ -90,6 +91,7 @@ const selector = (state: StoreState) => ({
   priorities: state.priorities,
   functions: state.functions,
   uses: state.uses,
+  values: state.values,
   simulationEpoch: state.simulationEpoch,
   setSimulationEpoch: state.setSimulationEpoch,
   createPetriNet: state.createPetriNet,
@@ -101,6 +103,7 @@ const selector = (state: StoreState) => ({
   setPriorities: state.setPriorities,
   setFunctions: state.setFunctions,
   setUses: state.setUses,
+  setValues: state.setValues,
   setFusionSets: state.setFusionSets,
   setMonitors: state.setMonitors,
   toggleArcMode: state.toggleArcMode,
@@ -158,6 +161,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     priorities,
     functions,
     uses,
+    values,
     simulationEpoch,
     setSimulationEpoch,
     createPetriNet,
@@ -169,6 +173,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     setPriorities,
     setFunctions,
     setUses,
+    setValues,
     setFusionSets,
     setMonitors,
     toggleArcMode,
@@ -424,6 +429,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       if (data.priorities) setPriorities(data.priorities);
       if (data.functions) setFunctions(data.functions);
       if (data.uses) setUses(data.uses);
+      if (data.values) setValues(data.values);
       if (data.fusionSets) setFusionSets(data.fusionSets);
       if (data.monitors) setMonitors(data.monitors);
       
@@ -481,9 +487,16 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     const data = parseFileContent(fileContent, fileName)
     if (data) {
       onOpenPetriNet(data, fileName);
+      // Show import warnings (e.g., untranslated SML expressions)
+      if (data.importWarnings && data.importWarnings.length > 0) {
+        toast.warning('CPN import completed with warnings', {
+          description: data.importWarnings.join('\n'),
+          duration: 15000,
+        });
+      }
     } else {
       // Show error notification
-      alert("Failed to parse the file. Please check the file format.")
+      toast.error("Failed to parse the file. Please check the file format.")
     }
   }
 
@@ -504,6 +517,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
     setVariables([]);
     setFunctions([]);
     setUses([]);
+    setValues([]);
     setFusionSets([]);
     setMonitors([]);
 
@@ -544,6 +558,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       priorities,
       functions,
       uses,
+      values,
       fusionSets: useStore.getState().fusionSets,
       monitors: useStore.getState().monitors,
       // Include simulation settings for JSON/OCPN format
@@ -1025,8 +1040,16 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
   const handleImportSubpage = (fileContent: string, fileName: string) => {
     const data = parseFileContent(fileContent, fileName);
     if (!data) {
-      alert('Failed to parse the file. Please check the file format.');
+      toast.error('Failed to parse the file. Please check the file format.');
       return;
+    }
+
+    // Show import warnings if any
+    if (data.importWarnings && data.importWarnings.length > 0) {
+      toast.warning('CPN import completed with warnings', {
+        description: data.importWarnings.join('\n'),
+        duration: 15000,
+      });
     }
 
     // Import each petri net from the file as a new subpage
@@ -1164,6 +1187,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       priorities,
       functions,
       uses,
+      values,
     };
     const content = convertToJSON(singleNetData);
     saveFile(content, `${petriNet.name.replace(/\s+/g, '_')}.ocpn`);

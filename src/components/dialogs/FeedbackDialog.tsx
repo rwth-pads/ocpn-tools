@@ -90,6 +90,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
         priorities: state.priorities,
         functions: state.functions,
         uses: state.uses,
+        values: state.values,
         simulationSettings: {
           stepsPerRun: simulationContext?.simulationConfig?.stepsPerRun,
           animationDelayMs:

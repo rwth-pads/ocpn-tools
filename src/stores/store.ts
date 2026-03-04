@@ -32,6 +32,7 @@ const emptyState: AppState = {
   priorities: [],
   functions: [],
   uses: [],
+  values: [],
   simulationEpoch: null,
   showMarkingDisplay: true,
   isArcMode: false,
@@ -104,6 +105,7 @@ const useStore = create<StoreState>()(temporal((set) => ({
   priorities: initialPriorities,
   functions: initialFunctions,
   uses: [],
+  values: [],
   simulationEpoch: null,
   showMarkingDisplay: true,
   isArcMode: false,
@@ -531,7 +533,7 @@ const useStore = create<StoreState>()(temporal((set) => ({
                     const colorSet = state.colorSets.find(cs => cs.name === colorSetName);
 
                     if (colorSet && colorSet.definition.includes('int')) {
-                      const rangeMatch = colorSet.definition.match(/with\s+(\d+)\.\.(\d+);/);
+                      const rangeMatch = colorSet.definition.match(/with\s+(\d+)\.\.(\d+)(?:\s+timed)?;/);
                       if (rangeMatch) {
                         const start = parseInt(rangeMatch[1], 10);
                         const end = parseInt(rangeMatch[2], 10);
@@ -615,6 +617,9 @@ const useStore = create<StoreState>()(temporal((set) => ({
   },
   setUses: (uses) => {
     set({ uses });
+  },
+  setValues: (values) => {
+    set({ values });
   },
 
   // Add a new color set
@@ -733,6 +738,27 @@ const useStore = create<StoreState>()(temporal((set) => ({
   deleteUse: (id) =>
   set((state) => ({
     uses: state.uses.filter((use) => use.id !== id),
+  })),
+
+  // Add a new value
+  addValue: (newValue) =>
+  set((state) => ({
+    values: [
+      ...state.values,
+      { ...newValue, id: newValue.id ?? uuidv4() },
+    ],
+  })),
+  // Update a value
+  updateValue: (id, newValue) =>
+  set((state) => ({
+    values: state.values.map((v) =>
+      v.id === id ? { ...v, name: newValue.name, expression: newValue.expression } : v
+    ),
+  })),
+  // Remove a value
+  deleteValue: (id) =>
+  set((state) => ({
+    values: state.values.filter((v) => v.id !== id),
   })),
 
   toggleArcMode: (state: boolean, arcType?: ArcType) =>
@@ -1428,6 +1454,7 @@ const useStore = create<StoreState>()(temporal((set) => ({
       priorities: state.priorities,
       functions: state.functions,
       uses: state.uses,
+      values: state.values,
       fusionSets: state.fusionSets,
       monitors: state.monitors,
     }),
@@ -1443,6 +1470,7 @@ const useStore = create<StoreState>()(temporal((set) => ({
         priorities: pastState.priorities,
         functions: pastState.functions,
         uses: pastState.uses,
+        values: pastState.values,
         fusionSets: pastState.fusionSets,
         monitors: pastState.monitors,
       }) === JSON.stringify({
@@ -1454,6 +1482,7 @@ const useStore = create<StoreState>()(temporal((set) => ({
         priorities: currentState.priorities,
         functions: currentState.functions,
         uses: currentState.uses,
+        values: currentState.values,
         fusionSets: currentState.fusionSets,
         monitors: currentState.monitors,
       });

@@ -113,8 +113,9 @@ function validatePetriNet(
 
     // Check priority exists (if set and not empty)
     if (data.priority && data.priority.trim() !== '') {
+      const isNumeric = /^\d+$/.test(data.priority.trim());
       const priorityExists = priorities.some(p => p.name === data.priority);
-      if (!priorityExists) {
+      if (!isNumeric && !priorityExists) {
         addError(node.id, 'error', `Undefined priority "${data.priority}"`);
       }
     }

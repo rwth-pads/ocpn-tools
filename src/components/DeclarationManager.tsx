@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Trash2, GripVertical, Edit, ChevronRight, ChevronDown, Clock } from "lucide-react"
+import { Trash2, GripVertical, Edit, ChevronRight, ChevronDown, Clock, TriangleAlert } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { AdvancedColorSetEditor } from "@/components/AdvancedColorSetEditor";
 import { VariableEditor } from '@/components/VariableEditor';
 import { PriorityEditor } from "@/components/PriorityEditor";
@@ -693,6 +694,16 @@ export function DeclarationManager() {
                 <span className="sr-only">Toggle</span>
               </Button>
               <h2 className="font-bold flex-1">Functions</h2>
+              {functions.some((f) => f.code.startsWith('// SML (needs manual translation):')) && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <TriangleAlert className="h-4 w-4 text-amber-500 mr-1" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>Some functions could not be auto-translated from SML and need manual translation to Rhai.</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </div>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-3">
@@ -716,6 +727,16 @@ export function DeclarationManager() {
                       <div className="font-mono text-sm">
                         fn {f.name}
                       </div>
+                      {f.code.startsWith('// SML (needs manual translation):') && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <TriangleAlert className="h-3.5 w-3.5 text-amber-500" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p>This function could not be auto-translated from SML to Rhai. Manual translation is needed.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
                     <div className="flex items-center">
                       <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleEditFunction(f)}>

@@ -173,6 +173,16 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
             });
           setRecordFields(fields);
         }
+      } else if (colorSet.type === "enum") {
+        const enumMatch = colorSet.definition.match(/with\s+(.+?)(?:\s+timed)?\s*;?\s*$/);
+        if (enumMatch) {
+          const values = enumMatch[1].split('|').map((v, i) => ({
+            id: uuidv4(),
+            name: v.trim(),
+            value: `${i + 1}`,
+          }));
+          setEnumValues(values);
+        }
       } else if (colorSet.type === "subset") {
         const subsetMatch = colorSet.definition.match(/subset\s+(\w+)\s+by\s+(.+)/);
         if (subsetMatch) {
@@ -431,16 +441,10 @@ export function AdvancedColorSetEditor({ colorSet, existingColorSets, onSave }: 
               {enumValues.map((value) => (
                 <div key={value.id} className="flex items-center space-x-2">
                   <Input
-                    placeholder="Name"
+                    placeholder="Value name"
                     value={value.name}
                     onChange={(e) => handleUpdateEnumValue(value.id, "name", e.target.value)}
                     className="flex-1"
-                  />
-                  <Input
-                    placeholder="Value"
-                    value={value.value}
-                    onChange={(e) => handleUpdateEnumValue(value.id, "value", e.target.value)}
-                    className="w-24"
                   />
                   <Button variant="ghost" size="icon" onClick={() => handleRemoveEnumValue(value.id)}>
                     <Trash2 className="h-4 w-4" />

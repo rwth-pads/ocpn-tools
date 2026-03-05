@@ -399,13 +399,13 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="priority">Priority</Label>
         <Select
-          value={data.priority || "NONE"}
+          value={data.priority && !priorities.some(p => p.name === data.priority) ? "CUSTOM" : (data.priority || "NONE")}
           onValueChange={(value) => {
             if (activePetriNetId) {
               updateNodeData(activePetriNetId, id, {
                 ...data,
                 label: data.label || "",
-                priority: value === "NONE" ? undefined : value,
+                priority: value === "NONE" ? undefined : value === "CUSTOM" ? (data.priority && /^\d+$/.test(data.priority) ? data.priority : "") : value,
                 isArcMode: data.isArcMode || false,
                 type: data.type || "defaultType",
                 colorSet: data.colorSet,
@@ -427,8 +427,32 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
                 {p.name} ({p.level})
               </SelectItem>
             ))}
+            <SelectItem value="CUSTOM">Custom value...</SelectItem>
           </SelectContent>
         </Select>
+        {data.priority !== undefined && !priorities.some(p => p.name === data.priority) && (
+          <Input
+            type="number"
+            placeholder="Priority level (lower = higher priority)"
+            value={data.priority}
+            onValueCommit={(value) => {
+              if (activePetriNetId) {
+                updateNodeData(activePetriNetId, id, {
+                  ...data,
+                  label: data.label || "",
+                  priority: value.trim() === '' ? undefined : value.trim(),
+                  isArcMode: data.isArcMode || false,
+                  type: data.type || "defaultType",
+                  colorSet: data.colorSet,
+                  initialMarking: data.initialMarking,
+                  guard: data.guard || "",
+                  time: data.time || "",
+                  codeSegment: data.codeSegment || "",
+                });
+              }
+            }}
+          />
+        )}
       </div>
 
       <Separator />

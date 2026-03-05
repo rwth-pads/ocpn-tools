@@ -504,6 +504,191 @@ function generateRandomColor(): string {
 const importWarnings: string[] = [];
 
 /**
+ * Converts SML tuple syntax (a, b, ...) to Rhai array syntax [a, b, ...]
+ * within an expression. Only converts parenthesized groups that contain
+ * at least one comma at the top level (to distinguish from grouping parens).
+ * Handles nested tuples, strings, and brackets.
+ */
+function convertSMLTuplesToRhaiArrays(expr: string): string {
+  let result = '';
+  let i = 0;
+
+  while (i < expr.length) {
+    if (expr[i] === '"') {
+      // Skip string literals
+      const start = i;
+      i++;
+      while (i < expr.length && expr[i] !== '"') {
+        if (expr[i] === '\\') i++;
+        i++;
+      }
+      if (i < expr.length) i++;
+      result += expr.slice(start, i);
+    } else if (expr[i] === '(') {
+      // Found opening paren — extract the full balanced group
+      const start = i;
+      let depth = 0;
+      let hasTopLevelComma = false;
+      let j = i;
+
+      while (j < expr.length) {
+        if (expr[j] === '"') {
+          j++;
+          while (j < expr.length && expr[j] !== '"') {
+            if (expr[j] === '\\') j++;
+            j++;
+          }
+          if (j < expr.length) j++;
+        } else if (expr[j] === '(' || expr[j] === '[' || expr[j] === '{') {
+          depth++;
+          j++;
+        } else if (expr[j] === ')' || expr[j] === ']' || expr[j] === '}') {
+          depth--;
+          j++;
+          if (depth === 0) break;
+        } else {
+          if (expr[j] === ',' && depth === 1) {
+            hasTopLevelComma = true;
+          }
+          j++;
+        }
+      }
+
+      const group = expr.slice(start, j);
+
+      // Check if this is a function call — preceded by a word character (e.g., delay(p,r))
+      // Function call arguments should NOT be converted to arrays
+      const isFuncCall = start > 0 && /\w/.test(expr[start - 1]);
+
+      if (hasTopLevelComma && !isFuncCall) {
+        // It's a tuple — convert (a, b) → [a, b] and recursively convert inner tuples
+        const inner = group.slice(1, -1);
+        const converted = convertSMLTuplesToRhaiArrays(inner);
+        result += `[${converted}]`;
+      } else {
+        // Function call args or grouping parens — keep as-is but recursively convert contents
+        const inner = group.slice(1, -1);
+        const converted = convertSMLTuplesToRhaiArrays(inner);
+        result += `(${converted})`;
+      }
+      i = j;
+    } else {
+      result += expr[i];
+      i++;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Finds the position of an SML keyword in text, skipping over string literals.
+ * Returns the index of the keyword, or -1 if not found.
+ */
+function findSMLKeyword(text: string, keyword: string, startFrom: number): number {
+  let i = startFrom;
+  while (i < text.length) {
+    // Skip string literals
+    if (text[i] === '"') {
+      i++;
+      while (i < text.length && text[i] !== '"') {
+        if (text[i] === '\\') i++;
+        i++;
+      }
+      if (i < text.length) i++;
+      continue;
+    }
+    // Check for keyword at word boundary
+    if (text.slice(i, i + keyword.length) === keyword) {
+      const before = i === 0 || /\W/.test(text[i - 1]);
+      const after = (i + keyword.length >= text.length) || /\W/.test(text[i + keyword.length]);
+      if (before && after) {
+        return i;
+      }
+    }
+    i++;
+  }
+  return -1;
+}
+
+/**
+ * Finds the matching 'else' for an if-then-else, properly handling nesting.
+ * `text` starts AFTER the 'then' keyword of the if being parsed.
+ * Each nested 'if' must have its own 'else', so we count depth.
+ * Returns the index in text where the matching 'else' starts, or -1.
+ */
+function findMatchingElse(text: string): number {
+  let depth = 0;
+  let i = 0;
+  while (i < text.length) {
+    // Skip string literals
+    if (text[i] === '"') {
+      i++;
+      while (i < text.length && text[i] !== '"') {
+        if (text[i] === '\\') i++;
+        i++;
+      }
+      if (i < text.length) i++;
+      continue;
+    }
+    // Check for 'if' keyword
+    if (text.slice(i, i + 2) === 'if') {
+      const before = i === 0 || /\W/.test(text[i - 1]);
+      const after = (i + 2 >= text.length) || /\W/.test(text[i + 2]);
+      if (before && after) {
+        depth++;
+        i += 2;
+        continue;
+      }
+    }
+    // Check for 'else' keyword
+    if (text.slice(i, i + 4) === 'else') {
+      const before = i === 0 || /\W/.test(text[i - 1]);
+      const after = (i + 4 >= text.length) || /\W/.test(text[i + 4]);
+      if (before && after) {
+        if (depth === 0) {
+          return i;
+        }
+        depth--;
+        i += 4;
+        continue;
+      }
+    }
+    i++;
+  }
+  return -1;
+}
+
+/**
+ * Translates SML if-then-else expressions to Rhai, properly handling nesting.
+ * SML: if cond then e1 else e2  →  Rhai: if cond { e1 } else { e2 }
+ */
+function translateSMLIfThenElse(expr: string): string {
+  const ifIdx = findSMLKeyword(expr, 'if', 0);
+  if (ifIdx === -1) return expr;
+
+  const prefix = expr.slice(0, ifIdx);
+
+  const thenIdx = findSMLKeyword(expr, 'then', ifIdx + 2);
+  if (thenIdx === -1) return expr;
+
+  const condition = expr.slice(ifIdx + 2, thenIdx).trim();
+  const afterThen = expr.slice(thenIdx + 4); // text after 'then'
+
+  const elseOffset = findMatchingElse(afterThen);
+  if (elseOffset === -1) return expr; // No matching else
+
+  const thenExpr = afterThen.slice(0, elseOffset).trim();
+  const elseExpr = afterThen.slice(elseOffset + 4).trim(); // text after 'else'
+
+  // Recursively translate nested if-then-else in both branches
+  const translatedThen = translateSMLIfThenElse(thenExpr);
+  const translatedElse = translateSMLIfThenElse(elseExpr);
+
+  return `${prefix}if ${condition} { ${translatedThen} } else { ${translatedElse} }`;
+}
+
+/**
  * Best-effort translation of Standard ML (CPN ML) expressions to Rhai syntax.
  * Returns the translated string, or the original if no translation rules apply.
  * Adds a warning to importWarnings if untranslatable SML syntax is detected.
@@ -513,6 +698,30 @@ function translateSMLExpr(expr: string, context: string): string {
 
   // Track whether we made any changes
   const original = expr;
+
+  // ── SML IntInf.toInt(expr) → expr ──
+  // CPN Tools uses IntInf for arbitrary-precision integers.
+  // IntInf.toInt(x) converts to standard int — in Rhai, ints are already i64.
+  result = result.replace(/IntInf\.toInt\s*\(/g, '(');
+
+  // ── Strip SML type annotations ──
+  // SML allows type annotations like  expr:TypeName  or  (expr):TypeName
+  // e.g. (time()):int  →  (time())
+  //      ("",[],(0,0),""):ProdRule  →  ("",[],(0,0),"")
+  //      ((lb,ub):TimeInt)  →  ((lb,ub))
+  // Only strip :TypeName after ) or after a word char (not inside strings)
+  result = result.replace(/(\))\s*:[A-Za-z][A-Za-z0-9_]*/g, '$1');
+
+  // ── SML record access: #N(expr) → Rhai not supported, keep with warning ──
+  if (/#\d+\s*\(/.test(result)) {
+    importWarnings.push(`${context}: SML record field access (#N) needs manual translation: "${expr}"`);
+  }
+
+  // ── Tuple conversion ──
+  // SML tuple (a, b, ...) → Rhai array [a, b, ...]
+  // Only convert if there's a comma at the top level inside outer parens
+  // (to distinguish from grouping parens like "(x + 1)")
+  result = convertSMLTuplesToRhaiArrays(result);
 
   // ── List operations ──
   // SML list cons: x::xs  →  Rhai: [x] + xs  (prepend element to list)
@@ -536,18 +745,24 @@ function translateSMLExpr(expr: string, context: string): string {
   result = result.replace(
     /^\s*fun\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*?)\)\s*=\s*(.+?)\s*;?\s*$/,
     (_match, name: string, args: string, body: string) => {
+      // Unwrap array-destructured args: [a,b,...] → a,b,...  (from SML tuple patterns)
+      let cleanArgs = args.replace(/^\[([^\]]*)\]$/, '$1');
+      // Strip SML type annotations from parameters: q:Queue → q, (lb,ub):TimeInt → (lb,ub)
+      cleanArgs = cleanArgs.replace(/\s*:[A-Za-z][A-Za-z0-9_]*/g, '');
       const translatedBody = translateSMLExpr(body.trim(), context);
-      return `fn ${name}(${args}) { ${translatedBody} }`;
+      return `fn ${name}(${cleanArgs}) { ${translatedBody} }`;
     }
   );
 
   // SML if-then-else: if cond then e1 else e2  →  Rhai: if cond { e1 } else { e2 }
-  result = result.replace(
-    /\bif\s+(.+?)\s+then\s+(.+?)\s+else\s+(.+)/g,
-    (_match, cond: string, thenExpr: string, elseExpr: string) => {
-      return `if ${cond.trim()} { ${thenExpr.trim()} } else { ${elseExpr.trim()} }`;
-    }
-  );
+  // Uses recursive parser to properly handle nested if-then-else
+  result = translateSMLIfThenElse(result);
+
+  // SML not-equal: <> → Rhai: !=
+  result = result.replace(/<>/g, '!=');
+
+  // SML equality: = → Rhai: == (standalone = not part of ==, !=, >=, <=, =>)
+  result = result.replace(/(?<![!<>=])=(?!=|>)/g, '==');
 
   // SML boolean operators: andalso → &&, orelse → ||
   result = result.replace(/\bandalso\b/g, '&&');
@@ -606,10 +821,27 @@ function translateSMLExpr(expr: string, context: string): string {
  */
 function translateSMLFunction(code: string, funcName: string): string {
   // Handle multiple function definitions in same code block (duplicates from CPN Tools)
-  // Take only the first definition
+  // Join all lines and take only the first complete definition (up to ';')
   const lines = code.split(/\n/).map(s => s.trim()).filter(s => s.length > 0);
-  const firstDef = lines[0] || code;
-  
+  const joined = lines.join(' ');
+
+  // Take up to the first semicolon (end of first function definition)
+  const semiIndex = joined.indexOf(';');
+  const firstDef = semiIndex >= 0 ? joined.slice(0, semiIndex + 1) : joined;
+
+  // Detect SML pattern matching (multiple clauses with '|').  These can't be
+  // auto-translated to Rhai, so store the original SML with a comment and warning.
+  if (/\bfun\s+\w+.*\|\s*\w+/.test(firstDef)) {
+    importWarnings.push(`Function "${funcName}": SML pattern matching cannot be auto-translated. Manual rewrite needed.`);
+    return `// SML (needs manual translation): ${firstDef}`;
+  }
+
+  // Detect other untranslatable SML constructs (record field access #N(...))
+  if (/#\d+\s*\(/.test(firstDef)) {
+    importWarnings.push(`Function "${funcName}": Contains SML-specific constructs that need manual translation.`);
+    return `// SML (needs manual translation): ${firstDef}`;
+  }
+
   return translateSMLExpr(firstDef, `Function "${funcName}"`);
 }
 
@@ -637,6 +869,250 @@ function translateSMLInscription(inscription: string, context: string): string {
 }
 
 /**
+ * Parses an SML multiset literal into its constituent tokens.
+ * Format: N`value ++ N`value ++ ...
+ * where N is an integer multiplicity and value is an SML expression.
+ * Returns null if the string doesn't look like a multiset literal.
+ * 
+ * Examples:
+ *   1`"Dan Brown"++ 1`"John Grisham"
+ *   → [{count:1, value:'"Dan Brown"'}, {count:1, value:'"John Grisham"'}]
+ * 
+ *   1`("Dan Brown","De Da Vinci code") ++ 1`("Dan Brown","Het Bernini mysterie")
+ *   → [{count:1, value:'("Dan Brown","De Da Vinci code")'}, ...]
+ */
+function parseSMLMultiset(expr: string): Array<{ count: number; value: string }> | null {
+  const s = expr.trim();
+  // Quick check: must contain at least one N` pattern
+  if (!/\d+`/.test(s)) return null;
+
+  const tokens: Array<{ count: number; value: string }> = [];
+  let pos = 0;
+
+  while (pos < s.length) {
+    // Skip whitespace
+    while (pos < s.length && /\s/.test(s[pos])) pos++;
+    if (pos >= s.length) break;
+
+    // Skip ++ separator
+    if (s.startsWith('++', pos)) {
+      pos += 2;
+      while (pos < s.length && /\s/.test(s[pos])) pos++;
+      if (pos >= s.length) break;
+    }
+
+    // Expect: N`value
+    const multMatch = s.slice(pos).match(/^(\d+)`/);
+    if (!multMatch) return null; // Not a valid multiset pattern
+
+    const count = parseInt(multMatch[1], 10);
+    pos += multMatch[0].length;
+
+    // Now parse the value — it can be:
+    // - A string: "..."
+    // - A tuple: (...)
+    // - A list: [...]
+    // - A record: {...}
+    // - A simple token: identifier or number
+    const valueStart = pos;
+    
+    if (s[pos] === '"') {
+      // String value — find matching closing quote
+      pos++;
+      while (pos < s.length && s[pos] !== '"') {
+        if (s[pos] === '\\') pos++; // skip escaped char
+        pos++;
+      }
+      if (pos < s.length) pos++; // skip closing quote
+    } else if (s[pos] === '(') {
+      // Tuple — find matching closing paren, respecting nesting and strings
+      pos = skipBracketedExpr(s, pos, '(', ')');
+    } else if (s[pos] === '[') {
+      // List — find matching closing bracket
+      pos = skipBracketedExpr(s, pos, '[', ']');
+    } else if (s[pos] === '{') {
+      // Record — find matching closing brace
+      pos = skipBracketedExpr(s, pos, '{', '}');
+    } else {
+      // Simple value (number, identifier) — read until whitespace or ++
+      while (pos < s.length && !/\s/.test(s[pos]) && !s.startsWith('++', pos)) {
+        pos++;
+      }
+    }
+
+    const value = s.slice(valueStart, pos).trim();
+    if (!value) return null;
+    tokens.push({ count, value });
+  }
+
+  return tokens.length > 0 ? tokens : null;
+}
+
+/**
+ * Skips a bracketed expression in a string, respecting nesting and string literals.
+ * Returns the position after the closing bracket.
+ */
+function skipBracketedExpr(s: string, pos: number, open: string, close: string): number {
+  let depth = 0;
+  while (pos < s.length) {
+    if (s[pos] === '"') {
+      // Skip string literal
+      pos++;
+      while (pos < s.length && s[pos] !== '"') {
+        if (s[pos] === '\\') pos++;
+        pos++;
+      }
+      if (pos < s.length) pos++;
+    } else if (s[pos] === open) {
+      depth++;
+      pos++;
+    } else if (s[pos] === close) {
+      depth--;
+      pos++;
+      if (depth === 0) break;
+    } else {
+      pos++;
+    }
+  }
+  return pos;
+}
+
+type ColorSetArray = Array<{ id: string; name: string; type: string; definition: string; color: string }>;
+
+/**
+ * Returns the component color set names for a product type, e.g.
+ * "colset AA = product Author * Article;" → ["Author", "Article"]
+ */
+function getProductComponentTypes(colorSetName: string, colorSets: ColorSetArray): string[] | null {
+  const cs = colorSets.find(c => c.name === colorSetName);
+  if (!cs || cs.type !== 'product') return null;
+  const match = cs.definition.match(/=\s*product\s+(.+?)\s*;?\s*$/);
+  if (!match) return null;
+  return match[1].split('*').map(s => s.trim());
+}
+
+/**
+ * Returns the element color set name for a list type, e.g.
+ * "colset AL = list Article;" → "Article"
+ */
+function getListElementType(colorSetName: string, colorSets: ColorSetArray): string | null {
+  const cs = colorSets.find(c => c.name === colorSetName);
+  if (!cs || cs.type !== 'list') return null;
+  const match = cs.definition.match(/=\s*list\s+(\w+)\s*;?\s*$/);
+  if (!match) return null;
+  return match[1];
+}
+
+/**
+ * Translates a single SML token value to Rhai syntax.
+ * Uses color set type information to correctly parse product tuples, lists, etc.
+ */
+function translateSMLTokenValue(
+  value: string,
+  colorSetName: string,
+  colorSets: ColorSetArray,
+): string {
+  const v = value.trim();
+
+  // Look up color set type info
+  const productComponents = getProductComponentTypes(colorSetName, colorSets);
+
+  // Tuple value: (a, b, ...) → [a, b, ...] (Rhai array = product token)
+  if (v.startsWith('(') && v.endsWith(')')) {
+    // Split the tuple components, respecting nested strings and parens
+    const inner = v.slice(1, -1);
+    const components = splitTupleComponents(inner);
+    // Recursively translate each component with the correct component color set
+    const translated = components.map((c, i) => {
+      const componentCS = productComponents?.[i] ?? '';
+      return translateSMLTokenValue(c.trim(), componentCS, colorSets);
+    });
+    return `[${translated.join(', ')}]`;
+  }
+
+  // If color set is a product but value isn't in tuple syntax (no outer parens),
+  // try splitting as comma-separated components — this handles cases like
+  // "Dan Brown","Article" without enclosing parens
+  if (productComponents && productComponents.length > 1) {
+    const components = splitTupleComponents(v);
+    if (components.length === productComponents.length) {
+      const translated = components.map((c, i) =>
+        translateSMLTokenValue(c.trim(), productComponents[i], colorSets)
+      );
+      return `[${translated.join(', ')}]`;
+    }
+  }
+
+  // String value: already in correct format
+  if (v.startsWith('"') && v.endsWith('"')) return v;
+
+  // List value: [...] — recursively translate elements with the element type
+  if (v.startsWith('[') && v.endsWith(']')) {
+    const elementType = getListElementType(colorSetName, colorSets);
+    if (elementType) {
+      const inner = v.slice(1, -1).trim();
+      if (!inner) return '[]'; // empty list
+      const elements = splitTupleComponents(inner);
+      const translated = elements.map(e =>
+        translateSMLTokenValue(e.trim(), elementType, colorSets)
+      );
+      return `[${translated.join(', ')}]`;
+    }
+    return v;
+  }
+
+  // Number
+  if (/^-?\d+(\.\d+)?$/.test(v)) return v;
+
+  // Boolean
+  if (v === 'true' || v === 'false') return v;
+
+  // Unit
+  if (v === '()') return '()';
+
+  // Fall through: return as-is (could be an identifier or complex expression)
+  return v;
+}
+
+/**
+ * Splits comma-separated tuple components, respecting nested parens and string literals.
+ */
+function splitTupleComponents(inner: string): string[] {
+  const components: string[] = [];
+  let current = '';
+  let depth = 0;
+  let inString = false;
+
+  for (let i = 0; i < inner.length; i++) {
+    const ch = inner[i];
+    if (inString) {
+      current += ch;
+      if (ch === '\\' && i + 1 < inner.length) {
+        current += inner[++i];
+      } else if (ch === '"') {
+        inString = false;
+      }
+    } else if (ch === '"') {
+      inString = true;
+      current += ch;
+    } else if (ch === '(' || ch === '[' || ch === '{') {
+      depth++;
+      current += ch;
+    } else if (ch === ')' || ch === ']' || ch === '}') {
+      depth--;
+      current += ch;
+    } else if (ch === ',' && depth === 0) {
+      components.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim()) components.push(current);
+  return components;
+}
+
+/**
  * Translates an SML initial marking expression.
  * Handles UNIT markings and common SML patterns.
  */
@@ -644,10 +1120,18 @@ function translateSMLInitialMarking(
   marking: string,
   placeName: string,
   colorSetName: string,
-  colorSets: Array<{ id: string; name: string; type: string; definition: string; color: string }>,
+  colorSets: ColorSetArray,
 ): string {
-  const trimmed = marking.trim();
+  let trimmed = marking.trim();
   if (!trimmed) return '';
+
+  // Strip CPN Tools timed-token timestamps: value@N → value
+  // In CPN Tools, "Mary"@6 means token "Mary" available at time 6.
+  // Rhai doesn't understand @ syntax, so strip the timestamps.
+  // Matches @N after a closing quote, paren, bracket, brace, or word character.
+  if (trimmed.includes('@')) {
+    trimmed = trimmed.replace(/(["\])\w])@\d+/g, '$1');
+  }
 
   // Handle UNIT place markings
   // The UI stores UNIT markings in array format: "[(), (), ...]" parsed by parseUnitMarkingCount
@@ -685,6 +1169,28 @@ function translateSMLInitialMarking(
       const lists = Array(n).fill('[]').join(', ');
       return `[${lists}]`;
     }
+    // Bare list literal [a,b,c] (without backtick multiset notation) means ONE token
+    // whose value is this list. Wrap it as [[a,b,c]] so the outer array represents
+    // the multiset of tokens and the inner array is the token's list value.
+    if (trimmed.startsWith('[') && trimmed.endsWith(']') && !parseSMLMultiset(trimmed)) {
+      return `[${trimmed}]`;
+    }
+  }
+
+  // Handle SML multiset notation: N`value ++ N`value ++ ...
+  // The backtick separates multiplicity from value, ++ is multiset union
+  const multisetTokens = parseSMLMultiset(trimmed);
+  if (multisetTokens !== null) {
+    // Convert each token value from SML to Rhai
+    const rhaiTokens: string[] = [];
+    for (const { count, value } of multisetTokens) {
+      // Translate the value (e.g., SML tuple ("a","b") → Rhai ["a","b"])
+      const rhaiValue = translateSMLTokenValue(value, colorSetName, colorSets);
+      for (let i = 0; i < count; i++) {
+        rhaiTokens.push(rhaiValue);
+      }
+    }
+    return `[${rhaiTokens.join(', ')}]`;
   }
 
   // Apply general SML→Rhai translation
@@ -765,6 +1271,21 @@ function parseCPNToolsXML(content: string): PetriNetData {
         id,
         name: id,
         type: 'list',
+        definition,
+        color: generateRandomColor(),
+        ...(isTimed ? { timed: true } : {}),
+      };
+    }
+
+    // Check for enum type (e.g., <enum><id>Corona</id><id>Heineken</id>...</enum>)
+    const enumElement = color.querySelector('enum');
+    if (enumElement) {
+      const enumValues = Array.from(enumElement.querySelectorAll(':scope > id')).map(el => el.textContent || '');
+      const definition = `colset ${id} = with ${enumValues.join('|')}${timedSuffix};`;
+      return {
+        id,
+        name: id,
+        type: 'enum',
         definition,
         color: generateRandomColor(),
         ...(isTimed ? { timed: true } : {}),
@@ -854,12 +1375,15 @@ function parseCPNToolsXML(content: string): PetriNetData {
     }
 
     // Check if it's a val declaration — store for later processing
-    const valMatch = content.match(/^val\s+(\w+)\s*=\s*(.+?)\s*;?\s*$/);
+    // Use [\s\S] instead of . to handle multi-line val declarations
+    const valMatch = content.match(/^val\s+(\w+)\s*=\s*([\s\S]+?)\s*;?\s*$/);
     if (valMatch) {
+      // Join multi-line values into a single line
+      const value = valMatch[2].trim().split(/\n/).map(s => s.trim()).join(' ');
       valDeclarations.push({
         id,
         name: valMatch[1],
-        value: valMatch[2].trim(),
+        value,
       });
       return;
     }
@@ -1005,6 +1529,14 @@ function parseCPNToolsXML(content: string): PetriNetData {
       const placeName = place.querySelector('text')?.textContent || '';
       const placeColorSet = place.querySelector('type text')?.textContent || '';
       
+      // Parse port type for places on subpages
+      const portElement = place.querySelector('port');
+      const rawPortType = portElement?.getAttribute('type')?.toLowerCase();
+      const portType = rawPortType === 'in' ? 'in' as const
+        : rawPortType === 'out' ? 'out' as const
+        : rawPortType === 'i/o' ? 'io' as const
+        : undefined;
+      
       const placeNode = {
         id: placeId,
         type: 'place',
@@ -1020,6 +1552,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
           initialMarking: translateSMLInitialMarking(rawInitialMarking, placeName, placeColorSet, colorSets),
           colorSetOffset,
           markingOffset,
+          ...(portType ? { portType } : {}),
         },
       };
       
@@ -1042,6 +1575,24 @@ function parseCPNToolsXML(content: string): PetriNetData {
       const transName = transition.querySelector('text')?.textContent || '';
       const rawGuard = transition.querySelector('cond text')?.textContent || '';
       
+      // Parse substitution transition (hierarchy)
+      const substElement = transition.querySelector('subst');
+      let subPageId: string | undefined;
+      let socketAssignments: { portPlaceId: string; socketPlaceId: string }[] | undefined;
+      if (substElement) {
+        subPageId = substElement.getAttribute('subpage') || undefined;
+        const portsockAttr = substElement.getAttribute('portsock') || '';
+        // Format: (portId,socketId)(portId,socketId)...
+        const pairs = portsockAttr.matchAll(/\(([^,]+),([^)]+)\)/g);
+        const assignments = Array.from(pairs).map(m => ({
+          portPlaceId: m[1],
+          socketPlaceId: m[2],
+        }));
+        if (assignments.length > 0) {
+          socketAssignments = assignments;
+        }
+      }
+      
       const transNode = {
         id: transId,
         type: 'transition',
@@ -1056,6 +1607,8 @@ function parseCPNToolsXML(content: string): PetriNetData {
           guard: translateSMLGuard(rawGuard, transName),
           time: transition.querySelector('time text')?.textContent || '',
           priority: transition.querySelector('priority text')?.textContent || '',
+          ...(subPageId ? { subPageId } : {}),
+          ...(socketAssignments ? { socketAssignments } : {}),
         },
       };
       
@@ -1077,6 +1630,7 @@ function parseCPNToolsXML(content: string): PetriNetData {
       const order = parseInt(arc.getAttribute('order') || '0', 10); // Parse order for parallel arc offset
       const placeEndRef = arc.querySelector('placeend')?.getAttribute('idref') || '';
       const transEndRef = arc.querySelector('transend')?.getAttribute('idref') || '';
+
       const rawLabel = arc.querySelector('annot text')?.textContent || '';
       
       // Split @+ arc delay from inscription (CPN Tools format: "expr @+ delay")

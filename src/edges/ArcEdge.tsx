@@ -1131,7 +1131,7 @@ function DraggableArcLabel({
               </svg>
               <div>
                 <p className="font-semibold">Warning</p>
-                {errorTooltip.split('\n').map((line, i) => (
+                {(errorTooltip ?? '').split('\n').map((line, i) => (
                   <p key={i} className="text-xs opacity-90">{line}</p>
                 ))}
               </div>

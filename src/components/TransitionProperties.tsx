@@ -435,12 +435,13 @@ const TransitionProperties = ({ priorities }: { priorities: Priority[] }) => {
             type="number"
             placeholder="Priority level (lower = higher priority)"
             value={data.priority}
-            onValueCommit={(value) => {
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               if (activePetriNetId) {
+                const val = e.target.value.trim();
                 updateNodeData(activePetriNetId, id, {
                   ...data,
                   label: data.label || "",
-                  priority: value.trim() === '' ? undefined : value.trim(),
+                  priority: val === '' ? undefined : val,
                   isArcMode: data.isArcMode || false,
                   type: data.type || "defaultType",
                   colorSet: data.colorSet,

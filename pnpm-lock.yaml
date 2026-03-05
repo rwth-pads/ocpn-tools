@@ -75,8 +75,8 @@ importers:
         specifier: ^1.2.4
         version: 1.2.4(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@rwth-pads/cpnsim':
-        specifier: ^0.4.5
-        version: 0.4.5
+        specifier: ^0.4.7
+        version: 0.4.7
       '@tailwindcss/vite':
         specifier: ^4.2.1
         version: 4.2.1(vite@7.3.1(jiti@2.6.1)(lightningcss@1.31.1)(yaml@2.8.2))
@@ -1224,8 +1224,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@rwth-pads/cpnsim@0.4.5':
-    resolution: {integrity: sha512-TZ1lteYGM5pKNBtb51e+l2BAiuHwpwTHfjkRFZT3uMu5eHpFvx3lNLj/JfS97vyVC1Vj68PR5p4Vu86i/v0dPg==}
+  '@rwth-pads/cpnsim@0.4.7':
+    resolution: {integrity: sha512-/UGUx2M4EoiYeg08mkspOlt5KaP3kMeGUBGQjEzr+bal+zUN+Q17TwnNPIC7JqhNoanryw/PllkuotJyuWW10g==}
 
   '@tailwindcss/node@4.2.1':
     resolution: {integrity: sha512-jlx6sLk4EOwO6hHe1oCGm1Q4AN/s0rSrTTPBGPM0/RQ6Uylwq17FuU8IeJJKEjtc6K6O07zsvP+gDO6MMWo7pg==}
@@ -4626,7 +4626,7 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.59.0':
     optional: true
 
-  '@rwth-pads/cpnsim@0.4.5': {}
+  '@rwth-pads/cpnsim@0.4.7': {}
 
   '@tailwindcss/node@4.2.1':
     dependencies:

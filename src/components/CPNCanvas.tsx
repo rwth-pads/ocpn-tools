@@ -631,7 +631,8 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
         id: `node_${Date.now()}`,
         type,
         position,
-        width: type === 'transition' ? 60 : 30,
+        width: type === 'transition' ? 60 : 35,
+        height: type === 'transition' ? 30 : 35,
         data: {
           label: type === 'auxText' ? 'Annotation' : `${type}`,
           ...(type === 'place' ? { colorSet: '' } : type === 'transition' ? { guard: '' } : {}),
@@ -863,8 +864,8 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
       return;
     }
     // Perform action based on slice.id
-    const nodeWidth = slice.key === 'new-place' ? 50 : 60; // Adjust width based on node type
-    const nodeHeight = slice.key === 'new-place' ? 50 : 40; // Adjust height based on node type
+    const nodeWidth = slice.key === 'new-place' ? 35 : 60; // Adjust width based on node type
+    const nodeHeight = slice.key === 'new-place' ? 35 : 30;
     const position = {
       x: screenToFlowPosition(dialPosition).x - nodeWidth / 2,
       y: screenToFlowPosition(dialPosition).y - nodeHeight / 2,
@@ -874,6 +875,8 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
         id: `node_${Date.now()}`,
         type: 'place',
         position,
+        width: 35,
+        height: 35,
         data: { label: 'place', isArcMode: false, colorSet: '' },
       };
       if (activePetriNetId) {
@@ -885,6 +888,7 @@ const CPNCanvas = ({ onToggleAIAssistant }: { onToggleAIAssistant: () => void })
         type: 'transition',
         position,
         width: 60,
+        height: 30,
         data: { label: 'transition', isArcMode: false, guard: '' },
       };
       if (activePetriNetId) {
